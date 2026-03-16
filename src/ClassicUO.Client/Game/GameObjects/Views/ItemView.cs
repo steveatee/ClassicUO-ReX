@@ -148,6 +148,20 @@ namespace ClassicUO.Game.GameObjects
                 hueVec.Z = 0.5f;
             }
 
+            if (ProfileManager.CurrentProfile.InvisibleHousesEnabled && IsMulti)
+            {
+                GameObject groundTile = World.Map.GetTile(X, Y);
+
+                if (
+                    groundTile != null
+                    && (Z - World.Player.Z) > ProfileManager.CurrentProfile.InvisibleHousesZ
+                    && (Z - groundTile.Z) > ProfileManager.CurrentProfile.DontRemoveHouseBelowZ
+                )
+                {
+                    return false;
+                }
+            }
+
             DrawStaticAnimated(batcher, graphic, posX, posY, hueVec, false, depth);
 
             return true;

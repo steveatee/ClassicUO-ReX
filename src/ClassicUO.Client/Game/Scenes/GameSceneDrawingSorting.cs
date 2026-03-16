@@ -258,7 +258,7 @@ namespace ClassicUO.Game.Scenes
         private void UpdateObjectHandles(Entity obj, bool useObjectHandles)
         {
             bool keepCustomPlayerHandle =
-                ProfileManager.CurrentProfile.CustomPlayerNameplate && obj == _world.Player;
+                ProfileManager.CurrentProfile.CustomPlayerNameplate && obj is Mobile;
 
             if ((useObjectHandles && _world.NameOverHeadManager.IsAllowed(obj)) || keepCustomPlayerHandle)
             {
@@ -339,6 +339,12 @@ namespace ClassicUO.Game.Scenes
         {
             allowSelection = true;
 
+            if (ShouldHideInvisibleHouseObject(obj))
+            {
+                obj.AlphaHue = 0;
+                return false;
+            }
+
             if (obj.Z >= _maxZ)
             {
                 bool changed;
@@ -382,6 +388,29 @@ namespace ClassicUO.Game.Scenes
             }
 
             return true;
+        }
+
+        private bool ShouldHideInvisibleHouseObject(GameObject obj)
+        {
+            if (!ProfileManager.CurrentProfile.InvisibleHousesEnabled)
+            {
+                return false;
+            }
+
+            if (obj is not Static && obj is not Multi)
+            {
+                return false;
+            }
+
+            GameObject groundTile = _world.Map.GetTile(obj.X, obj.Y);
+
+            if (groundTile == null)
+            {
+                return false;
+            }
+
+            return (obj.Z - _world.Player.Z) > ProfileManager.CurrentProfile.InvisibleHousesZ
+                && (obj.Z - groundTile.Z) > ProfileManager.CurrentProfile.DontRemoveHouseBelowZ;
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]

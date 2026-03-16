@@ -72,6 +72,78 @@ namespace ClassicUO.Game.Managers
 
                 }
             );
+
+            Register
+            (
+                "marktile",
+                s =>
+                {
+                    if (s.Length > 1 && s[1] == "-r")
+                    {
+                        if (s.Length == 2)
+                        {
+                            TileMarkerManager.Instance.RemoveTile(_world.Player.X, _world.Player.Y, _world.Map.Index);
+                        }
+                        else if (s.Length == 4)
+                        {
+                            if (int.TryParse(s[2], out int x) && int.TryParse(s[3], out int y))
+                            {
+                                TileMarkerManager.Instance.RemoveTile(x, y, _world.Map.Index);
+                            }
+                        }
+                        else if (s.Length == 5)
+                        {
+                            if (
+                                int.TryParse(s[2], out int x)
+                                && int.TryParse(s[3], out int y)
+                                && int.TryParse(s[4], out int map)
+                            )
+                            {
+                                TileMarkerManager.Instance.RemoveTile(x, y, map);
+                            }
+                        }
+                    }
+                    else
+                    {
+                        if (s.Length == 1)
+                        {
+                            TileMarkerManager.Instance.AddTile(_world.Player.X, _world.Player.Y, _world.Map.Index, 32);
+                        }
+                        else if (s.Length == 2)
+                        {
+                            if (ushort.TryParse(s[1], out ushort hue))
+                            {
+                                TileMarkerManager.Instance.AddTile(_world.Player.X, _world.Player.Y, _world.Map.Index, hue);
+                            }
+                        }
+                        else if (s.Length == 4)
+                        {
+                            if (
+                                int.TryParse(s[1], out int x)
+                                && int.TryParse(s[2], out int y)
+                                && ushort.TryParse(s[3], out ushort hue)
+                            )
+                            {
+                                TileMarkerManager.Instance.AddTile(x, y, _world.Map.Index, hue);
+                            }
+                        }
+                        else if (s.Length == 5)
+                        {
+                            if (
+                                int.TryParse(s[1], out int x)
+                                && int.TryParse(s[2], out int y)
+                                && int.TryParse(s[3], out int map)
+                                && ushort.TryParse(s[4], out ushort hue)
+                            )
+                            {
+                                TileMarkerManager.Instance.AddTile(x, y, map, hue);
+                            }
+                        }
+                    }
+
+                    TileMarkerManager.Instance.Save();
+                }
+            );
         }
 
 

@@ -26,10 +26,9 @@ namespace ClassicUO.Game.UI.Gumps
         private readonly RenderedText _renderedText;
         private Texture2D _borderColor = SolidColorTextureCache.GetTexture(Color.Black);
         private bool _showHpBar;
-        private bool UseCustomPlayerNameplate =>
+        private bool UseCustomMobileNameplate =>
             ProfileManager.CurrentProfile.CustomPlayerNameplate
-            && World.Player != null
-            && LocalSerial == World.Player.Serial;
+            && SerialHelper.IsMobile(LocalSerial);
 
         public NameOverheadGump(World world, uint serial) : base(world, serial, 0)
         {
@@ -161,14 +160,15 @@ namespace ClassicUO.Game.UI.Gumps
 
                 _showHpBar =
                     entity is Mobile
-                    && (UseCustomPlayerNameplate || ProfileManager.CurrentProfile.NameOverheadShowHpBar);
+                    && (UseCustomMobileNameplate || ProfileManager.CurrentProfile.NameOverheadShowHpBar);
 
-                if (UseCustomPlayerNameplate)
+                if (UseCustomMobileNameplate)
                 {
-                    const int customBarHeight = 6;
+                    bool isPlayer = World.Player != null && LocalSerial == World.Player.Serial;
+                    const int customBarHeight = 7;
                     const int customGap = 3;
 
-                    Width = Math.Max(width + 12, 90);
+                    Width = Math.Max(width + 10, isPlayer ? 90 : 72);
                     Height = _renderedText.Height + customGap + customBarHeight + 4;
                 }
                 else
@@ -208,7 +208,7 @@ namespace ClassicUO.Game.UI.Gumps
 
         protected override void CloseWithRightClick()
         {
-            if (UseCustomPlayerNameplate)
+            if (UseCustomMobileNameplate)
             {
                 return;
             }
@@ -592,7 +592,7 @@ namespace ClassicUO.Game.UI.Gumps
                     return false;
                 }
 
-                if (UseCustomPlayerNameplate)
+                if (UseCustomMobileNameplate)
                 {
                     x =
                         (int)(m.RealScreenPosition.X - m.FrameInfo.X + 22 + m.Offset.X)
@@ -683,7 +683,7 @@ namespace ClassicUO.Game.UI.Gumps
 
             X = x;
             Y = y;
-            if (!UseCustomPlayerNameplate)
+            if (!UseCustomMobileNameplate)
             {
                 renderLists.AddGumpNoAtlas(
                     batcher =>
@@ -717,10 +717,10 @@ namespace ClassicUO.Game.UI.Gumps
             if (_showHpBar && World.Get(LocalSerial) is Mobile mob)
             {
                 int barX = x;
-                int barHeight = UseCustomPlayerNameplate ? 6 : Constants.OBJECT_HANDLES_HP_BAR_HEIGHT;
+                int barHeight = UseCustomMobileNameplate ? 7 : Constants.OBJECT_HANDLES_HP_BAR_HEIGHT;
                 int barY = y + Height - barHeight;
                 int barWidth = Width;
-                int filledWidth = barWidth * mob.HitsPercentage / 100;
+                int filledWidth = (barWidth - 2) * mob.HitsPercentage / 100;
                 Color hpColor = mob.HitsPercentage >= 80 ? Color.Green
                               : mob.HitsPercentage >= 50 ? Color.YellowGreen
                               : mob.HitsPercentage >= 30 ? Color.Yellow
@@ -729,11 +729,39 @@ namespace ClassicUO.Game.UI.Gumps
 
                 renderLists.AddGumpNoAtlas(batcher =>
                 {
-                    batcher.Draw(SolidColorTextureCache.GetTexture(Color.Black),
-                        new Rectangle(barX, barY, barWidth, barHeight), hueVector, barDepth);
-                    if (filledWidth > 0)
-                        batcher.Draw(SolidColorTextureCache.GetTexture(hpColor),
-                            new Rectangle(barX, barY, filledWidth, barHeight), hueVector, barDepth + CHILD_LAYER_INCREMENT);
+                    if (UseCustomMobileNameplate)
+                    {
+                        batcher.Draw(
+                            SolidColorTextureCache.GetTexture(Color.Black),
+                            new Rectangle(barX, barY, barWidth, barHeight),
+                            hueVector,
+                            barDepth
+                        );
+                        batcher.Draw(
+                            SolidColorTextureCache.GetTexture(new Color(110, 0, 0)),
+                            new Rectangle(barX + 1, barY + 1, Math.Max(0, barWidth - 2), Math.Max(0, barHeight - 2)),
+                            hueVector,
+                            barDepth + CHILD_LAYER_INCREMENT
+                        );
+
+                        if (filledWidth > 0)
+                        {
+                            batcher.Draw(
+                                SolidColorTextureCache.GetTexture(hpColor),
+                                new Rectangle(barX + 1, barY + 1, filledWidth, Math.Max(0, barHeight - 2)),
+                                hueVector,
+                                barDepth + CHILD_LAYER_INCREMENT * 2
+                            );
+                        }
+                    }
+                    else
+                    {
+                        batcher.Draw(SolidColorTextureCache.GetTexture(Color.Black),
+                            new Rectangle(barX, barY, barWidth, barHeight), hueVector, barDepth);
+                        if (filledWidth > 0)
+                            batcher.Draw(SolidColorTextureCache.GetTexture(hpColor),
+                                new Rectangle(barX, barY, filledWidth, barHeight), hueVector, barDepth + CHILD_LAYER_INCREMENT);
+                    }
                     return true;
                 });
             }
