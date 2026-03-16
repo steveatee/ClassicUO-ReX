@@ -26,6 +26,10 @@ namespace ClassicUO.Game.UI.Gumps
         private readonly RenderedText _renderedText;
         private Texture2D _borderColor = SolidColorTextureCache.GetTexture(Color.Black);
         private bool _showHpBar;
+        private bool UseCustomPlayerNameplate =>
+            ProfileManager.CurrentProfile.CustomPlayerNameplate
+            && World.Player != null
+            && LocalSerial == World.Player.Serial;
 
         public NameOverheadGump(World world, uint serial) : base(world, serial, 0)
         {
@@ -155,10 +159,24 @@ namespace ClassicUO.Game.UI.Gumps
 
                 _renderedText.Text = t;
 
-                Width = _background.Width = Constants.OBJECT_HANDLES_GUMP_WIDTH + 4;
-                _showHpBar = entity is Mobile && ProfileManager.CurrentProfile.NameOverheadShowHpBar;
-                int hpBarExtra = _showHpBar ? Constants.OBJECT_HANDLES_HP_BAR_HEIGHT + 1 : 0;
-                Height = _background.Height = Constants.OBJECT_HANDLES_GUMP_HEIGHT + 4 + hpBarExtra;
+                _showHpBar =
+                    entity is Mobile
+                    && (UseCustomPlayerNameplate || ProfileManager.CurrentProfile.NameOverheadShowHpBar);
+
+                if (UseCustomPlayerNameplate)
+                {
+                    const int customBarHeight = 6;
+                    const int customGap = 3;
+
+                    Width = Math.Max(width + 12, 90);
+                    Height = _renderedText.Height + customGap + customBarHeight + 4;
+                }
+                else
+                {
+                    Width = _background.Width = Constants.OBJECT_HANDLES_GUMP_WIDTH + 4;
+                    int hpBarExtra = _showHpBar ? Constants.OBJECT_HANDLES_HP_BAR_HEIGHT + 1 : 0;
+                    Height = _background.Height = Constants.OBJECT_HANDLES_GUMP_HEIGHT + 4 + hpBarExtra;
+                }
 
                 WantUpdateSize = false;
 
@@ -190,6 +208,11 @@ namespace ClassicUO.Game.UI.Gumps
 
         protected override void CloseWithRightClick()
         {
+            if (UseCustomPlayerNameplate)
+            {
+                return;
+            }
+
             Entity entity = World.Get(LocalSerial);
 
             if (entity != null)
@@ -569,7 +592,17 @@ namespace ClassicUO.Game.UI.Gumps
                     return false;
                 }
 
-                if (_positionLocked)
+                if (UseCustomPlayerNameplate)
+                {
+                    x =
+                        (int)(m.RealScreenPosition.X - m.FrameInfo.X + 22 + m.Offset.X)
+                        + (m.FrameInfo.Width >> 1);
+                    y =
+                        (int)(m.RealScreenPosition.Y - m.FrameInfo.Y + 22 + (m.Offset.Y - m.Offset.Z))
+                        + m.FrameInfo.Height
+                        + 12;
+                }
+                else if (_positionLocked)
                 {
                     x = _lockedPosition.X;
                     y = _lockedPosition.Y;
@@ -650,15 +683,18 @@ namespace ClassicUO.Game.UI.Gumps
 
             X = x;
             Y = y;
-            renderLists.AddGumpNoAtlas(
-                batcher =>
-                {
-                    batcher.DrawRectangle(_borderColor, x - 1, y - 1, Width + 1, Height + 1, hueVector, layerDepth);
-                    return true;
-                }
-            );
+            if (!UseCustomPlayerNameplate)
+            {
+                renderLists.AddGumpNoAtlas(
+                    batcher =>
+                    {
+                        batcher.DrawRectangle(_borderColor, x - 1, y - 1, Width + 1, Height + 1, hueVector, layerDepth);
+                        return true;
+                    }
+                );
 
-            base.AddToRenderLists(renderLists, x, y, ref layerDepthRef);
+                base.AddToRenderLists(renderLists, x, y, ref layerDepthRef);
+            }
 
             int renderedTextOffset = Math.Max(0, Width - _renderedText.Width - 4) >> 1;
             renderLists.AddGumpNoAtlas(batcher =>
@@ -681,9 +717,9 @@ namespace ClassicUO.Game.UI.Gumps
             if (_showHpBar && World.Get(LocalSerial) is Mobile mob)
             {
                 int barX = x;
-                int barY = y + Height - Constants.OBJECT_HANDLES_HP_BAR_HEIGHT;
+                int barHeight = UseCustomPlayerNameplate ? 6 : Constants.OBJECT_HANDLES_HP_BAR_HEIGHT;
+                int barY = y + Height - barHeight;
                 int barWidth = Width;
-                int barHeight = Constants.OBJECT_HANDLES_HP_BAR_HEIGHT;
                 int filledWidth = barWidth * mob.HitsPercentage / 100;
                 Color hpColor = mob.HitsPercentage >= 80 ? Color.Green
                               : mob.HitsPercentage >= 50 ? Color.YellowGreen

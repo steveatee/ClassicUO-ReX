@@ -37,7 +37,7 @@ namespace ClassicUO.Game.UI.Gumps
 
         //experimental
         private Checkbox _autoOpenDoors, _autoOpenCorpse, _skipEmptyCorpse, _disableTabBtn, _disableCtrlQWBtn, _disableDefaultHotkeys, _disableArrowBtn, _disableAutoMove, _overrideContainerLocation, _smoothDoors, _showTargetRangeIndicator, _customBars, _customBarsBBG, _saveHealthbars;
-        private Checkbox _nameOverheadAlwaysOn, _nameOverheadShowHpBar;
+        private Checkbox _nameOverheadAlwaysOn, _nameOverheadShowHpBar, _customPlayerNameplate;
         private HSliderBar _cellSize;
         private Checkbox _containerScaleItems, _containerDoubleClickToLoot, _relativeDragAnDropItems, _useLargeContianersGumps, _highlightContainersWhenMouseIsOver;
 
@@ -348,6 +348,19 @@ namespace ClassicUO.Game.UI.Gumps
 
             Add
             (
+                new NiceButton
+                (
+                    10,
+                    10 + 30 * i++,
+                    140,
+                    25,
+                    ButtonAction.SwitchPage,
+                    "Custom"
+                ) { ButtonParameter = 13 }
+            );
+
+            Add
+            (
                 new Line
                 (
                     160,
@@ -421,6 +434,7 @@ namespace ClassicUO.Game.UI.Gumps
             BuildInfoBar();
             BuildContainers();
             BuildExperimental();
+            BuildCustom();
 
             ChangePage(1);
         }
@@ -1554,6 +1568,43 @@ namespace ClassicUO.Game.UI.Gumps
             );
 
             startY += _musicInBackground.Height + 2;
+
+            Add(rightArea, PAGE);
+        }
+
+        private void BuildCustom()
+        {
+            const int PAGE = 13;
+
+            ScrollArea rightArea = new ScrollArea
+            (
+                190,
+                20,
+                WIDTH - 210,
+                420,
+                true
+            );
+
+            int startX = 5;
+            int startY = 5;
+
+            DataBox box = new DataBox(startX, startY, rightArea.Width - 15, 1);
+            box.WantUpdateSize = true;
+            rightArea.Add(box);
+
+            SettingsSection section = AddSettingsSection(box, "Player Overlay");
+
+            section.Add
+            (
+                _customPlayerNameplate = AddCheckBox
+                (
+                    null,
+                    "Show permanent player name with thick HP bar below character",
+                    _currentProfile.CustomPlayerNameplate,
+                    startX,
+                    startY
+                )
+            );
 
             Add(rightArea, PAGE);
         }
@@ -4279,6 +4330,7 @@ namespace ClassicUO.Game.UI.Gumps
             _currentProfile.ShowTargetRangeIndicator = _showTargetRangeIndicator.IsChecked;
             _currentProfile.NameOverheadToggled = _nameOverheadAlwaysOn.IsChecked;
             _currentProfile.NameOverheadShowHpBar = _nameOverheadShowHpBar.IsChecked;
+            _currentProfile.CustomPlayerNameplate = _customPlayerNameplate.IsChecked;
 
 
             bool updateHealthBars = _currentProfile.CustomBarsToggled != _customBars.IsChecked;

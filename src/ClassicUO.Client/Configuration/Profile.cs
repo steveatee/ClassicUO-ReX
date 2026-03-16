@@ -214,6 +214,7 @@ namespace ClassicUO.Configuration
         public bool NameOverheadToggled { get; set; } = false;
         public bool NameOverheadShowGump { get; set; } = true;
         public bool NameOverheadShowHpBar { get; set; } = true;
+        public bool CustomPlayerNameplate { get; set; }
         public bool ShowTargetRangeIndicator { get; set; }
         public bool PartyInviteGump { get; set; }
         public bool CustomBarsToggled { get; set; }

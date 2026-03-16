@@ -257,7 +257,10 @@ namespace ClassicUO.Game.Scenes
 
         private void UpdateObjectHandles(Entity obj, bool useObjectHandles)
         {
-            if (useObjectHandles && _world.NameOverHeadManager.IsAllowed(obj))
+            bool keepCustomPlayerHandle =
+                ProfileManager.CurrentProfile.CustomPlayerNameplate && obj == _world.Player;
+
+            if ((useObjectHandles && _world.NameOverHeadManager.IsAllowed(obj)) || keepCustomPlayerHandle)
             {
                 if (obj.ObjectHandlesStatus != ObjectHandlesStatus.CLOSED)
                 {
