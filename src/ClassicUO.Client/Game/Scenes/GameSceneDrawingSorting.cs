@@ -657,6 +657,12 @@ namespace ClassicUO.Game.Scenes
                 partial = m.ItemData.IsPartialHue;
             }
 
+            if (TileMarkerManager.Instance.IsTileMarked(obj.X, obj.Y, _world.Map.Index, out ushort markedHue))
+            {
+                hue = markedHue;
+                partial = false;
+            }
+
             float hueX, hueY;
             if (hue != 0)
             {
