@@ -148,6 +148,11 @@ namespace ClassicUO.Game.GameObjects
                 hueVec.Z = 0.5f;
             }
 
+            if (HouseHiding.ShouldHide(World, this))
+            {
+                return false;
+            }
+
             DrawStaticAnimated(batcher, graphic, posX, posY, hueVec, false, depth);
 
             return true;

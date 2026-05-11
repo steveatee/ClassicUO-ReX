@@ -216,6 +216,9 @@ namespace ClassicUO.Configuration
         public bool NameOverheadShowHpBar { get; set; } = true;
         public bool ShowTargetRangeIndicator { get; set; }
         public bool PartyInviteGump { get; set; }
+        public bool InvisibleHousesEnabled { get; set; }
+        public int InvisibleHousesZ { get; set; }
+        public int DontRemoveHouseBelowZ { get; set; } = 6;
         public bool CustomBarsToggled { get; set; }
         public bool CBBlackBGToggled { get; set; }
 

@@ -37,8 +37,9 @@ namespace ClassicUO.Game.UI.Gumps
 
         //experimental
         private Checkbox _autoOpenDoors, _autoOpenCorpse, _skipEmptyCorpse, _disableTabBtn, _disableCtrlQWBtn, _disableDefaultHotkeys, _disableArrowBtn, _disableAutoMove, _overrideContainerLocation, _smoothDoors, _showTargetRangeIndicator, _customBars, _customBarsBBG, _saveHealthbars;
+        private Checkbox _invisibleHousesEnabled;
         private Checkbox _nameOverheadAlwaysOn, _nameOverheadShowHpBar;
-        private HSliderBar _cellSize;
+        private HSliderBar _cellSize, _invisibleHousesZ, _dontRemoveHouseBelowZ;
         private Checkbox _containerScaleItems, _containerDoubleClickToLoot, _relativeDragAnDropItems, _useLargeContianersGumps, _highlightContainersWhenMouseIsOver;
 
 
@@ -348,6 +349,19 @@ namespace ClassicUO.Game.UI.Gumps
 
             Add
             (
+                new NiceButton
+                (
+                    10,
+                    10 + 30 * i++,
+                    140,
+                    25,
+                    ButtonAction.SwitchPage,
+                    "Custom"
+                ) { ButtonParameter = 13 }
+            );
+
+            Add
+            (
                 new Line
                 (
                     160,
@@ -421,6 +435,7 @@ namespace ClassicUO.Game.UI.Gumps
             BuildInfoBar();
             BuildContainers();
             BuildExperimental();
+            BuildCustom();
 
             ChangePage(1);
         }
@@ -1434,6 +1449,73 @@ namespace ClassicUO.Game.UI.Gumps
                 )
             );
 
+
+            Add(rightArea, PAGE);
+        }
+
+        private void BuildCustom()
+        {
+            const int PAGE = 13;
+
+            ScrollArea rightArea = new ScrollArea
+            (
+                190,
+                20,
+                WIDTH - 210,
+                420,
+                true
+            );
+
+            int startX = 5;
+            int startY = 5;
+
+            DataBox box = new DataBox(startX, startY, rightArea.Width - 15, 1);
+            box.WantUpdateSize = true;
+            rightArea.Add(box);
+
+            SettingsSection section = AddSettingsSection(box, "Invisible Houses");
+
+            section.Add
+            (
+                _invisibleHousesEnabled = AddCheckBox
+                (
+                    null,
+                    "Hide house pieces above your position",
+                    _currentProfile.InvisibleHousesEnabled,
+                    startX,
+                    startY
+                )
+            );
+
+            section.Add(AddLabel(null, "Hide when above player Z by at least", 0, 0));
+            section.Add
+            (
+                _invisibleHousesZ = AddHSlider
+                (
+                    null,
+                    0,
+                    100,
+                    _currentProfile.InvisibleHousesZ,
+                    startX,
+                    startY,
+                    200
+                )
+            );
+
+            section.Add(AddLabel(null, "Keep pieces close to the foundation (Z delta)", 0, 0));
+            section.Add
+            (
+                _dontRemoveHouseBelowZ = AddHSlider
+                (
+                    null,
+                    1,
+                    100,
+                    _currentProfile.DontRemoveHouseBelowZ,
+                    startX,
+                    startY,
+                    200
+                )
+            );
 
             Add(rightArea, PAGE);
         }
@@ -3810,6 +3892,13 @@ namespace ClassicUO.Game.UI.Gumps
                     _disableAutoMove.IsChecked = false;
 
                     break;
+
+                case 13: // custom
+                    _invisibleHousesEnabled.IsChecked = false;
+                    _invisibleHousesZ.Value = 0;
+                    _dontRemoveHouseBelowZ.Value = 6;
+
+                    break;
             }
         }
 
@@ -4280,6 +4369,9 @@ namespace ClassicUO.Game.UI.Gumps
             _currentProfile.NameOverheadToggled = _nameOverheadAlwaysOn.IsChecked;
             _currentProfile.NameOverheadShowHpBar = _nameOverheadShowHpBar.IsChecked;
 
+            _currentProfile.InvisibleHousesEnabled = _invisibleHousesEnabled.IsChecked;
+            _currentProfile.InvisibleHousesZ = _invisibleHousesZ.Value;
+            _currentProfile.DontRemoveHouseBelowZ = _dontRemoveHouseBelowZ.Value;
 
             bool updateHealthBars = _currentProfile.CustomBarsToggled != _customBars.IsChecked;
             _currentProfile.CustomBarsToggled = _customBars.IsChecked;

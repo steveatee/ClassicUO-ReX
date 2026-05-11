@@ -336,6 +336,13 @@ namespace ClassicUO.Game.Scenes
         {
             allowSelection = true;
 
+            if (HouseHiding.ShouldHide(_world, obj))
+            {
+                obj.AlphaHue = 0;
+
+                return false;
+            }
+
             if (obj.Z >= _maxZ)
             {
                 bool changed;
@@ -819,6 +826,12 @@ namespace ClassicUO.Game.Scenes
                     ref StaticTiles meshItemData = ref (obj is Static meshStatic
                         ? ref meshStatic.ItemData
                         : ref Unsafe.As<Multi>(obj).ItemData);
+
+                    if (HouseHiding.ShouldHide(_world, obj))
+                    {
+                        obj.AlphaHue = 0;
+                        continue;
+                    }
 
                     // Simplified ProcessAlpha for meshed statics: skip IsFoliage branch (never true)
                     bool meshAllowSelection = true;
