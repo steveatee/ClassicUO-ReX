@@ -78,6 +78,7 @@ namespace ClassicUO.Game.UI.Gumps
         private Checkbox _hideScreenshotStoredInMessage;
         private Checkbox _highlightObjects, /*_smoothMovements,*/
                          _enablePathfind,
+                         _autoAvoidObstacles,
                          _useShiftPathfind,
                          _alwaysRun,
                          _alwaysRunUnlessHidden,
@@ -531,6 +532,18 @@ namespace ClassicUO.Game.UI.Gumps
                     null,
                     "Fast rotation",
                     _currentProfile.FastRotation,
+                    startX,
+                    startY
+                )
+            );
+
+            section.Add
+            (
+                _autoAvoidObstacles = AddCheckBox
+                (
+                    null,
+                    "Auto-avoid obstacles",
+                    _currentProfile.AutoAvoidObstacles,
                     startX,
                     startY
                 )
@@ -3597,6 +3610,7 @@ namespace ClassicUO.Game.UI.Gumps
                     _holdShiftToSplitStack.IsChecked = false;
                     _enablePathfind.IsChecked = false;
                     _useShiftPathfind.IsChecked = false;
+                    _autoAvoidObstacles.IsChecked = false;
                     _alwaysRun.IsChecked = false;
                     _alwaysRunUnlessHidden.IsChecked = false;
                     _showHpMobile.IsChecked = false;
@@ -3826,6 +3840,7 @@ namespace ClassicUO.Game.UI.Gumps
             _currentProfile.HighlightGameObjects = _highlightObjects.IsChecked;
             _currentProfile.ReduceFPSWhenInactive = _reduceFPSWhenInactive.IsChecked;
             _currentProfile.EnablePathfind = _enablePathfind.IsChecked;
+            _currentProfile.AutoAvoidObstacles = _autoAvoidObstacles.IsChecked;
             _currentProfile.UseShiftToPathfind = _useShiftPathfind.IsChecked;
             _currentProfile.AlwaysRun = _alwaysRun.IsChecked;
             _currentProfile.AlwaysRunUnlessHidden = _alwaysRunUnlessHidden.IsChecked;
