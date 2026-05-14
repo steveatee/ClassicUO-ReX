@@ -100,7 +100,7 @@ namespace ClassicUO.Game.UI.Gumps
                          _chatShiftEnterCheckbox,
                          _enableCaveBorder;
         private Checkbox _holdShiftForContext, _holdShiftToSplitStack, _reduceFPSWhenInactive, _sallosEasyGrab, _partyInviteGump, _objectsFading, _textFading, _holdAltToMoveGumps;
-        private Combobox _hpComboBox, _healtbarType, _fieldsType, _hpComboBoxShowWhen;
+        private Combobox _hpComboBox, _healtbarType, _fieldsType, _treeReplacementType, _blockerReplacementType, _hpComboBoxShowWhen;
 
         // infobar
         private List<InfoBarBuilderControl> _infoBarBuilderControls;
@@ -1386,6 +1386,34 @@ namespace ClassicUO.Game.UI.Gumps
                     _currentProfile.TreeToStumps,
                     startX,
                     startY
+                )
+            );
+
+            section5.Add(AddLabel(null, "Tree Replacement", startX, startY));
+            section5.AddRight
+            (
+                _treeReplacementType = AddCombobox
+                (
+                    null,
+                    new[] { "Normal", "Stump", "Tile" },
+                    _currentProfile.TreeType,
+                    startX,
+                    startY,
+                    120
+                )
+            );
+
+            section5.Add(AddLabel(null, "Blocker Replacement", startX, startY));
+            section5.AddRight
+            (
+                _blockerReplacementType = AddCombobox
+                (
+                    null,
+                    new[] { "Normal", "Stump/Rock", "Tile" },
+                    _currentProfile.BlockerType,
+                    startX,
+                    startY,
+                    120
                 )
             );
 
@@ -3611,6 +3639,8 @@ namespace ClassicUO.Game.UI.Gumps
                     _drawRoofs.IsChecked = false;
                     _enableCaveBorder.IsChecked = false;
                     _treeToStumps.IsChecked = false;
+                    _treeReplacementType.SelectedIndex = 0;
+                    _blockerReplacementType.SelectedIndex = 0;
                     _hideVegetation.IsChecked = false;
                     _noColorOutOfRangeObjects.IsChecked = false;
                     _circleOfTranspRadius.Value = Constants.MIN_CIRCLE_OF_TRANSPARENCY_RADIUS;
@@ -3883,6 +3913,20 @@ namespace ClassicUO.Game.UI.Gumps
             {
                 StaticFilters.CleanTreeTextures();
                 _currentProfile.TreeToStumps = _treeToStumps.IsChecked;
+            }
+
+            bool rebuildStaticMeshes =
+                _currentProfile.TreeType != _treeReplacementType.SelectedIndex
+                || _currentProfile.BlockerType != _blockerReplacementType.SelectedIndex;
+            _currentProfile.TreeType = _treeReplacementType.SelectedIndex;
+            _currentProfile.BlockerType = _blockerReplacementType.SelectedIndex;
+
+            if (rebuildStaticMeshes)
+            {
+                foreach (var chunk in World.Map.GetUsedChunks())
+                {
+                    chunk.Mesh.IsDirty = true;
+                }
             }
 
             _currentProfile.FieldsType = _fieldsType.SelectedIndex;

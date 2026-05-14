@@ -262,7 +262,9 @@ namespace ClassicUO.Game.Map
             if (!staticObj.AllowedToDraw || staticObj.IsDestroyed)
                 return;
 
-            CountStaticLike(ref staticObj.ItemData, staticObj.Graphic);
+            ushort graphic = StaticArtReplacements.Replace(staticObj.Graphic);
+            ref StaticTiles itemData = ref Client.Game.UO.FileManager.TileData.StaticData[graphic];
+            CountStaticLike(ref itemData, graphic);
         }
 
         private void CountMulti(Multi multi)
@@ -273,7 +275,9 @@ namespace ClassicUO.Game.Map
             if (multi.State != 0)
                 return;
 
-            CountStaticLike(ref multi.ItemData, multi.Graphic);
+            ushort graphic = StaticArtReplacements.Replace(multi.Graphic);
+            ref StaticTiles itemData = ref Client.Game.UO.FileManager.TileData.StaticData[graphic];
+            CountStaticLike(ref itemData, graphic);
         }
 
         private void CountStaticLike(ref StaticTiles itemData, ushort graphic)
@@ -402,7 +406,9 @@ namespace ClassicUO.Game.Map
             if (!staticObj.AllowedToDraw || staticObj.IsDestroyed)
                 return;
 
-            TryAddStaticLike(staticObj, ref staticObj.ItemData, staticObj.Graphic, staticObj.Hue);
+            ushort graphic = StaticArtReplacements.Replace(staticObj.Graphic);
+            ref StaticTiles itemData = ref Client.Game.UO.FileManager.TileData.StaticData[graphic];
+            TryAddStaticLike(staticObj, ref itemData, graphic, staticObj.Hue);
         }
 
         private void TryAddMulti(Multi multi)
@@ -413,7 +419,9 @@ namespace ClassicUO.Game.Map
             if (multi.State != 0)
                 return;
 
-            TryAddStaticLike(multi, ref multi.ItemData, multi.Graphic, multi.Hue);
+            ushort graphic = StaticArtReplacements.Replace(multi.Graphic);
+            ref StaticTiles itemData = ref Client.Game.UO.FileManager.TileData.StaticData[graphic];
+            TryAddStaticLike(multi, ref itemData, graphic, multi.Hue);
         }
 
         private void TryAddStaticLike(GameObject obj, ref StaticTiles itemData, ushort graphic, ushort hue)

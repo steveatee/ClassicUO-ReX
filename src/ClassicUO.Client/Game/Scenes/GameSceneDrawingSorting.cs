@@ -960,7 +960,7 @@ namespace ClassicUO.Game.Scenes
                                 continue;
                             }
 
-                            if (itemData.IsFoliage && profile.TreeToStumps)
+                            if (itemData.IsFoliage && profile.TreeToStumps && profile.TreeType == 0)
                             {
                                 continue;
                             }
@@ -1002,7 +1002,7 @@ namespace ClassicUO.Game.Scenes
 
                             if (!itemData.IsMultiMovable)
                             {
-                                if (itemData.IsFoliage && profile.TreeToStumps)
+                                if (itemData.IsFoliage && profile.TreeToStumps && profile.TreeType == 0)
                                 {
                                     continue;
                                 }
@@ -1102,6 +1102,7 @@ namespace ClassicUO.Game.Scenes
                                 !itemData.IsMultiMovable
                                 && itemData.IsFoliage
                                 && profile.TreeToStumps
+                                && profile.TreeType == 0
                             )
                             {
                                 continue;

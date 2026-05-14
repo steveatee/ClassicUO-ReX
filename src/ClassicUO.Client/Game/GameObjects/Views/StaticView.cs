@@ -73,10 +73,8 @@ namespace ClassicUO.Game.GameObjects
             bool cot = !isTree && !ItemData.IsFoliage && TransparentTest(World.Player.Z + 5);
             Vector3 hueVec = ShaderHueTranslator.GetHueVector(hue, partial, AlphaHue / 255f, circletrans: cot);
 
-            if (isTree && ProfileManager.CurrentProfile.TreeToStumps)
-            {
-                graphic = Constants.TREE_REPLACE_GRAPHIC;
-            }
+            graphic = StaticArtReplacements.Replace(graphic);
+            bool replacedIsTree = StaticFilters.IsTree(graphic, out _);
 
             DrawStaticAnimated(
                 batcher,
@@ -86,7 +84,7 @@ namespace ClassicUO.Game.GameObjects
                 hueVec,
                 ProfileManager.CurrentProfile.ShadowsEnabled
                     && ProfileManager.CurrentProfile.ShadowsStatics
-                    && (isTree || ItemData.IsFoliage || StaticFilters.IsRock(graphic)),
+                    && (replacedIsTree || ItemData.IsFoliage || StaticFilters.IsRock(graphic)),
                 depth,
                 ProfileManager.CurrentProfile.AnimatedWaterEffect && ItemData.IsWet
             );
@@ -111,12 +109,7 @@ namespace ClassicUO.Game.GameObjects
             {
                 ushort graphic = Graphic;
 
-                bool isTree = StaticFilters.IsTree(graphic, out _);
-
-                if (isTree && ProfileManager.CurrentProfile.TreeToStumps)
-                {
-                    graphic = Constants.TREE_REPLACE_GRAPHIC;
-                }
+                graphic = StaticArtReplacements.Replace(graphic);
 
                 ref var index = ref Client.Game.UO.FileManager.Arts.File.GetValidRefEntry(graphic + 0x4000);
 
