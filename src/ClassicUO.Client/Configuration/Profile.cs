@@ -154,6 +154,8 @@ namespace ClassicUO.Configuration
         public bool AlwaysRun { get; set; }
         public bool AlwaysRunUnlessHidden { get; set; }
         public bool FastRotation { get; set; }
+        public int MovementTurnDelay { get; set; } = Constants.TURN_DELAY;
+        public int MovementTurnDelayFast { get; set; } = Constants.TURN_DELAY_FAST;
         public bool SmoothMovements { get; set; } = true;
         public bool HoldDownKeyTab { get; set; } = true;
         public bool HoldShiftForContext { get; set; } = false;
