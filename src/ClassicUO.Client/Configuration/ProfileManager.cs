@@ -92,6 +92,9 @@ namespace ClassicUO.Configuration
             {
                 profile.WindowClientBounds = new Point(profile.WindowClientBounds.X, 480);
             }
+
+            profile.MovementTurnDelay = Math.Clamp(profile.MovementTurnDelay, 40, 250);
+            profile.MovementTurnDelayFast = Math.Clamp(profile.MovementTurnDelayFast, 20, 200);
         }
 
         public static void UnLoadProfile()
