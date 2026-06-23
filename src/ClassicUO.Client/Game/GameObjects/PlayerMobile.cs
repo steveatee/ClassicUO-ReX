@@ -55,6 +55,9 @@ namespace ClassicUO.Game.GameObjects
         // Tracks the last direction actually sent to the server via a walk packet.
         private Direction _serverDirection;
         private bool _serverDirectionInitialized;
+        private bool _obstacleDodgeActive;
+        private Direction _obstacleDodgeForwardDirection;
+        private Direction _obstacleDodgeSideDirection;
 
         /// <summary>
         /// Resyncs the server-tracked direction with the current visual Direction.
@@ -559,18 +562,31 @@ namespace ClassicUO.Game.GameObjects
                 oldDirection = (Direction) walkStep.Direction;
             }
 
-            if (ProfileManager.CurrentProfile.AutoAvoidObstacles && IsCardinalDirection(direction) && IsObstacle(direction, x, y, z))
+            if (ProfileManager.CurrentProfile.AutoAvoidObstacles && IsCardinalDirection(direction))
             {
-                Direction dodgeDirection = TryAvoidObstacle(direction, x, y, z);
-
-                if (IsObstacle(dodgeDirection, x, y, z))
+                if (IsObstacle(direction, x, y, z))
                 {
-                    return false;
-                }
+                    Direction dodgeDirection = TryAvoidObstacle(direction, x, y, z);
 
-                direction = dodgeDirection;
-                ClearSteps();
-                SetInWorldTile((ushort)x, (ushort)y, z);
+                    if (IsObstacle(dodgeDirection, x, y, z))
+                    {
+                        ClearObstacleDodge();
+
+                        return false;
+                    }
+
+                    direction = dodgeDirection;
+                    ClearSteps();
+                    SetInWorldTile((ushort)x, (ushort)y, z);
+                }
+                else
+                {
+                    ClearObstacleDodge();
+                }
+            }
+            else
+            {
+                ClearObstacleDodge();
             }
 
             sbyte oldZ = z;
@@ -720,19 +736,95 @@ namespace ClassicUO.Game.GameObjects
 
         private Direction TryAvoidObstacle(Direction direction, int x, int y, sbyte z)
         {
+            Direction forwardDirection = direction & Direction.Mask;
+            GetObstacleDodgeDirections(forwardDirection, out Direction firstDirection, out Direction secondDirection);
+
+            if (_obstacleDodgeActive && (_obstacleDodgeForwardDirection & Direction.Mask) == forwardDirection)
+            {
+                return SelectObstacleDodgeDirection(forwardDirection, _obstacleDodgeSideDirection, GetOppositeObstacleDodgeDirection(_obstacleDodgeSideDirection), x, y, z);
+            }
+
+            return SelectObstacleDodgeDirection(forwardDirection, firstDirection, secondDirection, x, y, z);
+        }
+
+        private Direction SelectObstacleDodgeDirection(Direction forwardDirection, Direction firstDirection, Direction secondDirection, int x, int y, sbyte z)
+        {
+            if (!IsObstacle(firstDirection, x, y, z))
+            {
+                SetObstacleDodge(forwardDirection, firstDirection);
+
+                return firstDirection;
+            }
+
+            if (!IsObstacle(secondDirection, x, y, z))
+            {
+                SetObstacleDodge(forwardDirection, secondDirection);
+
+                return secondDirection;
+            }
+
+            ClearObstacleDodge();
+
+            return forwardDirection;
+        }
+
+        private static void GetObstacleDodgeDirections(Direction direction, out Direction firstDirection, out Direction secondDirection)
+        {
             switch (direction & Direction.Mask)
             {
                 case Direction.North:
                 case Direction.South:
-                    return IsObstacle(Direction.East, x, y, z) ? Direction.West : Direction.East;
+                    firstDirection = Direction.East;
+                    secondDirection = Direction.West;
+
+                    break;
 
                 case Direction.East:
                 case Direction.West:
-                    return IsObstacle(Direction.North, x, y, z) ? Direction.South : Direction.North;
+                    firstDirection = Direction.North;
+                    secondDirection = Direction.South;
+
+                    break;
+
+                default:
+                    firstDirection = direction;
+                    secondDirection = direction;
+
+                    break;
+            }
+        }
+
+        private static Direction GetOppositeObstacleDodgeDirection(Direction direction)
+        {
+            switch (direction & Direction.Mask)
+            {
+                case Direction.North:
+                    return Direction.South;
+
+                case Direction.South:
+                    return Direction.North;
+
+                case Direction.East:
+                    return Direction.West;
+
+                case Direction.West:
+                    return Direction.East;
 
                 default:
                     return direction;
             }
+        }
+
+        private void SetObstacleDodge(Direction forwardDirection, Direction sideDirection)
+        {
+            _obstacleDodgeActive = true;
+            _obstacleDodgeForwardDirection = forwardDirection & Direction.Mask;
+            _obstacleDodgeSideDirection = sideDirection & Direction.Mask;
+        }
+
+        private void ClearObstacleDodge()
+        {
+            _obstacleDodgeActive = false;
         }
     }
 }

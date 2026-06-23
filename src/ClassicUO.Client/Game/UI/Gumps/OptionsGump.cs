@@ -556,18 +556,6 @@ namespace ClassicUO.Game.UI.Gumps
 
             section.Add
             (
-                _autoAvoidObstacles = AddCheckBox
-                (
-                    null,
-                    "Auto-avoid obstacles",
-                    _currentProfile.AutoAvoidObstacles,
-                    startX,
-                    startY
-                )
-            );
-
-            section.Add
-            (
                 _autoOpenDoors = AddCheckBox
                 (
                     null,
@@ -1566,8 +1554,23 @@ namespace ClassicUO.Game.UI.Gumps
                 MarkUsedChunksDirty();
             };
 
+            SettingsSection movement = AddSettingsSection(box, "Movement");
+            movement.Y = terrain.Bounds.Bottom + 30;
+
+            movement.Add
+            (
+                _autoAvoidObstacles = AddCheckBox
+                (
+                    null,
+                    "Auto-avoid obstacles",
+                    _currentProfile.AutoAvoidObstacles,
+                    startX,
+                    startY
+                )
+            );
+
             SettingsSection section = AddSettingsSection(box, "Player Overlay");
-            section.Y = terrain.Bounds.Bottom + 30;
+            section.Y = movement.Bounds.Bottom + 30;
 
             section.Add
             (
@@ -3788,7 +3791,6 @@ namespace ClassicUO.Game.UI.Gumps
                     _holdShiftToSplitStack.IsChecked = false;
                     _enablePathfind.IsChecked = false;
                     _useShiftPathfind.IsChecked = false;
-                    _autoAvoidObstacles.IsChecked = false;
                     _alwaysRun.IsChecked = false;
                     _alwaysRunUnlessHidden.IsChecked = false;
                     _showHpMobile.IsChecked = false;
@@ -4006,6 +4008,7 @@ namespace ClassicUO.Game.UI.Gumps
                 case 13: // custom
                     _useSeasonFile.IsChecked = true;
                     _showTrapTiles.IsChecked = false;
+                    _autoAvoidObstacles.IsChecked = false;
                     _treeReplacementType.SelectedIndex = 0;
                     _blockerReplacementType.SelectedIndex = 0;
                     _customPlayerNameplate.IsChecked = false;
