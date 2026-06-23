@@ -197,7 +197,7 @@ namespace ClassicUO.Game.GameObjects
             Texture2D texture = SolidColorTextureCache.GetTexture(poison ? Color.LimeGreen : Color.Red);
             batcher.Draw(
                 texture,
-                new Vector2(x, y),
+                new Vector2(x + 22, y + 22),
                 texture.Bounds,
                 ShaderHueTranslator.GetHueVector(0),
                 rotation,
@@ -210,7 +210,7 @@ namespace ClassicUO.Game.GameObjects
 
         protected static bool CheckTrapMarkerMouseSelection(Point position)
         {
-            Rectangle bounds = new Rectangle(position.X - 14, position.Y - 14, 28, 28);
+            Rectangle bounds = new Rectangle(position.X + 8, position.Y + 8, 28, 28);
             return bounds.Contains(SelectedObject.TranslatedMousePositionByViewport);
         }
 
