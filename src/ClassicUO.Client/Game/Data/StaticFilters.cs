@@ -216,6 +216,7 @@ namespace ClassicUO.Game.Data
 
             AddBuiltInNonBlockingVegetation(tileData);
             AddBuiltInTrapMarkers(tileData);
+            AddBuiltInTrapMarkersByGraphic();
             LoadTrapMarkers(traps, false);
             LoadTrapMarkers(poisonTraps, true);
         }
@@ -266,6 +267,19 @@ namespace ClassicUO.Game.Data
             }
         }
 
+        private static void AddBuiltInTrapMarkersByGraphic()
+        {
+            ushort[] redTrapTiles =
+            {
+                0x1125 // mushroom trap
+            };
+
+            for (int i = 0; i < redTrapTiles.Length; i++)
+            {
+                MarkTrap(redTrapTiles[i], false);
+            }
+        }
+
         private static void LoadTrapMarkers(string filePath, bool poison)
         {
             TextFileParser parser = new TextFileParser(File.ReadAllText(filePath), new[] { ' ', '\t', ',' }, new[] { '#', ';' }, new[] { '"', '"' });
@@ -306,6 +320,8 @@ namespace ClassicUO.Game.Data
             ushort[] tiles =
             {
                 0x0C97, 0x0CEA,
+                0x0CA5, 0x0CA9, 0x0CB7, 0x0CBB,
+                0x0D55, 0x0D56, 0x0D81, 0x0D92,
                 0x1773, 0x1774, 0x1777, 0x1778, 0x177B, 0x177C
             };
 
@@ -313,7 +329,7 @@ namespace ClassicUO.Game.Data
             {
                 ushort graphic = tiles[i];
 
-                if (!tileData.StaticData[graphic].IsImpassable)
+                if (graphic < tileData.StaticData.Length && !tileData.StaticData[graphic].IsImpassable)
                 {
                     _filteredTiles[graphic] |= STATIC_TILES_FILTER_FLAGS.STFF_VEGETATION;
                 }
