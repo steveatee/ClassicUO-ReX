@@ -559,6 +559,20 @@ namespace ClassicUO.Game.GameObjects
                 oldDirection = (Direction) walkStep.Direction;
             }
 
+            if (ProfileManager.CurrentProfile.AutoAvoidObstacles && IsCardinalDirection(direction) && IsObstacle(direction, x, y, z))
+            {
+                Direction dodgeDirection = TryAvoidObstacle(direction, x, y, z);
+
+                if (IsObstacle(dodgeDirection, x, y, z))
+                {
+                    return false;
+                }
+
+                direction = dodgeDirection;
+                ClearSteps();
+                SetInWorldTile((ushort)x, (ushort)y, z);
+            }
+
             sbyte oldZ = z;
             ushort walkTime = (ushort)MovementSpeed.TurnDelay;
 
@@ -687,6 +701,38 @@ namespace ClassicUO.Game.GameObjects
             GetGroupForAnimation(this, 0, true);
 
             return true;
+        }
+
+        private static bool IsCardinalDirection(Direction direction)
+        {
+            direction &= Direction.Mask;
+
+            return direction == Direction.North
+                || direction == Direction.South
+                || direction == Direction.East
+                || direction == Direction.West;
+        }
+
+        private bool IsObstacle(Direction direction, int x, int y, sbyte z)
+        {
+            return !Pathfinder.CanWalk(ref direction, ref x, ref y, ref z);
+        }
+
+        private Direction TryAvoidObstacle(Direction direction, int x, int y, sbyte z)
+        {
+            switch (direction & Direction.Mask)
+            {
+                case Direction.North:
+                case Direction.South:
+                    return IsObstacle(Direction.East, x, y, z) ? Direction.West : Direction.East;
+
+                case Direction.East:
+                case Direction.West:
+                    return IsObstacle(Direction.North, x, y, z) ? Direction.South : Direction.North;
+
+                default:
+                    return direction;
+            }
         }
     }
 }
