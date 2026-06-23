@@ -183,6 +183,37 @@ namespace ClassicUO.Game.GameObjects
             }
         }
 
+        protected static void DrawTrapMarker(
+            UltimaBatcher2D batcher,
+            int x,
+            int y,
+            bool poison,
+            float depth
+        )
+        {
+            const int size = 28;
+            const float rotation = 0.7853982f;
+
+            Texture2D texture = SolidColorTextureCache.GetTexture(poison ? Color.LimeGreen : Color.Red);
+            batcher.Draw(
+                texture,
+                new Vector2(x, y),
+                texture.Bounds,
+                ShaderHueTranslator.GetHueVector(0),
+                rotation,
+                new Vector2(0.5f, 0.5f),
+                new Vector2(size, size),
+                SpriteEffects.None,
+                depth + 0.5f
+            );
+        }
+
+        protected static bool CheckTrapMarkerMouseSelection(Point position)
+        {
+            Rectangle bounds = new Rectangle(position.X - 14, position.Y - 14, 28, 28);
+            return bounds.Contains(SelectedObject.TranslatedMousePositionByViewport);
+        }
+
         protected static void DrawStaticRotated(
             UltimaBatcher2D batcher,
             ushort graphic,

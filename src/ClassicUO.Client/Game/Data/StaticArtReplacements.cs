@@ -13,6 +13,37 @@ namespace ClassicUO.Game.Data
         public const ushort BlockerReplaceGraphicStump = 0x0750;
         public const ushort BlockerReplaceGraphicRock = 0x0750;
 
+        public static ushort ReplaceFixedStatic(ushort graphic)
+        {
+            ushort replacement = Replace(graphic);
+
+            if (replacement != graphic)
+            {
+                return replacement;
+            }
+
+            Profile profile = ProfileManager.CurrentProfile;
+
+            if (profile == null || profile.BlockerType == 0 || !IsGravestoneArt(graphic))
+            {
+                return graphic;
+            }
+
+            return profile.BlockerType == 1 ? BlockerReplaceGraphicRock : BlockerReplaceGraphicTile;
+        }
+
+        public static ushort ReplaceFixedGroundItem(ushort graphic, bool isMovable)
+        {
+            Profile profile = ProfileManager.CurrentProfile;
+
+            if (profile == null || isMovable || profile.BlockerType == 0 || !IsGravestoneArt(graphic))
+            {
+                return graphic;
+            }
+
+            return profile.BlockerType == 1 ? BlockerReplaceGraphicRock : BlockerReplaceGraphicTile;
+        }
+
         public static ushort Replace(ushort graphic)
         {
             Profile profile = ProfileManager.CurrentProfile;
@@ -134,6 +165,25 @@ namespace ClassicUO.Game.Data
                 case 0x1180:
                 case 0x1181:
                 case 0x1182:
+                    return true;
+            }
+
+            return false;
+        }
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public static bool IsGravestoneArt(ushort graphic)
+        {
+            switch (graphic)
+            {
+                case 0x0ED3:
+                case 0x0ED4:
+                case 0x0ED5:
+                case 0x0ED6:
+                case 0x0ED7:
+                case 0x0ED8:
+                case 0x0ED9:
+                case 0x0EDA:
                     return true;
             }
 

@@ -1777,6 +1777,11 @@ namespace ClassicUO.Game.Managers
                 case MacroType.ToggleVegetation:
                     ProfileManager.CurrentProfile.HideVegetation = !ProfileManager.CurrentProfile.HideVegetation;
 
+                    foreach (var chunk in _world.Map.GetUsedChunks())
+                    {
+                        chunk.Mesh.IsDirty = true;
+                    }
+
                     break;
 
                 case MacroType.ToggleCaveTiles:

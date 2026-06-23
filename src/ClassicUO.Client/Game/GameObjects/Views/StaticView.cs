@@ -67,13 +67,19 @@ namespace ClassicUO.Game.GameObjects
                 partial = false;
             }
 
+            if (ProfileManager.CurrentProfile.ShowTrapTiles && StaticFilters.IsTrapMarker(graphic, out bool poisonTrap))
+            {
+                DrawTrapMarker(batcher, posX, posY, poisonTrap, depth);
+                return true;
+            }
+
             bool isTree = StaticFilters.IsTree(graphic, out _);
 
             // Trees and foliage stay visible inside CoT circle
             bool cot = !isTree && !ItemData.IsFoliage && TransparentTest(World.Player.Z + 5);
             Vector3 hueVec = ShaderHueTranslator.GetHueVector(hue, partial, AlphaHue / 255f, circletrans: cot);
 
-            graphic = StaticArtReplacements.Replace(graphic);
+            graphic = StaticArtReplacements.ReplaceFixedStatic(graphic);
             bool replacedIsTree = StaticFilters.IsTree(graphic, out _);
 
             DrawStaticAnimated(
@@ -109,7 +115,12 @@ namespace ClassicUO.Game.GameObjects
             {
                 ushort graphic = Graphic;
 
-                graphic = StaticArtReplacements.Replace(graphic);
+                if (ProfileManager.CurrentProfile.ShowTrapTiles && StaticFilters.IsTrapMarker(graphic, out _))
+                {
+                    return CheckTrapMarkerMouseSelection(RealScreenPosition);
+                }
+
+                graphic = StaticArtReplacements.ReplaceFixedStatic(graphic);
 
                 ref var index = ref Client.Game.UO.FileManager.Arts.File.GetValidRefEntry(graphic + 0x4000);
 

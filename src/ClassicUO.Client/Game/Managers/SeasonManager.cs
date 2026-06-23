@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: BSD-2-Clause
 
 using ClassicUO.Assets;
+using ClassicUO.Configuration;
 using System;
 using System.IO;
 
@@ -19,28 +20,29 @@ namespace ClassicUO.Game.Managers
         private static ushort[] _fallGraphic;
         private static ushort[] _winterGraphic;
         private static ushort[] _desolationGraphic;
+        private static bool _seasonFileLoaded;
 
         private static readonly string _seasonsFilePath = Path.Combine(CUOEnviroment.ExecutablePath, "Data", "Client");
         private static readonly string _seasonsFile = Path.Combine(_seasonsFilePath, "seasons.txt");
 
         static SeasonManager()
         {
-            LoadSeasonFile();
+            ClearSeasonData();
+
+            if (IsSeasonFileEnabled)
+            {
+                LoadSeasonFile();
+            }
         }
 
         public static void LoadSeasonFile()
         {
-            _springLandTile = new ushort[ArtLoader.MAX_LAND_DATA_INDEX_COUNT];
-            _summerLandTile = new ushort[ArtLoader.MAX_LAND_DATA_INDEX_COUNT];
-            _fallLandTile = new ushort[ArtLoader.MAX_LAND_DATA_INDEX_COUNT];
-            _winterLandTile = new ushort[ArtLoader.MAX_LAND_DATA_INDEX_COUNT];
-            _desolationLandTile = new ushort[ArtLoader.MAX_LAND_DATA_INDEX_COUNT];
+            ClearSeasonData();
 
-            _springGraphic = new ushort[ArtLoader.MAX_STATIC_DATA_INDEX_COUNT];
-            _summerGraphic = new ushort[ArtLoader.MAX_STATIC_DATA_INDEX_COUNT];
-            _fallGraphic = new ushort[ArtLoader.MAX_STATIC_DATA_INDEX_COUNT];
-            _winterGraphic = new ushort[ArtLoader.MAX_STATIC_DATA_INDEX_COUNT];
-            _desolationGraphic = new ushort[ArtLoader.MAX_STATIC_DATA_INDEX_COUNT];
+            if (!IsSeasonFileEnabled)
+            {
+                return;
+            }
 
             if (!File.Exists(_seasonsFile))
             {
@@ -143,10 +145,31 @@ namespace ClassicUO.Game.Managers
                     }
                 }
             }
+
+            _seasonFileLoaded = true;
+        }
+
+        public static void SetSeasonFileEnabled(bool enabled)
+        {
+            if (enabled)
+            {
+                LoadSeasonFile();
+            }
+            else
+            {
+                ClearSeasonData();
+            }
         }
 
         public static ushort GetSeasonGraphic(Season season, ushort graphic)
         {
+            if (!IsSeasonFileEnabled)
+            {
+                return graphic;
+            }
+
+            EnsureSeasonFileLoaded();
+
             switch (season)
             {
                 case Season.Spring: return _springGraphic[graphic] == 0 ? graphic : _springGraphic[graphic];
@@ -161,6 +184,13 @@ namespace ClassicUO.Game.Managers
 
         public static ushort GetLandSeasonGraphic(Season season, ushort graphic)
         {
+            if (!IsSeasonFileEnabled)
+            {
+                return graphic;
+            }
+
+            EnsureSeasonFileLoaded();
+
             switch (season)
             {
                 case Season.Spring: return _springLandTile[graphic] == 0 ? graphic : _springLandTile[graphic];
@@ -171,6 +201,32 @@ namespace ClassicUO.Game.Managers
             }
 
             return graphic;
+        }
+
+        private static bool IsSeasonFileEnabled => ProfileManager.CurrentProfile?.UseSeasonFile ?? true;
+
+        private static void EnsureSeasonFileLoaded()
+        {
+            if (!_seasonFileLoaded)
+            {
+                LoadSeasonFile();
+            }
+        }
+
+        private static void ClearSeasonData()
+        {
+            _springLandTile = new ushort[ArtLoader.MAX_LAND_DATA_INDEX_COUNT];
+            _summerLandTile = new ushort[ArtLoader.MAX_LAND_DATA_INDEX_COUNT];
+            _fallLandTile = new ushort[ArtLoader.MAX_LAND_DATA_INDEX_COUNT];
+            _winterLandTile = new ushort[ArtLoader.MAX_LAND_DATA_INDEX_COUNT];
+            _desolationLandTile = new ushort[ArtLoader.MAX_LAND_DATA_INDEX_COUNT];
+
+            _springGraphic = new ushort[ArtLoader.MAX_STATIC_DATA_INDEX_COUNT];
+            _summerGraphic = new ushort[ArtLoader.MAX_STATIC_DATA_INDEX_COUNT];
+            _fallGraphic = new ushort[ArtLoader.MAX_STATIC_DATA_INDEX_COUNT];
+            _winterGraphic = new ushort[ArtLoader.MAX_STATIC_DATA_INDEX_COUNT];
+            _desolationGraphic = new ushort[ArtLoader.MAX_STATIC_DATA_INDEX_COUNT];
+            _seasonFileLoaded = false;
         }
 
         #region CreateDefaultFile
