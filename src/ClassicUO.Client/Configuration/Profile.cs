@@ -220,7 +220,7 @@ namespace ClassicUO.Configuration
         public bool NameOverheadShowHpBar { get; set; } = true;
         public bool CustomPlayerNameplate { get; set; }
         public bool InvisibleHousesEnabled { get; set; }
-        public int InvisibleHousesZ { get; set; } = 10;
+        public int InvisibleHousesZ { get; set; } = 1;
         public int DontRemoveHouseBelowZ { get; set; } = 6;
         public bool ShowTargetRangeIndicator { get; set; }
         public bool PartyInviteGump { get; set; }

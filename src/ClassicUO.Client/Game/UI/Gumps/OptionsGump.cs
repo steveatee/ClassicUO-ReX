@@ -38,7 +38,7 @@ namespace ClassicUO.Game.UI.Gumps
         //experimental
         private Checkbox _autoOpenDoors, _autoOpenCorpse, _skipEmptyCorpse, _disableTabBtn, _disableCtrlQWBtn, _disableDefaultHotkeys, _disableArrowBtn, _disableAutoMove, _overrideContainerLocation, _smoothDoors, _showTargetRangeIndicator, _customBars, _customBarsBBG, _saveHealthbars;
         private Checkbox _nameOverheadAlwaysOn, _nameOverheadShowHpBar, _customPlayerNameplate, _invisibleHousesEnabled;
-        private HSliderBar _invisibleHousesZ;
+        private HSliderBar _invisibleHousesZ, _dontRemoveHouseBelowZ;
         private HSliderBar _cellSize;
         private Checkbox _containerScaleItems, _containerDoubleClickToLoot, _relativeDragAnDropItems, _useLargeContianersGumps, _highlightContainersWhenMouseIsOver;
 
@@ -360,19 +360,6 @@ namespace ClassicUO.Game.UI.Gumps
                 {
                     ButtonParameter = (int)Buttons.OpenIgnoreList
                 }
-            );
-
-            Add
-            (
-                new NiceButton
-                (
-                    10,
-                    10 + 30 * i++,
-                    140,
-                    25,
-                    ButtonAction.SwitchPage,
-                    "Custom"
-                ) { ButtonParameter = 13 }
             );
 
             Add
@@ -1605,6 +1592,21 @@ namespace ClassicUO.Game.UI.Gumps
                     1,
                     25,
                     _currentProfile.InvisibleHousesZ,
+                    startX,
+                    startY,
+                    200
+                )
+            );
+
+            section2.Add(AddLabel(null, "Ground threshold", startX, startY));
+            section2.AddRight
+            (
+                _dontRemoveHouseBelowZ = AddHSlider
+                (
+                    null,
+                    1,
+                    25,
+                    _currentProfile.DontRemoveHouseBelowZ,
                     startX,
                     startY,
                     200
@@ -3992,6 +3994,10 @@ namespace ClassicUO.Game.UI.Gumps
                     _showTrapTiles.IsChecked = false;
                     _treeReplacementType.SelectedIndex = 0;
                     _blockerReplacementType.SelectedIndex = 0;
+                    _customPlayerNameplate.IsChecked = false;
+                    _invisibleHousesEnabled.IsChecked = false;
+                    _invisibleHousesZ.Value = 1;
+                    _dontRemoveHouseBelowZ.Value = 6;
 
                     break;
             }
@@ -4496,8 +4502,20 @@ namespace ClassicUO.Game.UI.Gumps
             _currentProfile.NameOverheadToggled = _nameOverheadAlwaysOn.IsChecked;
             _currentProfile.NameOverheadShowHpBar = _nameOverheadShowHpBar.IsChecked;
             _currentProfile.CustomPlayerNameplate = _customPlayerNameplate.IsChecked;
+
+            bool invisibleHousesChanged =
+                _currentProfile.InvisibleHousesEnabled != _invisibleHousesEnabled.IsChecked
+                || _currentProfile.InvisibleHousesZ != _invisibleHousesZ.Value
+                || _currentProfile.DontRemoveHouseBelowZ != _dontRemoveHouseBelowZ.Value;
+
             _currentProfile.InvisibleHousesEnabled = _invisibleHousesEnabled.IsChecked;
             _currentProfile.InvisibleHousesZ = _invisibleHousesZ.Value;
+            _currentProfile.DontRemoveHouseBelowZ = _dontRemoveHouseBelowZ.Value;
+
+            if (invisibleHousesChanged)
+            {
+                MarkUsedChunksDirty();
+            }
 
 
             bool updateHealthBars = _currentProfile.CustomBarsToggled != _customBars.IsChecked;

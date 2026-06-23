@@ -1080,7 +1080,9 @@ namespace ClassicUO.Game.Scenes
                                 continue;
                             }
 
-                            obj.AllowedToDraw = !HasSurfaceOverhead(mobile);
+                            obj.AllowedToDraw =
+                                ProfileManager.CurrentProfile.InvisibleHousesEnabled
+                                || !HasSurfaceOverhead(mobile);
 
                             PushToRenderQueue(
                                 obj,
