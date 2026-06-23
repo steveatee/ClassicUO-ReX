@@ -262,7 +262,12 @@ namespace ClassicUO.Game.Map
             if (!staticObj.AllowedToDraw || staticObj.IsDestroyed)
                 return;
 
-            CountStaticLike(ref staticObj.ItemData, staticObj.Graphic);
+            if (ShouldHideVegetation(staticObj))
+                return;
+
+            ushort graphic = StaticArtReplacements.ReplaceFixedStatic(staticObj.Graphic);
+            ref StaticTiles itemData = ref Client.Game.UO.FileManager.TileData.StaticData[graphic];
+            CountStaticLike(ref itemData, graphic);
         }
 
         private void CountMulti(Multi multi)
@@ -273,7 +278,12 @@ namespace ClassicUO.Game.Map
             if (multi.State != 0)
                 return;
 
-            CountStaticLike(ref multi.ItemData, multi.Graphic);
+            if (ShouldHideVegetation(multi))
+                return;
+
+            ushort graphic = StaticArtReplacements.Replace(multi.Graphic);
+            ref StaticTiles itemData = ref Client.Game.UO.FileManager.TileData.StaticData[graphic];
+            CountStaticLike(ref itemData, graphic);
         }
 
         private void CountStaticLike(ref StaticTiles itemData, ushort graphic)
@@ -388,7 +398,15 @@ namespace ClassicUO.Game.Map
             if (itemData.IsFoliage)
                 return true;
 
+            Profile profile = ProfileManager.CurrentProfile;
+
+            if (profile != null && profile.ShowTrapTiles && StaticFilters.IsTrapMarker(graphic, out _))
+                return true;
+
             if (StaticFilters.IsTree(graphic, out _))
+                return true;
+
+            if (StaticFilters.IsRock(graphic))
                 return true;
 
             return false;
@@ -399,7 +417,12 @@ namespace ClassicUO.Game.Map
             if (!staticObj.AllowedToDraw || staticObj.IsDestroyed)
                 return;
 
-            TryAddStaticLike(staticObj, ref staticObj.ItemData, staticObj.Graphic, staticObj.Hue);
+            if (ShouldHideVegetation(staticObj))
+                return;
+
+            ushort graphic = StaticArtReplacements.ReplaceFixedStatic(staticObj.Graphic);
+            ref StaticTiles itemData = ref Client.Game.UO.FileManager.TileData.StaticData[graphic];
+            TryAddStaticLike(staticObj, ref itemData, graphic, staticObj.Hue);
         }
 
         private void TryAddMulti(Multi multi)
@@ -410,7 +433,12 @@ namespace ClassicUO.Game.Map
             if (multi.State != 0)
                 return;
 
-            TryAddStaticLike(multi, ref multi.ItemData, multi.Graphic, multi.Hue);
+            if (ShouldHideVegetation(multi))
+                return;
+
+            ushort graphic = StaticArtReplacements.Replace(multi.Graphic);
+            ref StaticTiles itemData = ref Client.Game.UO.FileManager.TileData.StaticData[graphic];
+            TryAddStaticLike(multi, ref itemData, graphic, multi.Hue);
         }
 
         private void TryAddStaticLike(GameObject obj, ref StaticTiles itemData, ushort graphic, ushort hue)
@@ -439,6 +467,28 @@ namespace ClassicUO.Game.Map
             obj.MeshSpriteIndex = idx;
             Statics.WriteQuadAt(idx, artInfo.Texture, artInfo.UV, posX, posY, hueVec, depth);
             obj.InChunkMesh = true;
+        }
+
+        private static bool ShouldHideVegetation(Static staticObj)
+        {
+            Profile profile = ProfileManager.CurrentProfile;
+
+            return profile != null
+                   && profile.HideVegetation
+                   && !staticObj.ItemData.IsMultiMovable
+                   && !staticObj.ItemData.IsImpassable
+                   && staticObj.IsVegetation;
+        }
+
+        private static bool ShouldHideVegetation(Multi multi)
+        {
+            Profile profile = ProfileManager.CurrentProfile;
+
+            return profile != null
+                   && profile.HideVegetation
+                   && !multi.ItemData.IsMultiMovable
+                   && !multi.ItemData.IsImpassable
+                   && multi.IsVegetation;
         }
 
         private void WriteStretchedLand(

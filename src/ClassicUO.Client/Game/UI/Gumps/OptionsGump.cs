@@ -99,9 +99,11 @@ namespace ClassicUO.Game.UI.Gumps
                          _chatAfterEnter,
                          _chatAdditionalButtonsCheckbox,
                          _chatShiftEnterCheckbox,
-                         _enableCaveBorder;
+                         _enableCaveBorder,
+                         _useSeasonFile,
+                         _showTrapTiles;
         private Checkbox _holdShiftForContext, _holdShiftToSplitStack, _reduceFPSWhenInactive, _sallosEasyGrab, _partyInviteGump, _objectsFading, _textFading, _holdAltToMoveGumps;
-        private Combobox _hpComboBox, _healtbarType, _fieldsType, _hpComboBoxShowWhen;
+        private Combobox _hpComboBox, _healtbarType, _fieldsType, _treeReplacementType, _blockerReplacementType, _hpComboBoxShowWhen;
 
         // infobar
         private List<InfoBarBuilderControl> _infoBarBuilderControls;
@@ -329,6 +331,19 @@ namespace ClassicUO.Game.UI.Gumps
                     ButtonAction.SwitchPage,
                     ResGumps.Experimental
                 ) { ButtonParameter = 12 }
+            );
+
+            Add
+            (
+                new NiceButton
+                (
+                    10,
+                    10 + 30 * i++,
+                    140,
+                    25,
+                    ButtonAction.SwitchPage,
+                    "Custom"
+                ) { ButtonParameter = 13 }
             );
 
             Add
@@ -1453,6 +1468,152 @@ namespace ClassicUO.Game.UI.Gumps
             Add(rightArea, PAGE);
         }
 
+        private void BuildCustom()
+        {
+            const int PAGE = 13;
+
+            ScrollArea rightArea = new ScrollArea
+            (
+                190,
+                20,
+                WIDTH - 210,
+                420,
+                true
+            );
+
+            int startX = 5;
+            int startY = 5;
+
+            DataBox box = new DataBox(startX, startY, rightArea.Width - 15, 1);
+            box.WantUpdateSize = true;
+            rightArea.Add(box);
+
+            SettingsSection terrain = AddSettingsSection(box, "Terrain");
+
+            terrain.Add
+            (
+                _useSeasonFile = AddCheckBox
+                (
+                    null,
+                    "Use seasons.txt",
+                    _currentProfile.UseSeasonFile,
+                    startX,
+                    startY
+                )
+            );
+
+            terrain.Add
+            (
+                _showTrapTiles = AddCheckBox
+                (
+                    null,
+                    "Show trap tiles",
+                    _currentProfile.ShowTrapTiles,
+                    startX,
+                    startY
+                )
+            );
+
+            int mode = _currentProfile.TreeType;
+
+            if (mode < 0 || mode > 2)
+            {
+                mode = 0;
+            }
+
+            terrain.Add(AddLabel(null, "Tree Replacement", startX, startY));
+            terrain.AddRight
+            (
+                _treeReplacementType = AddCombobox
+                (
+                    null,
+                    new[] { "Normal", "Stump", "Tile" },
+                    mode,
+                    startX,
+                    startY,
+                    120
+                )
+            );
+            _treeReplacementType.OnOptionSelected += (sender, selected) =>
+            {
+                _currentProfile.TreeType = ClampReplacementMode(selected);
+                MarkUsedChunksDirty();
+            };
+
+            mode = _currentProfile.BlockerType;
+
+            if (mode < 0 || mode > 2)
+            {
+                mode = 0;
+            }
+
+            terrain.Add(AddLabel(null, "Blocker Replacement", startX, startY));
+            terrain.AddRight
+            (
+                _blockerReplacementType = AddCombobox
+                (
+                    null,
+                    new[] { "Normal", "Stump/Rock", "Tile" },
+                    mode,
+                    startX,
+                    startY,
+                    120
+                )
+            );
+            _blockerReplacementType.OnOptionSelected += (sender, selected) =>
+            {
+                _currentProfile.BlockerType = ClampReplacementMode(selected);
+                MarkUsedChunksDirty();
+            };
+
+            SettingsSection section = AddSettingsSection(box, "Player Overlay");
+            section.Y = terrain.Bounds.Bottom + 30;
+
+            section.Add
+            (
+                _customPlayerNameplate = AddCheckBox
+                (
+                    null,
+                    "Show permanent mobile names with HP bars below characters",
+                    _currentProfile.CustomPlayerNameplate,
+                    startX,
+                    startY
+                )
+            );
+
+            SettingsSection section2 = AddSettingsSection(box, "Invisible Houses");
+            section2.Y = section.Bounds.Bottom + 30;
+
+            section2.Add
+            (
+                _invisibleHousesEnabled = AddCheckBox
+                (
+                    null,
+                    "Hide house pieces above your position",
+                    _currentProfile.InvisibleHousesEnabled,
+                    startX,
+                    startY
+                )
+            );
+
+            section2.Add(AddLabel(null, "Height threshold", startX, startY));
+            section2.AddRight
+            (
+                _invisibleHousesZ = AddHSlider
+                (
+                    null,
+                    1,
+                    25,
+                    _currentProfile.InvisibleHousesZ,
+                    startX,
+                    startY,
+                    200
+                )
+            );
+
+            Add(rightArea, PAGE);
+        }
+
         private void BuildSounds()
         {
             const int PAGE = 2;
@@ -1569,73 +1730,6 @@ namespace ClassicUO.Game.UI.Gumps
             );
 
             startY += _musicInBackground.Height + 2;
-
-            Add(rightArea, PAGE);
-        }
-
-        private void BuildCustom()
-        {
-            const int PAGE = 13;
-
-            ScrollArea rightArea = new ScrollArea
-            (
-                190,
-                20,
-                WIDTH - 210,
-                420,
-                true
-            );
-
-            int startX = 5;
-            int startY = 5;
-
-            DataBox box = new DataBox(startX, startY, rightArea.Width - 15, 1);
-            box.WantUpdateSize = true;
-            rightArea.Add(box);
-
-            SettingsSection section = AddSettingsSection(box, "Player Overlay");
-
-            section.Add
-            (
-                _customPlayerNameplate = AddCheckBox
-                (
-                    null,
-                    "Show permanent mobile names with HP bars below characters",
-                    _currentProfile.CustomPlayerNameplate,
-                    startX,
-                    startY
-                )
-            );
-
-            SettingsSection section2 = AddSettingsSection(box, "Invisible Houses");
-            section2.Y = section.Bounds.Bottom + 30;
-
-            section2.Add
-            (
-                _invisibleHousesEnabled = AddCheckBox
-                (
-                    null,
-                    "Hide house pieces above your position",
-                    _currentProfile.InvisibleHousesEnabled,
-                    startX,
-                    startY
-                )
-            );
-
-            section2.Add(AddLabel(null, "Height threshold", startX, startY));
-            section2.AddRight
-            (
-                _invisibleHousesZ = AddHSlider
-                (
-                    null,
-                    1,
-                    25,
-                    _currentProfile.InvisibleHousesZ,
-                    startX,
-                    startY,
-                    200
-                )
-            );
 
             Add(rightArea, PAGE);
         }
@@ -3892,6 +3986,14 @@ namespace ClassicUO.Game.UI.Gumps
                     _disableAutoMove.IsChecked = false;
 
                     break;
+
+                case 13: // custom
+                    _useSeasonFile.IsChecked = true;
+                    _showTrapTiles.IsChecked = false;
+                    _treeReplacementType.SelectedIndex = 0;
+                    _blockerReplacementType.SelectedIndex = 0;
+
+                    break;
             }
         }
 
@@ -3967,8 +4069,40 @@ namespace ClassicUO.Game.UI.Gumps
                 _currentProfile.TreeToStumps = _treeToStumps.IsChecked;
             }
 
+            bool seasonFileChanged = _currentProfile.UseSeasonFile != _useSeasonFile.IsChecked;
+            _currentProfile.UseSeasonFile = _useSeasonFile.IsChecked;
+
+            if (seasonFileChanged)
+            {
+                SeasonManager.SetSeasonFileEnabled(_currentProfile.UseSeasonFile);
+            }
+
+            bool trapTilesChanged = _currentProfile.ShowTrapTiles != _showTrapTiles.IsChecked;
+            _currentProfile.ShowTrapTiles = _showTrapTiles.IsChecked;
+
+            bool rebuildStaticMeshes =
+                _currentProfile.TreeType != ClampReplacementMode(_treeReplacementType.SelectedIndex)
+                || _currentProfile.BlockerType != ClampReplacementMode(_blockerReplacementType.SelectedIndex);
+            _currentProfile.TreeType = ClampReplacementMode(_treeReplacementType.SelectedIndex);
+            _currentProfile.BlockerType = ClampReplacementMode(_blockerReplacementType.SelectedIndex);
+
+            if (seasonFileChanged)
+            {
+                RefreshSeasonGraphics();
+            }
+            else if (rebuildStaticMeshes || trapTilesChanged)
+            {
+                MarkUsedChunksDirty();
+            }
+
             _currentProfile.FieldsType = _fieldsType.SelectedIndex;
-            _currentProfile.HideVegetation = _hideVegetation.IsChecked;
+
+            if (_currentProfile.HideVegetation != _hideVegetation.IsChecked)
+            {
+                _currentProfile.HideVegetation = _hideVegetation.IsChecked;
+                MarkUsedChunksDirty();
+            }
+
             _currentProfile.NoColorObjectsOutOfRange = _noColorOutOfRangeObjects.IsChecked;
             _currentProfile.UseCircleOfTransparency = _useCircleOfTransparency.IsChecked;
             _currentProfile.CircleOfTransparencyRadius = _circleOfTranspRadius.Value;
@@ -4477,6 +4611,43 @@ namespace ClassicUO.Game.UI.Gumps
             _currentProfile.TooltipFont = _tooltip_font_selector.GetSelectedFont();
 
             _currentProfile?.Save(World, ProfileManager.ProfilePath);
+        }
+
+        private void MarkUsedChunksDirty()
+        {
+            foreach (var chunk in World.Map.GetUsedChunks())
+            {
+                chunk.Mesh.IsDirty = true;
+            }
+        }
+
+        private static int ClampReplacementMode(int mode)
+        {
+            return mode < 0 || mode > 2 ? 0 : mode;
+        }
+
+        private void RefreshSeasonGraphics()
+        {
+            foreach (var chunk in World.Map.GetUsedChunks())
+            {
+                if (chunk == null)
+                {
+                    continue;
+                }
+
+                for (int x = 0; x < 8; x++)
+                {
+                    for (int y = 0; y < 8; y++)
+                    {
+                        for (GameObject obj = chunk.GetHeadObject(x, y); obj != null; obj = obj.TNext)
+                        {
+                            obj.UpdateGraphicBySeason();
+                        }
+                    }
+                }
+
+                chunk.Mesh.IsDirty = true;
+            }
         }
 
         internal void UpdateVideo()

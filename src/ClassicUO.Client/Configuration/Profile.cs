@@ -119,6 +119,10 @@ namespace ClassicUO.Configuration
         public int MobileHPShowWhen { get; set; } // 0 = Always, 1 - <100%
         public bool DrawRoofs { get; set; } = true;
         public bool TreeToStumps { get; set; }
+        public int TreeType { get; set; }
+        public int BlockerType { get; set; }
+        public bool UseSeasonFile { get; set; } = true;
+        public bool ShowTrapTiles { get; set; }
         public bool EnableCaveBorder { get; set; }
         public bool HideVegetation { get; set; }
         public int FieldsType { get; set; } // 0 = normal, 1 = static, 2 = tile

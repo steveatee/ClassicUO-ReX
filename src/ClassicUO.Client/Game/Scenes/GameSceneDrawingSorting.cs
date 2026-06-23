@@ -689,6 +689,12 @@ namespace ClassicUO.Game.Scenes
                 partial = m.ItemData.IsPartialHue;
             }
 
+            if (TileMarkerManager.Instance.IsTileMarked(obj.X, obj.Y, _world.Map.Index, out ushort markedHue))
+            {
+                hue = markedHue;
+                partial = false;
+            }
+
             float hueX, hueY;
             if (hue != 0)
             {
@@ -986,7 +992,7 @@ namespace ClassicUO.Game.Scenes
                                 continue;
                             }
 
-                            if (itemData.IsFoliage && profile.TreeToStumps)
+                            if (itemData.IsFoliage && profile.TreeToStumps && profile.TreeType == 0)
                             {
                                 continue;
                             }
@@ -1028,7 +1034,7 @@ namespace ClassicUO.Game.Scenes
 
                             if (!itemData.IsMultiMovable)
                             {
-                                if (itemData.IsFoliage && profile.TreeToStumps)
+                                if (itemData.IsFoliage && profile.TreeToStumps && profile.TreeType == 0)
                                 {
                                     continue;
                                 }
@@ -1128,6 +1134,7 @@ namespace ClassicUO.Game.Scenes
                                 !itemData.IsMultiMovable
                                 && itemData.IsFoliage
                                 && profile.TreeToStumps
+                                && profile.TreeType == 0
                             )
                             {
                                 continue;

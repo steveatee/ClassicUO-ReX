@@ -2,6 +2,7 @@
 
 using System;
 using System.Collections.Generic;
+using System.Globalization;
 using System.IO;
 using System.Runtime.CompilerServices;
 using ClassicUO.Configuration;
@@ -18,7 +19,9 @@ namespace ClassicUO.Game.Data
         STFF_STUMP = 0x02,
         STFF_STUMP_HATCHED = 0x04,
         STFF_VEGETATION = 0x08,
-        STFF_WATER = 0x10
+        STFF_WATER = 0x10,
+        STFF_TRAP = 0x20,
+        STFF_POISON_TRAP = 0x40
     }
 
     internal static class StaticFilters
@@ -40,6 +43,8 @@ namespace ClassicUO.Game.Data
             string cave = Path.Combine(path, "cave.txt");
             string vegetation = Path.Combine(path, "vegetation.txt");
             string trees = Path.Combine(path, "tree.txt");
+            string traps = Path.Combine(path, "trap.txt");
+            string poisonTraps = Path.Combine(path, "poisontrap.txt");
 
 
             if (!File.Exists(cave))
@@ -205,6 +210,114 @@ namespace ClassicUO.Game.Data
                     }
                 }
             }
+
+            CreateTrapFileIfMissing(traps, false);
+            CreateTrapFileIfMissing(poisonTraps, true);
+
+            AddBuiltInNonBlockingVegetation(tileData);
+            AddBuiltInTrapMarkers(tileData);
+            LoadTrapMarkers(traps, false);
+            LoadTrapMarkers(poisonTraps, true);
+        }
+
+        private static void CreateTrapFileIfMissing(string filePath, bool poison)
+        {
+            if (File.Exists(filePath))
+            {
+                return;
+            }
+
+            using (StreamWriter writer = new StreamWriter(filePath))
+            {
+                writer.WriteLine(poison
+                    ? "# Add green poison trap art IDs here, one per line. Decimal and 0x hex are both accepted."
+                    : "# Add red trap art IDs here, one per line. Decimal and 0x hex are both accepted.");
+                writer.WriteLine("# Example: 0x1234");
+            }
+        }
+
+        private static void AddBuiltInTrapMarkers(TileDataLoader tileData)
+        {
+            int count = Math.Min(_filteredTiles.Length, tileData.StaticData.Length);
+
+            for (int graphic = 0; graphic < count; graphic++)
+            {
+                string name = tileData.StaticData[graphic].Name;
+
+                if (string.IsNullOrWhiteSpace(name))
+                {
+                    continue;
+                }
+
+                string lowerName = name.ToLowerInvariant();
+                bool trapLike =
+                    lowerName.Contains("trap")
+                    || lowerName.Contains("saw")
+                    || lowerName.Contains("spike")
+                    || lowerName.Contains("dart")
+                    || lowerName.Contains("blade");
+
+                if (!trapLike)
+                {
+                    continue;
+                }
+
+                MarkTrap((ushort)graphic, lowerName.Contains("poison") || lowerName.Contains("gas"));
+            }
+        }
+
+        private static void LoadTrapMarkers(string filePath, bool poison)
+        {
+            TextFileParser parser = new TextFileParser(File.ReadAllText(filePath), new[] { ' ', '\t', ',' }, new[] { '#', ';' }, new[] { '"', '"' });
+
+            while (!parser.IsEOF())
+            {
+                List<string> ss = parser.ReadTokens();
+
+                if (ss != null && ss.Count != 0 && TryParseGraphic(ss[0], out ushort graphic))
+                {
+                    MarkTrap(graphic, poison);
+                }
+            }
+        }
+
+        private static bool TryParseGraphic(string token, out ushort graphic)
+        {
+            if (token.StartsWith("0x", StringComparison.InvariantCultureIgnoreCase))
+            {
+                return ushort.TryParse(token.Substring(2), NumberStyles.HexNumber, CultureInfo.InvariantCulture, out graphic);
+            }
+
+            return ushort.TryParse(token, NumberStyles.Integer, CultureInfo.InvariantCulture, out graphic);
+        }
+
+        private static void MarkTrap(ushort graphic, bool poison)
+        {
+            _filteredTiles[graphic] |= STATIC_TILES_FILTER_FLAGS.STFF_TRAP;
+
+            if (poison)
+            {
+                _filteredTiles[graphic] |= STATIC_TILES_FILTER_FLAGS.STFF_POISON_TRAP;
+            }
+        }
+
+        private static void AddBuiltInNonBlockingVegetation(TileDataLoader tileData)
+        {
+            ushort[] tiles =
+            {
+                0x0C97, 0x0CEA,
+                0x1773, 0x1774, 0x1777, 0x1778, 0x177B, 0x177C
+            };
+
+            for (int i = 0; i < tiles.Length; i++)
+            {
+                ushort graphic = tiles[i];
+
+                if (!tileData.StaticData[graphic].IsImpassable)
+                {
+                    _filteredTiles[graphic] |= STATIC_TILES_FILTER_FLAGS.STFF_VEGETATION;
+                }
+            }
         }
 
         public static void CleanCaveTextures()
@@ -265,6 +378,15 @@ namespace ClassicUO.Game.Data
         public static bool IsVegetation(ushort g)
         {
             return (_filteredTiles[g] & STATIC_TILES_FILTER_FLAGS.STFF_VEGETATION) != 0;
+        }
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public static bool IsTrapMarker(ushort g, out bool poison)
+        {
+            STATIC_TILES_FILTER_FLAGS flag = _filteredTiles[g];
+            poison = (flag & STATIC_TILES_FILTER_FLAGS.STFF_POISON_TRAP) != 0;
+
+            return (flag & STATIC_TILES_FILTER_FLAGS.STFF_TRAP) != 0;
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]

@@ -8,6 +8,7 @@ using Microsoft.Xna.Framework.Graphics;
 using StbTextEditSharp;
 using System;
 using System.Collections.Generic;
+using System.Runtime.InteropServices;
 
 namespace ClassicUO.Game
 {
@@ -128,30 +129,69 @@ namespace ClassicUO.Game
                             Client.Game.UO.FileManager.Fonts.SetUseHTML(true, HTMLColor, HasBackgroundColor);
                         }
 
+                        // The atlas-based renderer (see DrawGlyphs) iterates _info.Data to
+                        // place per-glyph quads — so _info must carry exactly the chars
+                        // that should appear on screen, including the "..." ellipsis for
+                        // cropped strings. Pre-atlas (<= commit 119108d3), cropping with
+                        // ellipsis happened inside GenerateUnicode/GeneratePixelsUnicode
+                        // when producing the per-string texture; _info was not on the
+                        // draw path. Now that _info IS on the draw path, we need to crop
+                        // the text here via GetTextByWidth{Unicode,ASCII} and hand the
+                        // already-truncated result (e.g. "LongTermMu...") to GetInfo*.
+                        // Otherwise long single-word property names would either go blank
+                        // or overflow without an ellipsis marker.
+                        string layoutText = Text;
+                        int layoutWidth = MaxWidth > 0 ? MaxWidth : Width;
+
+                        if (MaxWidth > 0 && (FontStyle & FontStyle.Cropped) != 0)
+                        {
+                            var fonts = Client.Game.UO.FileManager.Fonts;
+                            int realWidth = IsUnicode
+                                ? fonts.GetWidthUnicode(Font, Text)
+                                : fonts.GetWidthASCII(Font, Text);
+
+                            if (realWidth > MaxWidth)
+                            {
+                                layoutText = IsUnicode
+                                    ? fonts.GetTextByWidthUnicode(Font, Text.AsSpan(), MaxWidth, isCropped: true, Align, (ushort)FontStyle)
+                                    : fonts.GetTextByWidthASCII(Font, Text, MaxWidth, isCropped: true, Align, (ushort)FontStyle);
+                            }
+                        }
+
+                        // countret/countspaces MUST be true so that CharCount in each
+                        // MultilinesFontInfo node includes '\n' and ' '. Stb's hit-testing
+                        // (LocateCoord) walks rows by `i += r.num_chars` and bails out by
+                        // returning text length when it sees num_chars == 0. With
+                        // countret=false an empty line ("\n") produces CharCount=0, which
+                        // forces every click on an empty editable area (book body, etc.)
+                        // to put the caret at the end of the buffer — observed in
+                        // ModernBookGump as "click goes to the last page". The draw path
+                        // (DrawGlyphs) explicitly skips '\n'/'\r' glyphs so counting them
+                        // here costs nothing visually.
                         if (IsUnicode)
                         {
                             _info = Client.Game.UO.FileManager.Fonts.GetInfoUnicode(
                                 Font,
-                                Text,
-                                Text.Length,
+                                layoutText,
+                                layoutText.Length,
                                 Align,
                                 (ushort)FontStyle,
-                                MaxWidth > 0 ? MaxWidth : Width,
-                                countret: false,
-                                countspaces: false
+                                layoutWidth,
+                                countret: true,
+                                countspaces: true
                             );
                         }
                         else
                         {
                             _info = Client.Game.UO.FileManager.Fonts.GetInfoASCII(
                                 Font,
-                                Text,
-                                Text.Length,
+                                layoutText,
+                                layoutText.Length,
                                 Align,
                                 (ushort)FontStyle,
-                                MaxWidth > 0 ? MaxWidth : Width,
-                                countret: false,
-                                countspaces: false
+                                layoutWidth,
+                                countret: true,
+                                countspaces: true
                             );
                         }
 
@@ -367,7 +407,7 @@ namespace ClassicUO.Game
 
                     if (x >= 0)
                     {
-                        char c = x >= info.Data.Length ? '\n' : info.Data[x].Item;
+                        char c = x >= info.Data.Count ? '\n' : info.Data[x].Item;
 
                         if (IsUnicode)
                         {
@@ -541,11 +581,12 @@ namespace ClassicUO.Game
                         break;
                 }
 
-                int dataLen = ptr.Data.Length;
+                int dataLen = ptr.Data.Count;
+                var dataSpan = CollectionsMarshal.AsSpan(ptr.Data);
 
                 for (int i = 0; i < dataLen; i++)
                 {
-                    ref MultilinesFontData dataPtr = ref ptr.Data.Buffer[i];
+                    ref MultilinesFontData dataPtr = ref dataSpan[i];
                     char si = dataPtr.Item;
 
                     if (si == '\n' || si == '\r')

@@ -78,17 +78,24 @@ namespace ClassicUO.Game.Managers
                 "marktile",
                 s =>
                 {
+                    if (_world.Player == null)
+                    {
+                        return;
+                    }
+
                     if (s.Length > 1 && s[1] == "-r")
                     {
                         if (s.Length == 2)
                         {
                             TileMarkerManager.Instance.RemoveTile(_world.Player.X, _world.Player.Y, _world.Map.Index);
+                            GameActions.Print(_world, $"Removed tile marker at {_world.Player.X}, {_world.Player.Y} ({_world.Map.Index})");
                         }
                         else if (s.Length == 4)
                         {
                             if (int.TryParse(s[2], out int x) && int.TryParse(s[3], out int y))
                             {
                                 TileMarkerManager.Instance.RemoveTile(x, y, _world.Map.Index);
+                                GameActions.Print(_world, $"Removed tile marker at {x}, {y} ({_world.Map.Index})");
                             }
                         }
                         else if (s.Length == 5)
@@ -100,6 +107,7 @@ namespace ClassicUO.Game.Managers
                             )
                             {
                                 TileMarkerManager.Instance.RemoveTile(x, y, map);
+                                GameActions.Print(_world, $"Removed tile marker at {x}, {y} ({map})");
                             }
                         }
                     }
@@ -107,13 +115,15 @@ namespace ClassicUO.Game.Managers
                     {
                         if (s.Length == 1)
                         {
-                            TileMarkerManager.Instance.AddTile(_world.Player.X, _world.Player.Y, _world.Map.Index, 32);
+                            TileMarkerManager.Instance.AddTile(_world.Player.X, _world.Player.Y, _world.Map.Index, 0x44);
+                            GameActions.Print(_world, $"Added tile marker at {_world.Player.X}, {_world.Player.Y} ({_world.Map.Index}) hue 0x0044");
                         }
                         else if (s.Length == 2)
                         {
                             if (ushort.TryParse(s[1], out ushort hue))
                             {
                                 TileMarkerManager.Instance.AddTile(_world.Player.X, _world.Player.Y, _world.Map.Index, hue);
+                                GameActions.Print(_world, $"Added tile marker at {_world.Player.X}, {_world.Player.Y} ({_world.Map.Index}) hue {hue}");
                             }
                         }
                         else if (s.Length == 4)
@@ -125,6 +135,7 @@ namespace ClassicUO.Game.Managers
                             )
                             {
                                 TileMarkerManager.Instance.AddTile(x, y, _world.Map.Index, hue);
+                                GameActions.Print(_world, $"Added tile marker at {x}, {y} ({_world.Map.Index}) hue {hue}");
                             }
                         }
                         else if (s.Length == 5)
@@ -137,6 +148,7 @@ namespace ClassicUO.Game.Managers
                             )
                             {
                                 TileMarkerManager.Instance.AddTile(x, y, map, hue);
+                                GameActions.Print(_world, $"Added tile marker at {x}, {y} ({map}) hue {hue}");
                             }
                         }
                     }

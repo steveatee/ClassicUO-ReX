@@ -60,6 +60,17 @@ namespace ClassicUO.Game.GameObjects
 
             if (OnGround)
             {
+                if (!IsMulti)
+                {
+                    graphic = StaticArtReplacements.ReplaceFixedGroundItem(graphic, (Flags & Flags.Movable) != 0);
+                }
+
+                if (ProfileManager.CurrentProfile.ShowTrapTiles && StaticFilters.IsTrapMarker(DisplayedGraphic, out bool poisonTrap))
+                {
+                    DrawTrapMarker(batcher, posX, posY, poisonTrap, depth);
+                    return true;
+                }
+
                 if (ItemData.IsAnimated)
                 {
                     if (ProfileManager.CurrentProfile.FieldsType == 2)
@@ -468,6 +479,15 @@ namespace ClassicUO.Game.GameObjects
 
                 ushort graphic = DisplayedGraphic;
 
+                if (OnGround && ProfileManager.CurrentProfile.ShowTrapTiles && StaticFilters.IsTrapMarker(graphic, out _))
+                {
+                    Point position = RealScreenPosition;
+                    position.X += (int)Offset.X;
+                    position.Y += (int)(Offset.Y + Offset.Z);
+
+                    return CheckTrapMarkerMouseSelection(position);
+                }
+
                 if (OnGround && ItemData.IsAnimated)
                 {
                     if (
@@ -491,6 +511,11 @@ namespace ClassicUO.Game.GameObjects
 
                         graphic += (ushort)index.AnimOffset;
                     }
+                }
+
+                if (OnGround && !IsMulti)
+                {
+                    graphic = StaticArtReplacements.ReplaceFixedGroundItem(graphic, (Flags & Flags.Movable) != 0);
                 }
 
                 if (Client.Game.UO.Arts.GetArt(graphic).Texture != null)
