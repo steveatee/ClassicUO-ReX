@@ -24,7 +24,7 @@ namespace ClassicUO.Game.UI.Gumps
         private const byte FONT = 0xFF;
         private const ushort HUE_RED = 0x26;
         private const ushort HUE_GREEN = 0x3F;
-        private const uint ENCHANTED_APPLE_COOLDOWN = 45000;
+        private const uint ENCHANTED_APPLE_COOLDOWN = 30000;
         private const uint CONFLAGRATION_COOLDOWN = 30000;
         private const uint CONFLAGRATION_PENDING_TIME = 3000;
 

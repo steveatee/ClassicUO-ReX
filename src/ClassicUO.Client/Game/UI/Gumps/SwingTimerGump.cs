@@ -59,6 +59,8 @@ namespace ClassicUO.Game.UI.Gumps
         private const ushort HUE_RED = 0x26;
         private const ushort HUE_GREEN = 0x3F;
         private const uint DEFAULT_SWING_COOLDOWN = 2000;
+        private const ushort DEFAULT_WEAPON_SPEED = 25;
+        private const short MAX_SWING_SPEED_INCREASE = 60;
 
         private static readonly Dictionary<ushort, ushort> _weaponSpeeds = new Dictionary<ushort, ushort>();
 
@@ -211,15 +213,16 @@ namespace ClassicUO.Game.UI.Gumps
                 return;
             }
 
-            _timerSwing = (swingCooldown - elapsed + 99) / 100;
-            _timerLabel.Text = _timerSwing.ToString();
+            uint remaining = swingCooldown - elapsed;
+            _timerSwing = remaining;
+            _timerLabel.Text = (remaining / 1000.0).ToString("0.0", CultureInfo.InvariantCulture);
 
-            _fillLine.FillWidth = (int)Math.Clamp((long)_timerSwing * 100 / Math.Max(1, swingCooldown / 100), 0, 100);
+            _fillLine.FillWidth = (int)Math.Clamp((long)remaining * 100 / Math.Max(1, swingCooldown), 0, 100);
         }
 
         private uint GetSwingCooldown()
         {
-            uint weaponSpeed = DEFAULT_SWING_COOLDOWN;
+            ushort weaponSpeed = DEFAULT_WEAPON_SPEED;
 
             Item weapon = World.Player.FindItemByLayer(Layer.TwoHanded)
                 ?? World.Player.FindItemByLayer(Layer.OneHanded);
@@ -228,9 +231,27 @@ namespace ClassicUO.Game.UI.Gumps
             {
                 weaponSpeed = configuredSpeed;
             }
+            else if (weapon == null)
+            {
+                return DEFAULT_SWING_COOLDOWN;
+            }
 
-            double input = 60000.0 / ((World.Player.Stamina + 100) * weaponSpeed);
-            double final = Math.Min(Math.Max(Math.Floor(input) * 0.25, 1.25), 10) * 1000;
+            if ((weapon.Graphic == 0x13B1 || weapon.Graphic == 0x13B2) && weaponSpeed == 20)
+            {
+                weaponSpeed = 25;
+            }
+
+            int speedFactor = (World.Player.Stamina + 100) * weaponSpeed;
+            short swingSpeedIncrease = Math.Min(World.Player.SwingSpeedIncrease, MAX_SWING_SPEED_INCREASE);
+
+            speedFactor += speedFactor * swingSpeedIncrease / 100;
+
+            if (speedFactor <= 0)
+            {
+                speedFactor = 1;
+            }
+
+            double final = Math.Min(Math.Max(Math.Floor(40000.0 / speedFactor) * 0.5, 1.25), 10) * 1000;
 
             return Convert.ToUInt32(final);
         }
@@ -308,7 +329,7 @@ namespace ClassicUO.Game.UI.Gumps
             ushort[] speeds =
             {
                 53, 53, 58, 58, 45, 45, 43, 43, 40, 40, 30, 30, 40, 40, 45, 45,
-                35, 35, 35, 35, 45, 45, 30, 30, 30, 30, 30, 30, 32, 32, 20, 20,
+                35, 35, 35, 35, 45, 45, 30, 30, 30, 30, 30, 30, 32, 32, 25, 25,
                 50, 50, 45, 45, 37, 37, 30, 30, 37, 37, 37, 37, 30, 30, 30, 30,
                 33, 33, 35, 35, 48, 48, 18, 18, 46, 46, 25, 25, 26, 26, 31, 31,
                 10, 10
