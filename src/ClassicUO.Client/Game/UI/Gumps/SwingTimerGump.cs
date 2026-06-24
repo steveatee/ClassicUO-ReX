@@ -71,6 +71,7 @@ namespace ClassicUO.Game.UI.Gumps
         private readonly TimerRow _swingRow;
         private readonly TimerRow _appleRow;
         private readonly TimerRow _conflagRow;
+        private readonly TimerRow _healRow;
 
         private bool _triggerSwing;
         private uint _timerSwing;
@@ -84,7 +85,7 @@ namespace ClassicUO.Game.UI.Gumps
             AcceptMouseInput = true;
             LayerOrder = UILayer.Over;
             Profile profile = ProfileManager.CurrentProfile;
-            int rowCount = (profile?.ShowSwingTimer == true ? 1 : 0) + (profile?.ShowConsumableCooldowns == true ? 2 : 0);
+            int rowCount = (profile?.ShowSwingTimer == true ? 1 : 0) + (profile?.ShowConsumableCooldowns == true ? 3 : 0);
             Width = LABEL_WIDTH + FILL_WIDTH + 1;
             Height = Math.Max(1, rowCount) * ROW_HEIGHT;
 
@@ -110,6 +111,8 @@ namespace ClassicUO.Game.UI.Gumps
                 _appleRow = AddTimerRow("Apple", HUE_GREEN, Color.LimeGreen, y);
                 y += ROW_HEIGHT;
                 _conflagRow = AddTimerRow("Conflag", HUE_YELLOW, Color.OrangeRed, y);
+                y += ROW_HEIGHT;
+                _healRow = AddTimerRow("Heal", HUE_GREEN, Color.Gold, y);
             }
 
             WantUpdateSize = false;
@@ -186,7 +189,12 @@ namespace ClassicUO.Game.UI.Gumps
                 return;
             }
 
-            TimerRow row = kind == ConsumableCooldownKind.EnchantedApple ? gump._appleRow : gump._conflagRow;
+            TimerRow row = kind switch
+            {
+                ConsumableCooldownKind.EnchantedApple => gump._appleRow,
+                ConsumableCooldownKind.ConflagrationPotion => gump._conflagRow,
+                _ => gump._healRow
+            };
             row?.Start(cooldown);
         }
 
@@ -227,6 +235,7 @@ namespace ClassicUO.Game.UI.Gumps
 
             _appleRow?.Update(false);
             _conflagRow?.Update(false);
+            _healRow?.Update(false);
         }
 
         private void RunSwingCooldown()

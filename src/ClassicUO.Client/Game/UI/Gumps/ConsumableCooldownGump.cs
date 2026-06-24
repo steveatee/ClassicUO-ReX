@@ -16,7 +16,8 @@ namespace ClassicUO.Game.UI.Gumps
     internal enum ConsumableCooldownKind
     {
         EnchantedApple,
-        ConflagrationPotion
+        ConflagrationPotion,
+        HealingPotion
     }
 
     internal sealed class ConsumableCooldownGump : Gump
@@ -27,10 +28,17 @@ namespace ClassicUO.Game.UI.Gumps
         private const uint ENCHANTED_APPLE_COOLDOWN = 30000;
         private const uint CONFLAGRATION_COOLDOWN = 30000;
         private const uint CONFLAGRATION_PENDING_TIME = 3000;
+        private const uint HEALING_POTION_PENDING_TIME = 3000;
+        private const uint LESSER_HEALING_POTION_COOLDOWN = 3000;
+        private const uint GREATER_HEALING_POTION_COOLDOWN = 10000;
 
         private const ushort APPLE_GRAPHIC = 0x2FD8;
         private const ushort APPLE_HUE = 0x0488;
         private const int APPLE_CLILOC = 1072952;
+        private const ushort HEALING_POTION_GRAPHIC = 0x0F0C;
+        private const int LESSER_HEALING_POTION_CLILOC = 1041328;
+        private const int HEALING_POTION_CLILOC = 1041329;
+        private const int GREATER_HEALING_POTION_CLILOC = 1041330;
         private const ushort CONFLAGRATION_GRAPHIC = 0x0F06;
         private const ushort CONFLAGRATION_HUE = 0x0489;
         private const int CONFLAGRATION_CLILOC = 1072095;
@@ -45,6 +53,10 @@ namespace ClassicUO.Game.UI.Gumps
         private const ushort CONFLAGRATION_CAPTURED_EFFECT_HUE = 0x0488;
 
         private static uint _pendingConflagrationUntil;
+        private static uint _pendingHealingPotionSerial;
+        private static uint _pendingHealingPotionUntil;
+        private static uint _pendingHealingPotionCooldown;
+        private static bool _pendingHealingPotionSucceeded;
 
         private readonly ConsumableCooldownKind _kind;
         private readonly SwingTimerFillLine _fillLine;
@@ -121,6 +133,14 @@ namespace ClassicUO.Game.UI.Gumps
             {
                 _pendingConflagrationUntil = Time.Ticks + CONFLAGRATION_PENDING_TIME;
             }
+
+            if (IsHealingPotion(world, item, out uint cooldown))
+            {
+                _pendingHealingPotionSerial = serial;
+                _pendingHealingPotionUntil = Time.Ticks + HEALING_POTION_PENDING_TIME;
+                _pendingHealingPotionCooldown = cooldown;
+                _pendingHealingPotionSucceeded = false;
+            }
         }
 
         internal static void NotifyCliloc(World world, uint cliloc, string arguments)
@@ -146,6 +166,53 @@ namespace ClassicUO.Game.UI.Gumps
                         StartCooldown(ConsumableCooldownKind.ConflagrationPotion, (uint)Math.Max(1, seconds) * 1000);
                     }
                     break;
+            }
+        }
+
+        internal static void NotifyPlayerHitsChanged(World world, ushort oldHits, ushort newHits)
+        {
+            if (world?.Player == null || ProfileManager.CurrentProfile?.ShowConsumableCooldowns != true)
+            {
+                return;
+            }
+
+            if (_pendingHealingPotionUntil < Time.Ticks || newHits <= oldHits)
+            {
+                return;
+            }
+
+            if (_pendingHealingPotionCooldown != 0)
+            {
+                StartHealingPotionCooldown(_pendingHealingPotionCooldown);
+            }
+            else
+            {
+                _pendingHealingPotionSucceeded = true;
+            }
+        }
+
+        internal static void NotifyObjectProperties(World world, uint serial, int nameCliloc)
+        {
+            if (world?.Player == null || ProfileManager.CurrentProfile?.ShowConsumableCooldowns != true)
+            {
+                return;
+            }
+
+            if (_pendingHealingPotionSerial != serial || _pendingHealingPotionUntil < Time.Ticks)
+            {
+                return;
+            }
+
+            if (!TryGetHealingPotionCooldown(nameCliloc, out uint cooldown))
+            {
+                return;
+            }
+
+            _pendingHealingPotionCooldown = cooldown;
+
+            if (_pendingHealingPotionSucceeded)
+            {
+                StartHealingPotionCooldown(cooldown);
             }
         }
 
@@ -214,6 +281,15 @@ namespace ClassicUO.Game.UI.Gumps
             SwingTimerGump.StartConsumableCooldown(kind, cooldown);
         }
 
+        private static void StartHealingPotionCooldown(uint cooldown)
+        {
+            StartCooldown(ConsumableCooldownKind.HealingPotion, cooldown);
+            _pendingHealingPotionSerial = 0;
+            _pendingHealingPotionUntil = 0;
+            _pendingHealingPotionCooldown = 0;
+            _pendingHealingPotionSucceeded = false;
+        }
+
         private static bool IsConflagrationPotion(World world, Item item)
         {
             int nameCliloc = world.OPL.GetNameCliloc(item.Serial);
@@ -221,6 +297,44 @@ namespace ClassicUO.Game.UI.Gumps
             return nameCliloc == CONFLAGRATION_CLILOC
                 || nameCliloc == GREATER_CONFLAGRATION_CLILOC
                 || item.Graphic == CONFLAGRATION_GRAPHIC && item.Hue == CONFLAGRATION_HUE;
+        }
+
+        private static bool IsHealingPotion(World world, Item item, out uint cooldown)
+        {
+            cooldown = 0;
+
+            if (item.Graphic != HEALING_POTION_GRAPHIC)
+            {
+                return false;
+            }
+
+            int nameCliloc = world.OPL.GetNameCliloc(item.Serial);
+
+            if (TryGetHealingPotionCooldown(nameCliloc, out cooldown))
+            {
+                return true;
+            }
+
+            return nameCliloc == 0;
+        }
+
+        private static bool TryGetHealingPotionCooldown(int nameCliloc, out uint cooldown)
+        {
+            switch (nameCliloc)
+            {
+                case LESSER_HEALING_POTION_CLILOC:
+                    cooldown = LESSER_HEALING_POTION_COOLDOWN;
+                    return true;
+
+                case HEALING_POTION_CLILOC:
+                case GREATER_HEALING_POTION_CLILOC:
+                    cooldown = GREATER_HEALING_POTION_COOLDOWN;
+                    return true;
+
+                default:
+                    cooldown = 0;
+                    return false;
+            }
         }
 
         private static bool IsConflagrationEffect(ushort graphic, ushort hue)
@@ -251,17 +365,27 @@ namespace ClassicUO.Game.UI.Gumps
 
         private static string GetTitle(ConsumableCooldownKind kind)
         {
-            return kind == ConsumableCooldownKind.EnchantedApple ? "Apple" : "Conflag";
+            return kind switch
+            {
+                ConsumableCooldownKind.EnchantedApple => "Apple",
+                ConsumableCooldownKind.ConflagrationPotion => "Conflag",
+                _ => "Heal"
+            };
         }
 
         private static ushort GetTitleHue(ConsumableCooldownKind kind)
         {
-            return kind == ConsumableCooldownKind.EnchantedApple ? (ushort)0x3F : (ushort)0x35;
+            return kind == ConsumableCooldownKind.ConflagrationPotion ? (ushort)0x35 : (ushort)0x3F;
         }
 
         private static Color GetFillColor(ConsumableCooldownKind kind)
         {
-            return kind == ConsumableCooldownKind.EnchantedApple ? Color.LimeGreen : Color.OrangeRed;
+            return kind switch
+            {
+                ConsumableCooldownKind.EnchantedApple => Color.LimeGreen,
+                ConsumableCooldownKind.ConflagrationPotion => Color.OrangeRed,
+                _ => Color.Gold
+            };
         }
     }
 }

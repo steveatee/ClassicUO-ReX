@@ -496,6 +496,7 @@ namespace ClassicUO.Network
             }
 
             string oldName = entity.Name;
+            ushort oldHits = entity.Hits;
             entity.Name = p.ReadASCII(30);
             entity.Hits = p.ReadUInt16BE();
             entity.HitsMax = p.ReadUInt16BE();
@@ -694,6 +695,7 @@ namespace ClassicUO.Network
 
                 if (mobile == world.Player)
                 {
+                    ConsumableCooldownGump.NotifyPlayerHitsChanged(world, oldHits, entity.Hits);
                     world.UoAssist.SignalHits();
                     world.UoAssist.SignalStamina();
                     world.UoAssist.SignalMana();
@@ -1773,6 +1775,7 @@ namespace ClassicUO.Network
                 return;
             }
 
+            ushort oldHits = entity.Hits;
             entity.HitsMax = p.ReadUInt16BE();
             entity.Hits = p.ReadUInt16BE();
 
@@ -1797,6 +1800,7 @@ namespace ClassicUO.Network
 
                 if (mobile == world.Player)
                 {
+                    ConsumableCooldownGump.NotifyPlayerHitsChanged(world, oldHits, entity.Hits);
                     world.UoAssist.SignalHits();
                     world.UoAssist.SignalStamina();
                     world.UoAssist.SignalMana();
@@ -5086,6 +5090,7 @@ namespace ClassicUO.Network
             }
 
             world.OPL.Add(serial, revision, name, data, namecliloc, clilocs);
+            ConsumableCooldownGump.NotifyObjectProperties(world, serial, namecliloc);
 
             UIManager.GetGump<SpellbookGump>(serial)?.RequestUpdateContents();
 
