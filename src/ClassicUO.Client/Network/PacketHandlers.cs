@@ -2430,6 +2430,11 @@ namespace ClassicUO.Network
                 forward,
                 true
             );
+
+            if (mobile == world.Player)
+            {
+                SwingTimerGump.NotifyPlayerAnimation(world, action);
+            }
         }
 
         private static void GraphicEffect(World world, ref StackDataReader p)
@@ -5609,6 +5614,11 @@ namespace ClassicUO.Network
                 forward: true,
                 fromServer: true
             );
+
+            if (mobile == world.Player)
+            {
+                SwingTimerGump.NotifyPlayerNewAnimation(world);
+            }
         }
 
         private static void KREncryptionResponse(World world, ref StackDataReader p) { }

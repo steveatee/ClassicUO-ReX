@@ -102,7 +102,8 @@ namespace ClassicUO.Game.UI.Gumps
                          _chatShiftEnterCheckbox,
                          _enableCaveBorder,
                          _useSeasonFile,
-                         _showTrapTiles;
+                         _showTrapTiles,
+                         _showSwingTimer;
         private Checkbox _holdShiftForContext, _holdShiftToSplitStack, _reduceFPSWhenInactive, _sallosEasyGrab, _partyInviteGump, _objectsFading, _textFading, _holdAltToMoveGumps;
         private Combobox _hpComboBox, _healtbarType, _fieldsType, _treeReplacementType, _blockerReplacementType, _hpComboBoxShowWhen;
 
@@ -1569,8 +1570,23 @@ namespace ClassicUO.Game.UI.Gumps
                 )
             );
 
+            SettingsSection combat = AddSettingsSection(box, "Combat");
+            combat.Y = movement.Bounds.Bottom + 30;
+
+            combat.Add
+            (
+                _showSwingTimer = AddCheckBox
+                (
+                    null,
+                    "Show swing timer",
+                    _currentProfile.ShowSwingTimer,
+                    startX,
+                    startY
+                )
+            );
+
             SettingsSection section = AddSettingsSection(box, "Player Overlay");
-            section.Y = movement.Bounds.Bottom + 30;
+            section.Y = combat.Bounds.Bottom + 30;
 
             section.Add
             (
@@ -4009,6 +4025,7 @@ namespace ClassicUO.Game.UI.Gumps
                     _useSeasonFile.IsChecked = true;
                     _showTrapTiles.IsChecked = false;
                     _autoAvoidObstacles.IsChecked = false;
+                    _showSwingTimer.IsChecked = false;
                     _treeReplacementType.SelectedIndex = 0;
                     _blockerReplacementType.SelectedIndex = 0;
                     _customPlayerNameplate.IsChecked = false;
@@ -4529,6 +4546,12 @@ namespace ClassicUO.Game.UI.Gumps
             _currentProfile.InvisibleHousesEnabled = _invisibleHousesEnabled.IsChecked;
             _currentProfile.InvisibleHousesZ = _invisibleHousesZ.Value;
             _currentProfile.DontRemoveHouseBelowZ = _dontRemoveHouseBelowZ.Value;
+
+            if (_currentProfile.ShowSwingTimer != _showSwingTimer.IsChecked)
+            {
+                _currentProfile.ShowSwingTimer = _showSwingTimer.IsChecked;
+                SwingTimerGump.RefreshOpenGump(World);
+            }
 
             if (invisibleHousesChanged)
             {

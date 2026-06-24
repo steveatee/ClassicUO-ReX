@@ -225,6 +225,8 @@ namespace ClassicUO.Configuration
         public bool InvisibleHousesEnabled { get; set; }
         public int InvisibleHousesZ { get; set; } = 1;
         public int DontRemoveHouseBelowZ { get; set; } = 6;
+        public bool ShowSwingTimer { get; set; }
+        [JsonConverter(typeof(Point2Converter))] public Point SwingTimerLocation { get; set; } = new Point(250, 250);
         public bool ShowTargetRangeIndicator { get; set; }
         public bool PartyInviteGump { get; set; }
         public bool CustomBarsToggled { get; set; }
