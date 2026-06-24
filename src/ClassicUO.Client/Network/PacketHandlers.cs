@@ -2498,6 +2498,8 @@ namespace ClassicUO.Network
                 }
             }
 
+            ConsumableCooldownGump.NotifyGraphicEffect(world, source, graphic, (ushort)hue);
+
             world.SpawnEffect(
                 type,
                 source,
@@ -4790,6 +4792,8 @@ namespace ClassicUO.Network
             {
                 return;
             }
+
+            ConsumableCooldownGump.NotifyCliloc(world, cliloc, arguments);
 
             if (!string.IsNullOrWhiteSpace(affix))
             {

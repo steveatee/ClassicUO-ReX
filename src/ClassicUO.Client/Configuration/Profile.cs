@@ -227,6 +227,9 @@ namespace ClassicUO.Configuration
         public int DontRemoveHouseBelowZ { get; set; } = 6;
         public bool ShowSwingTimer { get; set; }
         [JsonConverter(typeof(Point2Converter))] public Point SwingTimerLocation { get; set; } = new Point(250, 250);
+        public bool ShowConsumableCooldowns { get; set; }
+        [JsonConverter(typeof(Point2Converter))] public Point EnchantedAppleCooldownLocation { get; set; } = new Point(250, 280);
+        [JsonConverter(typeof(Point2Converter))] public Point ConflagrationCooldownLocation { get; set; } = new Point(250, 310);
         public bool ShowTargetRangeIndicator { get; set; }
         public bool PartyInviteGump { get; set; }
         public bool CustomBarsToggled { get; set; }

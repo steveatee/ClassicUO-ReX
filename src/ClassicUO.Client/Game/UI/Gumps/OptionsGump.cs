@@ -103,7 +103,8 @@ namespace ClassicUO.Game.UI.Gumps
                          _enableCaveBorder,
                          _useSeasonFile,
                          _showTrapTiles,
-                         _showSwingTimer;
+                         _showSwingTimer,
+                         _showConsumableCooldowns;
         private Checkbox _holdShiftForContext, _holdShiftToSplitStack, _reduceFPSWhenInactive, _sallosEasyGrab, _partyInviteGump, _objectsFading, _textFading, _holdAltToMoveGumps;
         private Combobox _hpComboBox, _healtbarType, _fieldsType, _treeReplacementType, _blockerReplacementType, _hpComboBoxShowWhen;
 
@@ -1580,6 +1581,17 @@ namespace ClassicUO.Game.UI.Gumps
                     null,
                     "Show swing timer",
                     _currentProfile.ShowSwingTimer,
+                    startX,
+                    startY
+                )
+            );
+            combat.Add
+            (
+                _showConsumableCooldowns = AddCheckBox
+                (
+                    null,
+                    "Show consumable cooldowns",
+                    _currentProfile.ShowConsumableCooldowns,
                     startX,
                     startY
                 )
@@ -4026,6 +4038,7 @@ namespace ClassicUO.Game.UI.Gumps
                     _showTrapTiles.IsChecked = false;
                     _autoAvoidObstacles.IsChecked = false;
                     _showSwingTimer.IsChecked = false;
+                    _showConsumableCooldowns.IsChecked = false;
                     _treeReplacementType.SelectedIndex = 0;
                     _blockerReplacementType.SelectedIndex = 0;
                     _customPlayerNameplate.IsChecked = false;
@@ -4551,6 +4564,12 @@ namespace ClassicUO.Game.UI.Gumps
             {
                 _currentProfile.ShowSwingTimer = _showSwingTimer.IsChecked;
                 SwingTimerGump.RefreshOpenGump(World);
+            }
+
+            if (_currentProfile.ShowConsumableCooldowns != _showConsumableCooldowns.IsChecked)
+            {
+                _currentProfile.ShowConsumableCooldowns = _showConsumableCooldowns.IsChecked;
+                ConsumableCooldownGump.RefreshOpenGumps(World);
             }
 
             if (invisibleHousesChanged)

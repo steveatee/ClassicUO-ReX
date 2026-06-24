@@ -308,6 +308,8 @@ namespace ClassicUO.Game
                 Socket.Send_DoubleClick(serial);
             }
 
+            ConsumableCooldownGump.NotifyItemDoubleClick(world, serial);
+
             if (SerialHelper.IsItem(serial) || (SerialHelper.IsMobile(serial) && (world.Mobiles.Get(serial)?.IsHuman ?? false)))
             {
                 if (SerialHelper.IsMobile(serial))
