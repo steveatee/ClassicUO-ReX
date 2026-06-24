@@ -59,7 +59,8 @@ namespace ClassicUO.Game.UI.Gumps
         private const ushort HUE_RED = 0x26;
         private const ushort HUE_GREEN = 0x3F;
         private const uint DEFAULT_SWING_COOLDOWN = 2000;
-        private const ushort DEFAULT_WEAPON_SPEED = 25;
+        private const ushort DEFAULT_WEAPON_TICKS = 17;
+        private const ushort BARE_HAND_TICKS = 10;
         private const short MAX_SWING_SPEED_INCREASE = 60;
 
         private static readonly Dictionary<ushort, ushort> _weaponSpeeds = new Dictionary<ushort, ushort>();
@@ -222,36 +223,35 @@ namespace ClassicUO.Game.UI.Gumps
 
         private uint GetSwingCooldown()
         {
-            ushort weaponSpeed = DEFAULT_WEAPON_SPEED;
+            ushort weaponTicks = DEFAULT_WEAPON_TICKS;
 
             Item weapon = World.Player.FindItemByLayer(Layer.TwoHanded)
                 ?? World.Player.FindItemByLayer(Layer.OneHanded);
 
             if (weapon != null && _weaponSpeeds.TryGetValue(weapon.Graphic, out ushort configuredSpeed))
             {
-                weaponSpeed = configuredSpeed;
+                weaponTicks = configuredSpeed;
             }
             else if (weapon == null)
             {
-                return DEFAULT_SWING_COOLDOWN;
+                weaponTicks = BARE_HAND_TICKS;
             }
 
-            if ((weapon.Graphic == 0x13B1 || weapon.Graphic == 0x13B2) && weaponSpeed == 20)
+            if (weapon != null && (weapon.Graphic == 0x13B1 || weapon.Graphic == 0x13B2) && (weaponTicks == 20 || weaponTicks == 25))
             {
-                weaponSpeed = 25;
+                weaponTicks = 17;
             }
 
-            int speedFactor = (World.Player.Stamina + 100) * weaponSpeed;
+            int staminaTicks = World.Player.Stamina / 30;
             short swingSpeedIncrease = Math.Min(World.Player.SwingSpeedIncrease, MAX_SWING_SPEED_INCREASE);
+            double modifiedTicks = Math.Floor((weaponTicks - staminaTicks) * (100.0 / (100 + swingSpeedIncrease)));
 
-            speedFactor += speedFactor * swingSpeedIncrease / 100;
-
-            if (speedFactor <= 0)
+            if (modifiedTicks < 5)
             {
-                speedFactor = 1;
+                modifiedTicks = 5;
             }
 
-            double final = Math.Min(Math.Max(Math.Floor(40000.0 / speedFactor) * 0.5, 1.25), 10) * 1000;
+            double final = Math.Min(modifiedTicks * 0.25, 10) * 1000;
 
             return Convert.ToUInt32(final);
         }
@@ -329,7 +329,7 @@ namespace ClassicUO.Game.UI.Gumps
             ushort[] speeds =
             {
                 53, 53, 58, 58, 45, 45, 43, 43, 40, 40, 30, 30, 40, 40, 45, 45,
-                35, 35, 35, 35, 45, 45, 30, 30, 30, 30, 30, 30, 32, 32, 25, 25,
+                35, 35, 35, 35, 45, 45, 30, 30, 30, 30, 30, 30, 32, 32, 17, 17,
                 50, 50, 45, 45, 37, 37, 30, 30, 37, 37, 37, 37, 30, 30, 30, 30,
                 33, 33, 35, 35, 48, 48, 18, 18, 46, 46, 25, 25, 26, 26, 31, 31,
                 10, 10
