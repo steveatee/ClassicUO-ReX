@@ -41,6 +41,8 @@ namespace ClassicUO.Game.UI.Gumps
         private const uint GENERIC_ITEM_COOLDOWN_CLILOC = 1070772;
         private const uint CONFLAGRATION_COOLDOWN_CLILOC = 1072529;
         private const ushort CONFLAGRATION_EFFECT = 0x0F0D;
+        private const ushort CONFLAGRATION_CAPTURED_EFFECT = 0x0F06;
+        private const ushort CONFLAGRATION_CAPTURED_EFFECT_HUE = 0x0488;
 
         private static uint _pendingConflagrationUntil;
 
@@ -180,7 +182,7 @@ namespace ClassicUO.Game.UI.Gumps
                 return;
             }
 
-            if (source == world.Player.Serial && graphic == CONFLAGRATION_EFFECT && hue == CONFLAGRATION_HUE)
+            if (source == world.Player.Serial && IsConflagrationEffect(graphic, hue))
             {
                 _pendingConflagrationUntil = 0;
                 StartCooldown(ConsumableCooldownKind.ConflagrationPotion, CONFLAGRATION_COOLDOWN);
@@ -253,6 +255,12 @@ namespace ClassicUO.Game.UI.Gumps
             return nameCliloc == CONFLAGRATION_CLILOC
                 || nameCliloc == GREATER_CONFLAGRATION_CLILOC
                 || item.Graphic == CONFLAGRATION_GRAPHIC && item.Hue == CONFLAGRATION_HUE;
+        }
+
+        private static bool IsConflagrationEffect(ushort graphic, ushort hue)
+        {
+            return graphic == CONFLAGRATION_EFFECT && hue == CONFLAGRATION_HUE
+                || graphic == CONFLAGRATION_CAPTURED_EFFECT && hue == CONFLAGRATION_CAPTURED_EFFECT_HUE;
         }
 
         private static bool TryGetFirstNumber(string arguments, out int value)
