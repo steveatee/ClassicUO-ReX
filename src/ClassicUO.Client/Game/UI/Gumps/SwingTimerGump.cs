@@ -58,6 +58,9 @@ namespace ClassicUO.Game.UI.Gumps
         private const ushort HUE_YELLOW = 0x35;
         private const ushort HUE_RED = 0x26;
         private const ushort HUE_GREEN = 0x3F;
+        private const int ROW_HEIGHT = 22;
+        private const int LABEL_WIDTH = 58;
+        private const int FILL_WIDTH = 116;
         private const uint DEFAULT_SWING_COOLDOWN = 2000;
         private const ushort DEFAULT_WEAPON_TICKS = 17;
         private const ushort BARE_HAND_TICKS = 10;
@@ -65,8 +68,9 @@ namespace ClassicUO.Game.UI.Gumps
 
         private static readonly Dictionary<ushort, ushort> _weaponSpeeds = new Dictionary<ushort, ushort>();
 
-        private readonly SwingTimerFillLine _fillLine;
-        private readonly Label _timerLabel;
+        private readonly TimerRow _swingRow;
+        private readonly TimerRow _appleRow;
+        private readonly TimerRow _conflagRow;
 
         private bool _triggerSwing;
         private uint _timerSwing;
@@ -79,8 +83,10 @@ namespace ClassicUO.Game.UI.Gumps
             CanCloseWithRightClick = false;
             AcceptMouseInput = true;
             LayerOrder = UILayer.Over;
-            Width = 141;
-            Height = 24;
+            Profile profile = ProfileManager.CurrentProfile;
+            int rowCount = (profile?.ShowSwingTimer == true ? 1 : 0) + (profile?.ShowConsumableCooldowns == true ? 2 : 0);
+            Width = LABEL_WIDTH + FILL_WIDTH + 1;
+            Height = Math.Max(1, rowCount) * ROW_HEIGHT;
 
             Add
             (
@@ -91,30 +97,37 @@ namespace ClassicUO.Game.UI.Gumps
                 }
             );
 
-            Label titleLabel = new Label("Swing", true, HUE_YELLOW, font: FONT, style: FontStyle.BlackBorder)
-            {
-                X = 0,
-                Y = 0,
-                Width = 40,
-                Height = 20
-            };
-            Add(titleLabel);
+            int y = 0;
 
-            _fillLine = new SwingTimerFillLine(titleLabel.Width + 1, 0, 100, 20, Color.Red.PackedValue);
-            Add(_fillLine);
-
-            _timerLabel = new Label("0", true, HUE_GREEN, font: FONT, style: FontStyle.BlackBorder)
+            if (profile?.ShowSwingTimer == true)
             {
-                X = titleLabel.Width + 10,
-                Y = 0
-            };
-            Add(_timerLabel);
+                _swingRow = AddTimerRow("Swing", HUE_YELLOW, Color.Red, y);
+                y += ROW_HEIGHT;
+            }
+
+            if (profile?.ShowConsumableCooldowns == true)
+            {
+                _appleRow = AddTimerRow("Apple", HUE_GREEN, Color.LimeGreen, y);
+                y += ROW_HEIGHT;
+                _conflagRow = AddTimerRow("Conflag", HUE_YELLOW, Color.OrangeRed, y);
+            }
 
             WantUpdateSize = false;
             LoadSwingTimerFile();
         }
 
         public override GumpType GumpType => GumpType.None;
+
+        private TimerRow AddTimerRow(string title, ushort titleHue, Color fillColor, int y)
+        {
+            TimerRow row = new TimerRow(title, titleHue, fillColor, y);
+
+            Add(row.TitleLabel);
+            Add(row.FillLine);
+            Add(row.TimerLabel);
+
+            return row;
+        }
 
         internal static void NotifyPlayerAnimation(World world, ushort action)
         {
@@ -151,7 +164,7 @@ namespace ClassicUO.Game.UI.Gumps
 
             Profile profile = ProfileManager.CurrentProfile;
 
-            if (profile != null && profile.ShowSwingTimer)
+            if (profile != null && (profile.ShowSwingTimer || profile.ShowConsumableCooldowns))
             {
                 UIManager.Add
                 (
@@ -162,6 +175,19 @@ namespace ClassicUO.Game.UI.Gumps
                     }
                 );
             }
+        }
+
+        internal static void StartConsumableCooldown(ConsumableCooldownKind kind, uint cooldown)
+        {
+            SwingTimerGump gump = UIManager.GetGump<SwingTimerGump>();
+
+            if (gump == null)
+            {
+                return;
+            }
+
+            TimerRow row = kind == ConsumableCooldownKind.EnchantedApple ? gump._appleRow : gump._conflagRow;
+            row?.Start(cooldown);
         }
 
         public void TriggerSwing()
@@ -190,12 +216,17 @@ namespace ClassicUO.Game.UI.Gumps
                 return;
             }
 
-            _timerLabel.Hue = _timerSwing == 0 ? HUE_GREEN : HUE_RED;
-
             if (_triggerSwing)
             {
                 RunSwingCooldown();
             }
+            else
+            {
+                _swingRow?.SetReady();
+            }
+
+            _appleRow?.Update(false);
+            _conflagRow?.Update(false);
         }
 
         private void RunSwingCooldown()
@@ -208,17 +239,86 @@ namespace ClassicUO.Game.UI.Gumps
                 _timerSwing = 0;
                 _tickSwing = 0;
                 _triggerSwing = false;
-                _fillLine.FillWidth = 0;
-                _timerLabel.Text = "0";
+                _swingRow?.SetReady();
 
                 return;
             }
 
             uint remaining = swingCooldown - elapsed;
             _timerSwing = remaining;
-            _timerLabel.Text = (remaining / 1000.0).ToString("0.0", CultureInfo.InvariantCulture);
+            _swingRow?.SetRemaining(remaining, swingCooldown, true);
+        }
 
-            _fillLine.FillWidth = (int)Math.Clamp((long)remaining * 100 / Math.Max(1, swingCooldown), 0, 100);
+        private sealed class TimerRow
+        {
+            private uint _cooldownStart;
+            private uint _cooldownLength;
+
+            public TimerRow(string title, ushort titleHue, Color fillColor, int y)
+            {
+                TitleLabel = new Label(title, true, titleHue, font: FONT, style: FontStyle.BlackBorder)
+                {
+                    X = 0,
+                    Y = y,
+                    Width = LABEL_WIDTH,
+                    Height = 20
+                };
+
+                FillLine = new SwingTimerFillLine(LABEL_WIDTH + 1, y, FILL_WIDTH, 20, fillColor.PackedValue);
+
+                TimerLabel = new Label("0", true, HUE_GREEN, font: FONT, style: FontStyle.BlackBorder)
+                {
+                    X = LABEL_WIDTH + 10,
+                    Y = y
+                };
+            }
+
+            public Label TitleLabel { get; }
+            public SwingTimerFillLine FillLine { get; }
+            public Label TimerLabel { get; }
+
+            public void Start(uint cooldown)
+            {
+                _cooldownStart = Time.Ticks;
+                _cooldownLength = cooldown;
+            }
+
+            public void Update(bool showTenths)
+            {
+                if (_cooldownStart == 0 || _cooldownLength == 0)
+                {
+                    SetReady();
+                    return;
+                }
+
+                uint elapsed = Time.Ticks - _cooldownStart;
+
+                if (elapsed >= _cooldownLength)
+                {
+                    _cooldownStart = 0;
+                    _cooldownLength = 0;
+                    SetReady();
+                    return;
+                }
+
+                SetRemaining(_cooldownLength - elapsed, _cooldownLength, showTenths);
+            }
+
+            public void SetReady()
+            {
+                TimerLabel.Hue = HUE_GREEN;
+                TimerLabel.Text = "0";
+                FillLine.FillWidth = 0;
+            }
+
+            public void SetRemaining(uint remaining, uint cooldown, bool showTenths)
+            {
+                TimerLabel.Hue = HUE_RED;
+                TimerLabel.Text = showTenths
+                    ? (remaining / 1000.0).ToString("0.0", CultureInfo.InvariantCulture)
+                    : ((remaining + 999) / 1000).ToString(CultureInfo.InvariantCulture);
+                FillLine.FillWidth = (int)Math.Clamp((long)remaining * FILL_WIDTH / Math.Max(1, cooldown), 0, FILL_WIDTH);
+            }
         }
 
         private uint GetSwingCooldown()

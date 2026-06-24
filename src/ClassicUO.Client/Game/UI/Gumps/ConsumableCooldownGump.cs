@@ -100,33 +100,7 @@ namespace ClassicUO.Game.UI.Gumps
         {
             UIManager.GetGump<ConsumableCooldownGump>(0)?.Dispose();
             UIManager.GetGump<ConsumableCooldownGump>(1)?.Dispose();
-
-            Profile profile = ProfileManager.CurrentProfile;
-
-            if (profile == null || !profile.ShowConsumableCooldowns)
-            {
-                return;
-            }
-
-            UIManager.Add
-            (
-                new ConsumableCooldownGump(world, ConsumableCooldownKind.EnchantedApple)
-                {
-                    LocalSerial = 0,
-                    X = profile.EnchantedAppleCooldownLocation.X,
-                    Y = profile.EnchantedAppleCooldownLocation.Y
-                }
-            );
-
-            UIManager.Add
-            (
-                new ConsumableCooldownGump(world, ConsumableCooldownKind.ConflagrationPotion)
-                {
-                    LocalSerial = 1,
-                    X = profile.ConflagrationCooldownLocation.X,
-                    Y = profile.ConflagrationCooldownLocation.Y
-                }
-            );
+            SwingTimerGump.RefreshOpenGump(world);
         }
 
         internal static void NotifyItemDoubleClick(World world, uint serial)
@@ -237,15 +211,7 @@ namespace ClassicUO.Game.UI.Gumps
 
         private static void StartCooldown(ConsumableCooldownKind kind, uint cooldown)
         {
-            ConsumableCooldownGump gump = UIManager.GetGump<ConsumableCooldownGump>(kind == ConsumableCooldownKind.EnchantedApple ? 0u : 1u);
-
-            if (gump == null)
-            {
-                return;
-            }
-
-            gump._cooldownStart = Time.Ticks;
-            gump._cooldownLength = cooldown;
+            SwingTimerGump.StartConsumableCooldown(kind, cooldown);
         }
 
         private static bool IsConflagrationPotion(World world, Item item)
