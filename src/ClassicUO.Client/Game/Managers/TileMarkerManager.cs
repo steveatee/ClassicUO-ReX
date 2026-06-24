@@ -4,9 +4,16 @@ using ClassicUO.Configuration;
 using System.Collections.Generic;
 using System.IO;
 using System.Text.Json;
+using System.Text.Json.Serialization;
 
 namespace ClassicUO.Game.Managers
 {
+    [JsonSourceGenerationOptions(GenerationMode = JsonSourceGenerationMode.Metadata)]
+    [JsonSerializable(typeof(Dictionary<long, ushort>), GenerationMode = JsonSourceGenerationMode.Metadata)]
+    internal sealed partial class TileMarkerJsonContext : JsonSerializerContext
+    {
+    }
+
     internal sealed class TileMarkerManager
     {
         public static TileMarkerManager Instance { get; } = new TileMarkerManager();
@@ -50,7 +57,7 @@ namespace ClassicUO.Game.Managers
                 }
 
                 Directory.CreateDirectory(profilePath);
-                string json = JsonSerializer.Serialize(_markedTiles);
+                string json = JsonSerializer.Serialize(_markedTiles, TileMarkerJsonContext.Default.DictionaryInt64UInt16);
                 File.WriteAllText(GetSavePath(profilePath), json);
             }
             catch
@@ -84,7 +91,7 @@ namespace ClassicUO.Game.Managers
                 }
 
                 string json = File.ReadAllText(savePath);
-                var data = JsonSerializer.Deserialize<Dictionary<long, ushort>>(json);
+                Dictionary<long, ushort> data = JsonSerializer.Deserialize(json, TileMarkerJsonContext.Default.DictionaryInt64UInt16);
 
                 if (data != null)
                 {
