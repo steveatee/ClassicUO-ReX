@@ -56,7 +56,7 @@ namespace ClassicUO.Game.UI.Gumps
         private static uint _pendingHealingPotionSerial;
         private static uint _pendingHealingPotionUntil;
         private static uint _pendingHealingPotionCooldown;
-        private static bool _pendingHealingPotionSucceeded;
+        private static bool _pendingHealingPotionConfirmed;
 
         private readonly ConsumableCooldownKind _kind;
         private readonly SwingTimerFillLine _fillLine;
@@ -139,7 +139,7 @@ namespace ClassicUO.Game.UI.Gumps
                 _pendingHealingPotionSerial = serial;
                 _pendingHealingPotionUntil = Time.Ticks + HEALING_POTION_PENDING_TIME;
                 _pendingHealingPotionCooldown = cooldown;
-                _pendingHealingPotionSucceeded = false;
+                _pendingHealingPotionConfirmed = false;
             }
         }
 
@@ -169,14 +169,14 @@ namespace ClassicUO.Game.UI.Gumps
             }
         }
 
-        internal static void NotifyPlayerHitsChanged(World world, ushort oldHits, ushort newHits)
+        internal static void NotifySoundEffect(World world, ushort sound)
         {
             if (world?.Player == null || ProfileManager.CurrentProfile?.ShowConsumableCooldowns != true)
             {
                 return;
             }
 
-            if (_pendingHealingPotionUntil < Time.Ticks || newHits <= oldHits)
+            if (_pendingHealingPotionUntil < Time.Ticks || sound != 0x02D6)
             {
                 return;
             }
@@ -187,7 +187,7 @@ namespace ClassicUO.Game.UI.Gumps
             }
             else
             {
-                _pendingHealingPotionSucceeded = true;
+                _pendingHealingPotionConfirmed = true;
             }
         }
 
@@ -210,7 +210,7 @@ namespace ClassicUO.Game.UI.Gumps
 
             _pendingHealingPotionCooldown = cooldown;
 
-            if (_pendingHealingPotionSucceeded)
+            if (_pendingHealingPotionConfirmed)
             {
                 StartHealingPotionCooldown(cooldown);
             }
@@ -287,7 +287,7 @@ namespace ClassicUO.Game.UI.Gumps
             _pendingHealingPotionSerial = 0;
             _pendingHealingPotionUntil = 0;
             _pendingHealingPotionCooldown = 0;
-            _pendingHealingPotionSucceeded = false;
+            _pendingHealingPotionConfirmed = false;
         }
 
         private static bool IsConflagrationPotion(World world, Item item)
