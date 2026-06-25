@@ -276,7 +276,7 @@ namespace ClassicUO.Utility.Platforms
 
                     case UOAMessage.GET_STAT:
 
-                        if (_world.Player == null || wParam < 0 || wParam > 5)
+                        if (_world.Player == null || wParam < 0 || wParam > 6)
                         {
                             return 0;
                         }
@@ -289,6 +289,7 @@ namespace ClassicUO.Utility.Platforms
                             case 3: return _world.Player.Weight;
                             case 4: return _world.Player.HitsMax;
                             case 5: return (int)_world.Player.TithingPoints;
+                            case 6: return _world.Player.IsCasting ? 1 : 0;
                         }
 
                         return 0;

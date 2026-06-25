@@ -34,6 +34,18 @@ namespace ClassicUO.Game.GameObjects
         public Skill[] Skills { get; }
         public override bool InWarMode { get; set; }
         public IReadOnlyDictionary<BuffIconType, BuffIcon> BuffIcons => _buffIcons;
+        public bool IsCasting
+        {
+            get
+            {
+                if (_isCasting && Time.Ticks >= _castingEndTime)
+                {
+                    StopCasting();
+                }
+
+                return _isCasting;
+            }
+        }
 
         public ref Ability PrimaryAbility => ref Abilities[0];
         public ref Ability SecondaryAbility => ref Abilities[1];
@@ -58,6 +70,21 @@ namespace ClassicUO.Game.GameObjects
         private bool _obstacleDodgeActive;
         private Direction _obstacleDodgeForwardDirection;
         private Direction _obstacleDodgeSideDirection;
+        private bool _isCasting;
+        private uint _castingEndTime;
+
+        private static readonly int[] _castingStopClilocs =
+        {
+            500641,  // Your concentration is disturbed, thus ruining thy spell.
+            502625,  // Insufficient mana. You must have at least ~1_MANA_REQUIREMENT~ Mana to use this spell.
+            502630,  // More reagents are needed for this spell.
+            500946,  // You cannot cast this in town!
+            500015,  // You do not have that spell
+            502643,  // You can not cast a spell while frozen.
+            1061091, // You cannot cast that spell in this form.
+            502644,  // You have not yet recovered from casting a spell.
+            1072060  // You cannot cast a spell while calmed.
+        };
 
         /// <summary>
         /// Resyncs the server-tracked direction with the current visual Direction.
@@ -277,6 +304,120 @@ namespace ClassicUO.Game.GameObjects
         public void RemoveBuff(BuffIconType graphic)
         {
             _buffIcons.Remove(graphic);
+        }
+
+        internal void StartCasting(int spellIndex)
+        {
+            if (IsCasting || !TryGetDustCastingCircle(spellIndex, out int circle))
+            {
+                return;
+            }
+
+            uint protectionDelay = 0;
+            bool ignoreProtectionDelay = spellIndex == 15 || spellIndex == 26;
+
+            if (!ignoreProtectionDelay && (IsBuffIconExists(BuffIconType.Protection) || IsBuffIconExists(BuffIconType.EssenceOfWind)))
+            {
+                protectionDelay = 2;
+            }
+
+            _isCasting = true;
+            _castingEndTime = Time.Ticks + 400 + (uint)(circle + protectionDelay) * 250;
+        }
+
+        internal void StopCasting()
+        {
+            _isCasting = false;
+            _castingEndTime = 0;
+        }
+
+        internal void NotifyCastingCliloc(uint cliloc)
+        {
+            if (!IsCasting)
+            {
+                return;
+            }
+
+            for (int i = 0; i < _castingStopClilocs.Length; i++)
+            {
+                if (_castingStopClilocs[i] == cliloc)
+                {
+                    StopCasting();
+                    return;
+                }
+            }
+        }
+
+        private static bool TryGetDustCastingCircle(int spellIndex, out int circle)
+        {
+            circle = 0;
+
+            if (spellIndex >= 1 && spellIndex <= 64)
+            {
+                circle = (spellIndex - 1) / 8;
+                return true;
+            }
+
+            switch (spellIndex)
+            {
+                case 105:
+                    circle = 0;
+                    return true;
+
+                case 104:
+                case 109:
+                case 201:
+                case 605:
+                    circle = 1;
+                    return true;
+
+                case 202:
+                case 606:
+                case 607:
+                case 608:
+                case 609:
+                case 612:
+                case 613:
+                case 614:
+                    circle = 2;
+                    return true;
+
+                case 101:
+                case 102:
+                case 103:
+                case 106:
+                case 108:
+                case 110:
+                case 115:
+                case 117:
+                case 209:
+                case 601:
+                    circle = 3;
+                    return true;
+
+                case 111:
+                case 113:
+                    circle = 4;
+                    return true;
+
+                case 107:
+                case 112:
+                case 114:
+                case 116:
+                    circle = 5;
+                    return true;
+
+                case 602:
+                case 604:
+                case 610:
+                case 611:
+                case 615:
+                    circle = 8;
+                    return true;
+
+                default:
+                    return false;
+            }
         }
 
         public void UpdateAbilities()
