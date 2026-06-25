@@ -28,7 +28,8 @@ namespace ClassicUO.Game.UI.Gumps
         private bool _showHpBar;
         private bool UseCustomMobileNameplate =>
             ProfileManager.CurrentProfile.CustomPlayerNameplate
-            && SerialHelper.IsMobile(LocalSerial);
+            && World.Get(LocalSerial) is Mobile mobile
+            && ShouldUsePlayerOverheadStyle(mobile);
 
         public NameOverheadGump(World world, uint serial) : base(world, serial, 0)
         {
@@ -161,22 +162,22 @@ namespace ClassicUO.Game.UI.Gumps
                 _showHpBar =
                     entity is Mobile
                     && (UseCustomMobileNameplate || ProfileManager.CurrentProfile.NameOverheadShowHpBar);
+                bool usePlayerOverheadStyle = entity is Mobile mobile && ShouldUsePlayerOverheadStyle(mobile);
 
                 if (UseCustomMobileNameplate)
                 {
                     bool isPlayer = World.Player != null && LocalSerial == World.Player.Serial;
-                    const int customBarHeight = 7;
-                    const int customGap = 3;
+                    int nameHeight = Math.Max(_renderedText.Height + 4, 17);
                     int curseTimerHeight = ProfileManager.CurrentProfile.TrackCurses ? 9 : 0;
 
                     Width = Math.Max(width + 10, isPlayer ? 90 : 72);
-                    Height = _renderedText.Height + customGap + customBarHeight + curseTimerHeight + 4;
+                    Height = nameHeight + curseTimerHeight;
                 }
                 else
                 {
                     Width = _background.Width = Constants.OBJECT_HANDLES_GUMP_WIDTH + 4;
-                    int hpBarExtra = _showHpBar ? Constants.OBJECT_HANDLES_HP_BAR_HEIGHT + 1 : 0;
-                    int curseTimerExtra = _showHpBar && ProfileManager.CurrentProfile.TrackCurses ? 9 : 0;
+                    int hpBarExtra = _showHpBar && !usePlayerOverheadStyle ? Constants.OBJECT_HANDLES_HP_BAR_HEIGHT + 1 : 0;
+                    int curseTimerExtra = _showHpBar && usePlayerOverheadStyle && ProfileManager.CurrentProfile.TrackCurses ? 9 : 0;
                     Height = _background.Height = Constants.OBJECT_HANDLES_GUMP_HEIGHT + 4 + hpBarExtra + curseTimerExtra;
                 }
 
@@ -699,13 +700,17 @@ namespace ClassicUO.Game.UI.Gumps
             }
 
             int renderedTextOffset = Math.Max(0, Width - _renderedText.Width - 4) >> 1;
-            if (_showHpBar && World.Get(LocalSerial) is Mobile nameplateMobile)
+            Mobile nameplateMobile = World.Get(LocalSerial) as Mobile;
+            bool usePlayerOverheadStyle = _showHpBar
+                && nameplateMobile != null
+                && ShouldUsePlayerOverheadStyle(nameplateMobile);
+
+            if (usePlayerOverheadStyle)
             {
-                int hpBarExtra = _showHpBar ? (UseCustomMobileNameplate ? 8 : Constants.OBJECT_HANDLES_HP_BAR_HEIGHT + 1) : 0;
                 int curseTimerExtra = _showHpBar && ProfileManager.CurrentProfile.TrackCurses ? 9 : 0;
                 int nameHeight = UseCustomMobileNameplate
                     ? Math.Max(_renderedText.Height + 4, 17)
-                    : Math.Max(0, Height - hpBarExtra - curseTimerExtra);
+                    : Math.Max(0, Height - curseTimerExtra);
                 int filledNameWidth = Math.Max(0, (Width - 2) * nameplateMobile.HitsPercentage / 100);
                 Color hpColor = GetNameplateHpColor(nameplateMobile);
                 float nameDepth = layerDepth + CHILD_LAYER_INCREMENT * 4;
@@ -759,9 +764,21 @@ namespace ClassicUO.Game.UI.Gumps
 
             if (_showHpBar && World.Get(LocalSerial) is Mobile mob)
             {
+                if (usePlayerOverheadStyle)
+                {
+                    if (ProfileManager.CurrentProfile.TrackCurses)
+                    {
+                        int curseTimerExtra = 9;
+                        int curseY = y + Height - curseTimerExtra + 1;
+                        DrawCurseTimers(renderLists, x, curseY, layerDepth + CHILD_LAYER_INCREMENT * 9, hueVector);
+                    }
+
+                    return true;
+                }
+
                 int barX = x;
                 int barHeight = UseCustomMobileNameplate ? 7 : Constants.OBJECT_HANDLES_HP_BAR_HEIGHT;
-                int curseTimerHeight = ProfileManager.CurrentProfile.TrackCurses ? 9 : 0;
+                int curseTimerHeight = 0;
                 int barY = y + Height - barHeight - curseTimerHeight;
                 int barWidth = Width;
                 int filledWidth = (barWidth - 2) * mob.HitsPercentage / 100;
@@ -809,10 +826,6 @@ namespace ClassicUO.Game.UI.Gumps
                     return true;
                 });
 
-                if (ProfileManager.CurrentProfile.TrackCurses)
-                {
-                    DrawCurseTimers(renderLists, x, barY + barHeight + 1, layerDepth + CHILD_LAYER_INCREMENT * 9, hueVector);
-                }
             }
 
             return true;
@@ -834,6 +847,11 @@ namespace ClassicUO.Game.UI.Gumps
                  : mobile.HitsPercentage >= 50 ? Color.YellowGreen
                  : mobile.HitsPercentage >= 25 ? Color.Orange
                  : Color.Red;
+        }
+
+        private static bool ShouldUsePlayerOverheadStyle(Mobile mobile)
+        {
+            return mobile.IsHuman && !mobile.IsDead;
         }
 
         private void DrawCurseTimers(RenderLists renderLists, int x, int y, float layerDepth, Vector3 hueVector)
@@ -879,9 +897,9 @@ namespace ClassicUO.Game.UI.Gumps
         {
             return kind switch
             {
-                TrackedCurseKind.CorpseSkin => new Color(128, 0, 48),
-                TrackedCurseKind.Curse => new Color(150, 20, 20),
-                TrackedCurseKind.HitCurse => new Color(110, 0, 70),
+                TrackedCurseKind.CorpseSkin => new Color(255, 70, 190),
+                TrackedCurseKind.Curse => Color.DeepPink,
+                TrackedCurseKind.HitCurse => Color.Fuchsia,
                 _ => Color.White
             };
         }
