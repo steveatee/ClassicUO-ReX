@@ -703,7 +703,7 @@ namespace ClassicUO.Game.UI.Gumps
                 int nameHeight = Math.Max(_renderedText.Height + 4, 17);
                 int filledNameWidth = Math.Max(0, (Width - 2) * nameplateMobile.HitsPercentage / 100);
                 Color hpColor = GetNameplateHpColor(nameplateMobile);
-                float nameDepth = layerDepth + CHILD_LAYER_INCREMENT;
+                float nameDepth = layerDepth + CHILD_LAYER_INCREMENT * 4;
 
                 renderLists.AddGumpNoAtlas(batcher =>
                 {
@@ -747,7 +747,7 @@ namespace ClassicUO.Game.UI.Gumps
                         Height,
                         0,
                         0,
-                        layerDepth + CHILD_LAYER_INCREMENT * 2
+                        layerDepth + CHILD_LAYER_INCREMENT * 7
                     );
                 }
             );
@@ -764,7 +764,7 @@ namespace ClassicUO.Game.UI.Gumps
                               : mob.HitsPercentage >= 50 ? Color.YellowGreen
                               : mob.HitsPercentage >= 30 ? Color.Yellow
                               : Color.Red;
-                float barDepth = layerDepth + CHILD_LAYER_INCREMENT * 3;
+                float barDepth = layerDepth + CHILD_LAYER_INCREMENT * 8;
 
                 renderLists.AddGumpNoAtlas(batcher =>
                 {
@@ -806,7 +806,7 @@ namespace ClassicUO.Game.UI.Gumps
 
                 if (UseCustomMobileNameplate && ProfileManager.CurrentProfile.TrackCurses)
                 {
-                    DrawCurseTimers(renderLists, x, barY + barHeight + 1, layerDepth + CHILD_LAYER_INCREMENT * 4, hueVector);
+                    DrawCurseTimers(renderLists, x, barY + barHeight + 1, layerDepth + CHILD_LAYER_INCREMENT * 9, hueVector);
                 }
             }
 
@@ -874,9 +874,9 @@ namespace ClassicUO.Game.UI.Gumps
         {
             return kind switch
             {
-                TrackedCurseKind.CorpseSkin => Color.MediumPurple,
-                TrackedCurseKind.Curse => Color.Orange,
-                TrackedCurseKind.HitCurse => Color.DeepPink,
+                TrackedCurseKind.CorpseSkin => new Color(128, 0, 48),
+                TrackedCurseKind.Curse => new Color(150, 20, 20),
+                TrackedCurseKind.HitCurse => new Color(110, 0, 70),
                 _ => Color.White
             };
         }
