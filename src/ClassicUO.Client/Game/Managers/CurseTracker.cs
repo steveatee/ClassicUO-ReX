@@ -36,10 +36,15 @@ namespace ClassicUO.Game.Managers
         private const int CurseSpellIndex = 27;
         private const int CorpseSkinSpellIndex = 103;
         private const ushort CurseRemovalGraphic = 0x3709;
+        private const ushort CorpseSkinGraphic = 0x373A;
+        private const ushort CorpseSkinHue = 67;
         private const float AssumedTargetResist = 110.1f;
         private const uint HitCurseDurationMs = 10_000;
+        private const uint PendingCorpseSkinWindowMs = 5_000;
 
         private static readonly Dictionary<uint, CurseState> _states = new Dictionary<uint, CurseState>();
+        private static uint _pendingCorpseSkinTarget;
+        private static uint _pendingCorpseSkinExpiresAt;
 
         public static void NotifyTargetSelected(World world, uint targetSerial)
         {
@@ -58,7 +63,8 @@ namespace ClassicUO.Game.Managers
             switch (GameActions.LastSpellIndex)
             {
                 case CorpseSkinSpellIndex:
-                    Start(targetSerial, TrackedCurseKind.CorpseSkin, GetCorpseSkinDuration(world));
+                    _pendingCorpseSkinTarget = targetSerial;
+                    _pendingCorpseSkinExpiresAt = Time.Ticks + PendingCorpseSkinWindowMs;
                     break;
 
                 case CurseSpellIndex:
@@ -67,15 +73,26 @@ namespace ClassicUO.Game.Managers
             }
         }
 
-        public static void NotifyGraphicEffect(World world, uint source, uint target, ushort graphic)
+        public static void NotifyGraphicEffect(World world, uint source, uint target, ushort graphic, ushort hue)
         {
-            if (!IsEnabled(world) || graphic != CurseRemovalGraphic)
+            if (!IsEnabled(world))
             {
                 return;
             }
 
-            ClearIfMobile(world, source);
-            ClearIfMobile(world, target);
+            if (graphic == CurseRemovalGraphic)
+            {
+                ClearIfMobile(world, source);
+                ClearIfMobile(world, target);
+
+                return;
+            }
+
+            if (graphic == CorpseSkinGraphic && hue == CorpseSkinHue)
+            {
+                ConfirmCorpseSkinEffect(world, source);
+                ConfirmCorpseSkinEffect(world, target);
+            }
         }
 
         public static void NotifyCliloc(World world, uint serial, string text)
@@ -143,6 +160,18 @@ namespace ClassicUO.Game.Managers
                     state.HitCurse = timer;
                     break;
             }
+        }
+
+        private static void ConfirmCorpseSkinEffect(World world, uint serial)
+        {
+            if (serial == 0 || serial != _pendingCorpseSkinTarget || Time.Ticks > _pendingCorpseSkinExpiresAt)
+            {
+                return;
+            }
+
+            Start(serial, TrackedCurseKind.CorpseSkin, GetCorpseSkinDuration(world));
+            _pendingCorpseSkinTarget = 0;
+            _pendingCorpseSkinExpiresAt = 0;
         }
 
         private static bool IsEnabled(World world)
