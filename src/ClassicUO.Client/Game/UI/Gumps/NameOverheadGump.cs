@@ -176,7 +176,8 @@ namespace ClassicUO.Game.UI.Gumps
                 {
                     Width = _background.Width = Constants.OBJECT_HANDLES_GUMP_WIDTH + 4;
                     int hpBarExtra = _showHpBar ? Constants.OBJECT_HANDLES_HP_BAR_HEIGHT + 1 : 0;
-                    Height = _background.Height = Constants.OBJECT_HANDLES_GUMP_HEIGHT + 4 + hpBarExtra;
+                    int curseTimerExtra = _showHpBar && ProfileManager.CurrentProfile.TrackCurses ? 9 : 0;
+                    Height = _background.Height = Constants.OBJECT_HANDLES_GUMP_HEIGHT + 4 + hpBarExtra + curseTimerExtra;
                 }
 
                 WantUpdateSize = false;
@@ -698,9 +699,13 @@ namespace ClassicUO.Game.UI.Gumps
             }
 
             int renderedTextOffset = Math.Max(0, Width - _renderedText.Width - 4) >> 1;
-            if (UseCustomMobileNameplate && World.Get(LocalSerial) is Mobile nameplateMobile)
+            if (_showHpBar && World.Get(LocalSerial) is Mobile nameplateMobile)
             {
-                int nameHeight = Math.Max(_renderedText.Height + 4, 17);
+                int hpBarExtra = _showHpBar ? (UseCustomMobileNameplate ? 8 : Constants.OBJECT_HANDLES_HP_BAR_HEIGHT + 1) : 0;
+                int curseTimerExtra = _showHpBar && ProfileManager.CurrentProfile.TrackCurses ? 9 : 0;
+                int nameHeight = UseCustomMobileNameplate
+                    ? Math.Max(_renderedText.Height + 4, 17)
+                    : Math.Max(0, Height - hpBarExtra - curseTimerExtra);
                 int filledNameWidth = Math.Max(0, (Width - 2) * nameplateMobile.HitsPercentage / 100);
                 Color hpColor = GetNameplateHpColor(nameplateMobile);
                 float nameDepth = layerDepth + CHILD_LAYER_INCREMENT * 4;
@@ -756,7 +761,7 @@ namespace ClassicUO.Game.UI.Gumps
             {
                 int barX = x;
                 int barHeight = UseCustomMobileNameplate ? 7 : Constants.OBJECT_HANDLES_HP_BAR_HEIGHT;
-                int curseTimerHeight = UseCustomMobileNameplate && ProfileManager.CurrentProfile.TrackCurses ? 9 : 0;
+                int curseTimerHeight = ProfileManager.CurrentProfile.TrackCurses ? 9 : 0;
                 int barY = y + Height - barHeight - curseTimerHeight;
                 int barWidth = Width;
                 int filledWidth = (barWidth - 2) * mob.HitsPercentage / 100;
@@ -804,7 +809,7 @@ namespace ClassicUO.Game.UI.Gumps
                     return true;
                 });
 
-                if (UseCustomMobileNameplate && ProfileManager.CurrentProfile.TrackCurses)
+                if (ProfileManager.CurrentProfile.TrackCurses)
                 {
                     DrawCurseTimers(renderLists, x, barY + barHeight + 1, layerDepth + CHILD_LAYER_INCREMENT * 9, hueVector);
                 }
