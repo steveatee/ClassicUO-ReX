@@ -298,6 +298,7 @@ namespace ClassicUO.Game.Managers
                                                                                    _targetCursorId,
                                                                                    (byte)TargetingType);
                                                 StartBandageCooldownIfPending(entity.Serial);
+                                                CurseTracker.NotifyTargetSelected(_world, entity.Serial);
 
                                                 ClearTargetingWithoutTargetCancelPacket();
 
@@ -355,6 +356,7 @@ namespace ClassicUO.Game.Managers
                                                                _targetCursorId,
                                                                (byte)TargetingType);
                             StartBandageCooldownIfPending(entity.Serial);
+                            CurseTracker.NotifyTargetSelected(_world, entity.Serial);
 
                             if (SerialHelper.IsMobile(serial) && LastTargetInfo.Serial != serial)
                             {
@@ -481,7 +483,9 @@ namespace ClassicUO.Game.Managers
             _lastDataBuffer[6] = (byte) TargetingType;
 
             NetClient.Socket.Send(_lastDataBuffer);
-            StartBandageCooldownIfPending(ReadTargetSerial(_lastDataBuffer));
+            uint targetSerial = ReadTargetSerial(_lastDataBuffer);
+            StartBandageCooldownIfPending(targetSerial);
+            CurseTracker.NotifyTargetSelected(_world, targetSerial);
             Mouse.CancelDoubleClick = true;
             ClearTargetingWithoutTargetCancelPacket();
         }

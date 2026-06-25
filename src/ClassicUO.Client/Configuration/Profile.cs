@@ -228,6 +228,7 @@ namespace ClassicUO.Configuration
         public bool ShowSwingTimer { get; set; }
         [JsonConverter(typeof(Point2Converter))] public Point SwingTimerLocation { get; set; } = new Point(250, 250);
         public bool ShowConsumableCooldowns { get; set; }
+        public bool TrackCurses { get; set; }
         [JsonConverter(typeof(Point2Converter))] public Point EnchantedAppleCooldownLocation { get; set; } = new Point(250, 280);
         [JsonConverter(typeof(Point2Converter))] public Point ConflagrationCooldownLocation { get; set; } = new Point(250, 310);
         public bool ShowTargetRangeIndicator { get; set; }

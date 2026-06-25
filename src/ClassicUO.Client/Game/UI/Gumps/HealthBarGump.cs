@@ -311,6 +311,9 @@ namespace ClassicUO.Game.UI.Gumps
         internal const int HPB_BAR_WIDTH = 100;
         private const int HPB_BAR_HEIGHT = 8;
         private const int HPB_BAR_SPACELEFT = (HPB_WIDTH - HPB_BAR_WIDTH) / 2;
+        private const int HPB_CURSE_BAR_HEIGHT = 3;
+        private const int HPB_CURSE_BAR_GAP = 2;
+        private const int HPB_CURSE_START_Y = 31;
 
 
         private static Color HPB_COLOR_DRAW_RED = Color.Red;
@@ -326,6 +329,8 @@ namespace ClassicUO.Game.UI.Gumps
 
         private readonly LineCHB[] _bars = new LineCHB[3];
         private readonly LineCHB[] _border = new LineCHB[4];
+        private readonly LineCHB[] _curseBars = new LineCHB[3];
+        private readonly TrackedCurseSnapshot[] _curseSnapshots = new TrackedCurseSnapshot[3];
 
         private LineCHB _hpLineRed, _manaLineRed, _stamLineRed, _outline;
 
@@ -354,6 +359,7 @@ namespace ClassicUO.Game.UI.Gumps
 
             _background = null;
             _hpLineRed = _manaLineRed = _stamLineRed = null;
+            Array.Clear(_curseBars, 0, _curseBars.Length);
 
             if (_textBox != null)
             {
@@ -635,6 +641,8 @@ namespace ClassicUO.Game.UI.Gumps
                 {
                     _bars[0].LineWidth = hits;
                 }
+
+                UpdateCurseBars();
 
                 if ((inparty || LocalSerial == World.Player) && mobile != null && _bars != null)
                 {
@@ -1056,6 +1064,13 @@ namespace ClassicUO.Game.UI.Gumps
                     }
 
                     Height = HPB_HEIGHT_SINGLELINE;
+                    bool showCurseBars = ProfileManager.CurrentProfile.TrackCurses;
+
+                    if (showCurseBars)
+                    {
+                        Height += 13;
+                    }
+
                     Width = HPB_WIDTH;
 
                     Add(_background = new AlphaBlendControl(0.7f) { Width = Width, Height = Height, AcceptMouseInput = true, CanMove = true });
@@ -1096,6 +1111,11 @@ namespace ClassicUO.Game.UI.Gumps
                         ) { LineWidth = 0 }
                     );
 
+                    if (showCurseBars)
+                    {
+                        AddCurseBars();
+                    }
+
                     Add
                     (
                         _border[0] = new LineCHB
@@ -1113,7 +1133,7 @@ namespace ClassicUO.Game.UI.Gumps
                         _border[1] = new LineCHB
                         (
                             0,
-                            HPB_HEIGHT_SINGLELINE - HPB_BORDERSIZE,
+                            Height - HPB_BORDERSIZE,
                             HPB_WIDTH,
                             HPB_BORDERSIZE,
                             HPB_COLOR_DRAW_BLACK.PackedValue
@@ -1127,7 +1147,7 @@ namespace ClassicUO.Game.UI.Gumps
                             0,
                             0,
                             HPB_BORDERSIZE,
-                            HPB_HEIGHT_SINGLELINE,
+                            Height,
                             HPB_COLOR_DRAW_BLACK.PackedValue
                         )
                     );
@@ -1139,7 +1159,7 @@ namespace ClassicUO.Game.UI.Gumps
                             HPB_WIDTH - HPB_BORDERSIZE,
                             0,
                             HPB_BORDERSIZE,
-                            HPB_HEIGHT_SINGLELINE,
+                            Height,
                             HPB_COLOR_DRAW_BLACK.PackedValue
                         )
                     );
@@ -1190,6 +1210,81 @@ namespace ClassicUO.Game.UI.Gumps
                         _manaLineRed.LineColor = _stamLineRed.LineColor = HPB_COLOR_GRAY;
                     }
                 }
+            }
+        }
+
+        private void AddCurseBars()
+        {
+            Add
+            (
+                _curseBars[0] = new LineCHB
+                (
+                    HPB_BAR_SPACELEFT,
+                    HPB_CURSE_START_Y,
+                    HPB_BAR_WIDTH,
+                    HPB_CURSE_BAR_HEIGHT,
+                    Color.MediumPurple.PackedValue
+                ) { LineWidth = 0, IsVisible = false }
+            );
+
+            Add
+            (
+                _curseBars[1] = new LineCHB
+                (
+                    HPB_BAR_SPACELEFT,
+                    HPB_CURSE_START_Y + HPB_CURSE_BAR_HEIGHT + HPB_CURSE_BAR_GAP,
+                    HPB_BAR_WIDTH,
+                    HPB_CURSE_BAR_HEIGHT,
+                    Color.Orange.PackedValue
+                ) { LineWidth = 0, IsVisible = false }
+            );
+
+            Add
+            (
+                _curseBars[2] = new LineCHB
+                (
+                    HPB_BAR_SPACELEFT,
+                    HPB_CURSE_START_Y + (HPB_CURSE_BAR_HEIGHT + HPB_CURSE_BAR_GAP) * 2,
+                    HPB_BAR_WIDTH,
+                    HPB_CURSE_BAR_HEIGHT,
+                    Color.DeepPink.PackedValue
+                ) { LineWidth = 0, IsVisible = false }
+            );
+        }
+
+        private void UpdateCurseBars()
+        {
+            if (_curseBars[0] == null || LocalSerial == World.Player)
+            {
+                return;
+            }
+
+            if (!CurseTracker.TryGetSnapshots(LocalSerial, _curseSnapshots, out int count))
+            {
+                count = 0;
+            }
+
+            for (int i = 0; i < _curseBars.Length; i++)
+            {
+                LineCHB bar = _curseBars[i];
+
+                if (bar == null)
+                {
+                    continue;
+                }
+
+                if (i >= count)
+                {
+                    bar.IsVisible = false;
+                    bar.LineWidth = 0;
+
+                    continue;
+                }
+
+                TrackedCurseSnapshot snapshot = _curseSnapshots[i];
+                int width = CalculatePercents((int)Math.Max(1, snapshot.Duration), (int)snapshot.Remaining, HPB_BAR_WIDTH);
+                bar.LineWidth = Math.Max(1, width);
+                bar.IsVisible = true;
             }
         }
 

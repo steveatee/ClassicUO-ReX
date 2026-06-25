@@ -2501,6 +2501,7 @@ namespace ClassicUO.Network
             }
 
             ConsumableCooldownGump.NotifyGraphicEffect(world, source, graphic, (ushort)hue);
+            CurseTracker.NotifyGraphicEffect(world, source, target, graphic);
 
             world.SpawnEffect(
                 type,
@@ -4798,6 +4799,7 @@ namespace ClassicUO.Network
             ConsumableCooldownGump.NotifyCliloc(world, cliloc, arguments);
             SwingTimerGump.NotifyCliloc(world, cliloc);
             world.Player.NotifyCastingCliloc(cliloc);
+            CurseTracker.NotifyCliloc(world, serial, text);
 
             if (!string.IsNullOrWhiteSpace(affix))
             {

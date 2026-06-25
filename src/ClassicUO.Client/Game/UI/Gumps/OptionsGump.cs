@@ -104,7 +104,8 @@ namespace ClassicUO.Game.UI.Gumps
                          _useSeasonFile,
                          _showTrapTiles,
                          _showSwingTimer,
-                         _showConsumableCooldowns;
+                         _showConsumableCooldowns,
+                         _trackCurses;
         private Checkbox _holdShiftForContext, _holdShiftToSplitStack, _reduceFPSWhenInactive, _sallosEasyGrab, _partyInviteGump, _objectsFading, _textFading, _holdAltToMoveGumps;
         private Combobox _hpComboBox, _healtbarType, _fieldsType, _treeReplacementType, _blockerReplacementType, _hpComboBoxShowWhen;
 
@@ -1592,6 +1593,17 @@ namespace ClassicUO.Game.UI.Gumps
                     null,
                     "Show consumable cooldowns",
                     _currentProfile.ShowConsumableCooldowns,
+                    startX,
+                    startY
+                )
+            );
+            combat.Add
+            (
+                _trackCurses = AddCheckBox
+                (
+                    null,
+                    "Track curses",
+                    _currentProfile.TrackCurses,
                     startX,
                     startY
                 )
@@ -4572,6 +4584,9 @@ namespace ClassicUO.Game.UI.Gumps
                 ConsumableCooldownGump.RefreshOpenGumps(World);
             }
 
+            bool trackCursesChanged = _currentProfile.TrackCurses != _trackCurses.IsChecked;
+            _currentProfile.TrackCurses = _trackCurses.IsChecked;
+
             if (invisibleHousesChanged)
             {
                 MarkUsedChunksDirty();
@@ -4604,6 +4619,17 @@ namespace ClassicUO.Game.UI.Gumps
 
                         customhealthbar.Dispose();
                     }
+                }
+            }
+            else if (trackCursesChanged && _currentProfile.CustomBarsToggled)
+            {
+                List<HealthBarGumpCustom> hbgcustom = UIManager.Gumps.OfType<HealthBarGumpCustom>().ToList();
+
+                foreach (HealthBarGumpCustom customhealthbar in hbgcustom)
+                {
+                    UIManager.Add(new HealthBarGumpCustom(World, customhealthbar.LocalSerial) { X = customhealthbar.X, Y = customhealthbar.Y });
+
+                    customhealthbar.Dispose();
                 }
             }
 
