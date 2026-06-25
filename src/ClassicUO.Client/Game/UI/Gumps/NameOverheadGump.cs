@@ -26,6 +26,10 @@ namespace ClassicUO.Game.UI.Gumps
         private readonly RenderedText _renderedText;
         private Texture2D _borderColor = SolidColorTextureCache.GetTexture(Color.Black);
         private bool _showHpBar;
+        private const float PLAYER_OVERHEAD_SCALE = 0.85f;
+        private const int PLAYER_OVERHEAD_PADDING_X = 10;
+        private const int PLAYER_CURSE_TIMER_HEIGHT = 6;
+
         private bool UseCustomMobileNameplate =>
             ProfileManager.CurrentProfile.CustomPlayerNameplate
             && World.Get(LocalSerial) is Mobile mobile
@@ -167,18 +171,23 @@ namespace ClassicUO.Game.UI.Gumps
                 if (UseCustomMobileNameplate)
                 {
                     bool isPlayer = World.Player != null && LocalSerial == World.Player.Serial;
-                    int nameHeight = Math.Max(_renderedText.Height + 4, 17);
-                    int curseTimerHeight = ProfileManager.CurrentProfile.TrackCurses ? 9 : 0;
+                    int nameHeight = GetPlayerOverheadNameHeight();
+                    int curseTimerHeight = ProfileManager.CurrentProfile.TrackCurses ? PLAYER_CURSE_TIMER_HEIGHT : 0;
 
-                    Width = Math.Max(width + 10, isPlayer ? 90 : 72);
+                    Width = Math.Max((int)Math.Ceiling(width * PLAYER_OVERHEAD_SCALE) + PLAYER_OVERHEAD_PADDING_X, isPlayer ? 77 : 61);
                     Height = nameHeight + curseTimerHeight;
+                }
+                else if (usePlayerOverheadStyle)
+                {
+                    Width = _background.Width = Math.Max((int)Math.Ceiling(width * PLAYER_OVERHEAD_SCALE) + PLAYER_OVERHEAD_PADDING_X, 61);
+                    int curseTimerExtra = _showHpBar && ProfileManager.CurrentProfile.TrackCurses ? PLAYER_CURSE_TIMER_HEIGHT : 0;
+                    Height = _background.Height = GetPlayerOverheadNameHeight() + curseTimerExtra;
                 }
                 else
                 {
                     Width = _background.Width = Constants.OBJECT_HANDLES_GUMP_WIDTH + 4;
-                    int hpBarExtra = _showHpBar && !usePlayerOverheadStyle ? Constants.OBJECT_HANDLES_HP_BAR_HEIGHT + 1 : 0;
-                    int curseTimerExtra = _showHpBar && usePlayerOverheadStyle && ProfileManager.CurrentProfile.TrackCurses ? 9 : 0;
-                    Height = _background.Height = Constants.OBJECT_HANDLES_GUMP_HEIGHT + 4 + hpBarExtra + curseTimerExtra;
+                    int hpBarExtra = _showHpBar ? Constants.OBJECT_HANDLES_HP_BAR_HEIGHT + 1 : 0;
+                    Height = _background.Height = Constants.OBJECT_HANDLES_GUMP_HEIGHT + 4 + hpBarExtra;
                 }
 
                 WantUpdateSize = false;
@@ -699,17 +708,19 @@ namespace ClassicUO.Game.UI.Gumps
                 base.AddToRenderLists(renderLists, x, y, ref layerDepthRef);
             }
 
-            int renderedTextOffset = Math.Max(0, Width - _renderedText.Width - 4) >> 1;
             Mobile nameplateMobile = World.Get(LocalSerial) as Mobile;
             bool usePlayerOverheadStyle = _showHpBar
                 && nameplateMobile != null
                 && ShouldUsePlayerOverheadStyle(nameplateMobile);
+            int renderedTextOffset = usePlayerOverheadStyle
+                ? Math.Max(0, Width - (int)Math.Ceiling(_renderedText.Width * PLAYER_OVERHEAD_SCALE)) >> 1
+                : Math.Max(0, Width - _renderedText.Width - 4) >> 1;
 
             if (usePlayerOverheadStyle)
             {
-                int curseTimerExtra = _showHpBar && ProfileManager.CurrentProfile.TrackCurses ? 9 : 0;
+                int curseTimerExtra = _showHpBar && ProfileManager.CurrentProfile.TrackCurses ? PLAYER_CURSE_TIMER_HEIGHT : 0;
                 int nameHeight = UseCustomMobileNameplate
-                    ? Math.Max(_renderedText.Height + 4, 17)
+                    ? GetPlayerOverheadNameHeight()
                     : Math.Max(0, Height - curseTimerExtra);
                 int filledNameWidth = Math.Max(0, (Width - 2) * nameplateMobile.HitsPercentage / 100);
                 Color hpColor = GetNameplateHpColor(nameplateMobile);
@@ -747,18 +758,29 @@ namespace ClassicUO.Game.UI.Gumps
 
             renderLists.AddGumpNoAtlas(batcher =>
                 {
+                    if (usePlayerOverheadStyle)
+                    {
+                        return _renderedText.Draw(
+                            batcher,
+                            x + renderedTextOffset,
+                            y + 2,
+                            layerDepth + CHILD_LAYER_INCREMENT * 7,
+                            scale: PLAYER_OVERHEAD_SCALE
+                        );
+                    }
+
                     return _renderedText.Draw(
-                        batcher,
-                        Width,
-                        Height,
-                        x + 2 + renderedTextOffset,
-                        y + 2,
-                        Width,
-                        Height,
-                        0,
-                        0,
-                        layerDepth + CHILD_LAYER_INCREMENT * 7
-                    );
+                            batcher,
+                            Width,
+                            Height,
+                            x + 2 + renderedTextOffset,
+                            y + 2,
+                            Width,
+                            Height,
+                            0,
+                            0,
+                            layerDepth + CHILD_LAYER_INCREMENT * 7
+                        );
                 }
             );
 
@@ -768,7 +790,7 @@ namespace ClassicUO.Game.UI.Gumps
                 {
                     if (ProfileManager.CurrentProfile.TrackCurses)
                     {
-                        int curseTimerExtra = 9;
+                        int curseTimerExtra = PLAYER_CURSE_TIMER_HEIGHT;
                         int curseY = y + Height - curseTimerExtra + 1;
                         DrawCurseTimers(renderLists, x, curseY, layerDepth + CHILD_LAYER_INCREMENT * 9, hueVector);
                     }
@@ -851,7 +873,12 @@ namespace ClassicUO.Game.UI.Gumps
 
         private static bool ShouldUsePlayerOverheadStyle(Mobile mobile)
         {
-            return mobile.IsHuman && !mobile.IsDead;
+            return mobile.IsHuman && !mobile.IsDead && !mobile.IsRenamable && mobile.NotorietyFlag != NotorietyFlag.Invulnerable;
+        }
+
+        private int GetPlayerOverheadNameHeight()
+        {
+            return Math.Max((int)Math.Ceiling(_renderedText.Height * PLAYER_OVERHEAD_SCALE) + 4, 15);
         }
 
         private void DrawCurseTimers(RenderLists renderLists, int x, int y, float layerDepth, Vector3 hueVector)
@@ -863,34 +890,59 @@ namespace ClassicUO.Game.UI.Gumps
                 return;
             }
 
-            const int barHeight = 2;
-            const int barGap = 1;
+            TrackedCurseSnapshot snapshot = GetHighestPriorityCurseSnapshot(snapshots, count);
+            const int barHeight = 3;
 
             renderLists.AddGumpNoAtlas(batcher =>
             {
-                for (int i = 0; i < count; i++)
-                {
-                    TrackedCurseSnapshot snapshot = snapshots[i];
-                    int width = Math.Max(1, (Width - 2) * (int)snapshot.Remaining / Math.Max(1, (int)snapshot.Duration));
-                    int barY = y + i * (barHeight + barGap);
+                int width = Math.Max(1, (Width - 2) * (int)snapshot.Remaining / Math.Max(1, (int)snapshot.Duration));
 
-                    batcher.Draw(
-                        SolidColorTextureCache.GetTexture(Color.Black),
-                        new Rectangle(x, barY, Width, barHeight),
-                        hueVector,
-                        layerDepth
-                    );
+                batcher.Draw(
+                    SolidColorTextureCache.GetTexture(Color.Black),
+                    new Rectangle(x, y, Width, barHeight),
+                    hueVector,
+                    layerDepth
+                );
 
-                    batcher.Draw(
-                        SolidColorTextureCache.GetTexture(GetCurseTimerColor(snapshot.Kind)),
-                        new Rectangle(x + 1, barY, width, barHeight),
-                        hueVector,
-                        layerDepth + CHILD_LAYER_INCREMENT
-                    );
-                }
+                batcher.Draw(
+                    SolidColorTextureCache.GetTexture(GetCurseTimerColor(snapshot.Kind)),
+                    new Rectangle(x + 1, y, width, barHeight),
+                    hueVector,
+                    layerDepth + CHILD_LAYER_INCREMENT
+                );
 
                 return true;
             });
+        }
+
+        private static TrackedCurseSnapshot GetHighestPriorityCurseSnapshot(TrackedCurseSnapshot[] snapshots, int count)
+        {
+            TrackedCurseSnapshot best = snapshots[0];
+            int bestPriority = GetCursePriority(best.Kind);
+
+            for (int i = 1; i < count; i++)
+            {
+                int priority = GetCursePriority(snapshots[i].Kind);
+
+                if (priority > bestPriority)
+                {
+                    best = snapshots[i];
+                    bestPriority = priority;
+                }
+            }
+
+            return best;
+        }
+
+        private static int GetCursePriority(TrackedCurseKind kind)
+        {
+            return kind switch
+            {
+                TrackedCurseKind.CorpseSkin => 3,
+                TrackedCurseKind.Curse => 2,
+                TrackedCurseKind.HitCurse => 1,
+                _ => 0
+            };
         }
 
         private static Color GetCurseTimerColor(TrackedCurseKind kind)
