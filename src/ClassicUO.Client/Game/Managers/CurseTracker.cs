@@ -2,9 +2,7 @@
 
 using System;
 using System.Collections.Generic;
-using ClassicUO.Assets;
 using ClassicUO.Configuration;
-using ClassicUO.Game.Data;
 using ClassicUO.Game.GameObjects;
 using ClassicUO.Game;
 
@@ -34,17 +32,15 @@ namespace ClassicUO.Game.Managers
     internal static class CurseTracker
     {
         private const int CurseSpellIndex = 27;
-        private const int CorpseSkinSpellIndex = 103;
         private const ushort CurseRemovalGraphic = 0x3709;
         private const ushort CorpseSkinGraphic = 0x373A;
         private const ushort CorpseSkinHue = 67;
         private const float AssumedTargetResist = 110.1f;
+        private const float AssumedSpiritSpeak = 80.0f;
+        private const int AssumedEvalIntFixed = 1200;
         private const uint HitCurseDurationMs = 10_000;
-        private const uint PendingCorpseSkinWindowMs = 5_000;
 
         private static readonly Dictionary<uint, CurseState> _states = new Dictionary<uint, CurseState>();
-        private static uint _pendingCorpseSkinTarget;
-        private static uint _pendingCorpseSkinExpiresAt;
 
         public static void NotifyTargetSelected(World world, uint targetSerial)
         {
@@ -62,13 +58,8 @@ namespace ClassicUO.Game.Managers
 
             switch (GameActions.LastSpellIndex)
             {
-                case CorpseSkinSpellIndex:
-                    _pendingCorpseSkinTarget = targetSerial;
-                    _pendingCorpseSkinExpiresAt = Time.Ticks + PendingCorpseSkinWindowMs;
-                    break;
-
                 case CurseSpellIndex:
-                    Start(targetSerial, TrackedCurseKind.Curse, GetCurseDuration(world));
+                    Start(targetSerial, TrackedCurseKind.Curse, GetCurseDuration());
                     break;
             }
         }
@@ -90,8 +81,8 @@ namespace ClassicUO.Game.Managers
 
             if (graphic == CorpseSkinGraphic && hue == CorpseSkinHue)
             {
-                ConfirmCorpseSkinEffect(world, source);
-                ConfirmCorpseSkinEffect(world, target);
+                StartCorpseSkinIfMobile(world, source);
+                StartCorpseSkinIfMobile(world, target);
             }
         }
 
@@ -162,16 +153,19 @@ namespace ClassicUO.Game.Managers
             }
         }
 
-        private static void ConfirmCorpseSkinEffect(World world, uint serial)
+        private static void StartCorpseSkinIfMobile(World world, uint serial)
         {
-            if (serial == 0 || serial != _pendingCorpseSkinTarget || Time.Ticks > _pendingCorpseSkinExpiresAt)
+            if (serial == 0 || serial == world.Player.Serial || !SerialHelper.IsMobile(serial))
             {
                 return;
             }
 
-            Start(serial, TrackedCurseKind.CorpseSkin, GetCorpseSkinDuration(world));
-            _pendingCorpseSkinTarget = 0;
-            _pendingCorpseSkinExpiresAt = 0;
+            Entity entity = world.Get(serial);
+
+            if (entity is Mobile && !entity.IsDestroyed)
+            {
+                Start(serial, TrackedCurseKind.CorpseSkin, GetCorpseSkinDuration());
+            }
         }
 
         private static bool IsEnabled(World world)
@@ -187,44 +181,18 @@ namespace ClassicUO.Game.Managers
             }
         }
 
-        private static uint GetCorpseSkinDuration(World world)
+        private static uint GetCorpseSkinDuration()
         {
-            float spiritSpeak = GetSkillValue(world, SkillEntry.HardCodedName.SpiritSpeak);
-            double seconds = ((spiritSpeak - AssumedTargetResist) / 2.5d) + 40.0d;
+            double seconds = ((AssumedSpiritSpeak - AssumedTargetResist) / 2.5d) + 40.0d;
 
             return (uint)Math.Max(1_000, seconds * 1_000);
         }
 
-        private static uint GetCurseDuration(World world)
+        private static uint GetCurseDuration()
         {
-            int evalFixed = GetSkillFixed(world, SkillEntry.HardCodedName.EvaluateIntelligence);
-            int seconds = ((6 * evalFixed) / 50) + 1;
+            int seconds = ((6 * AssumedEvalIntFixed) / 50) + 1;
 
             return (uint)Math.Max(1_000, seconds * 1_000);
-        }
-
-        private static float GetSkillValue(World world, SkillEntry.HardCodedName skill)
-        {
-            int index = (int)skill;
-
-            if (world.Player?.Skills == null || index < 0 || index >= world.Player.Skills.Length)
-            {
-                return 0;
-            }
-
-            return world.Player.Skills[index].Value;
-        }
-
-        private static int GetSkillFixed(World world, SkillEntry.HardCodedName skill)
-        {
-            int index = (int)skill;
-
-            if (world.Player?.Skills == null || index < 0 || index >= world.Player.Skills.Length)
-            {
-                return 0;
-            }
-
-            return world.Player.Skills[index].ValueFixed;
         }
 
         private static void AddSnapshot(TrackedCurseSnapshot[] snapshots, ref int count, TrackedCurseKind kind, TrackedCurseTimer timer)
