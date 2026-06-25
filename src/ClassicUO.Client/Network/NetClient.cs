@@ -232,6 +232,13 @@ namespace ClassicUO.Network
             if (message.IsEmpty)
                 return;
 
+            uint targetSerial = message[0] == 0x6C ? GetTargetSerial(message) : 0;
+
+            if (targetSerial != 0 && Client.Game.UO.World?.Player?.TryConsumePendingBandageTarget(targetSerial) == true)
+            {
+                ClassicUO.Game.UI.Gumps.SwingTimerGump.StartBandageCooldown(Client.Game.UO.World, targetSerial);
+            }
+
             PacketLogger.Default?.Log(message, true);
 
             if (!skipEncryption)
@@ -247,6 +254,16 @@ namespace ClassicUO.Network
 
             Statistics.TotalBytesSent += (uint)message.Length;
             Statistics.TotalPacketsSent++;
+        }
+
+        private static uint GetTargetSerial(ReadOnlySpan<byte> message)
+        {
+            if (message.Length < 11)
+            {
+                return 0;
+            }
+
+            return (uint)(message[7] << 24 | message[8] << 16 | message[9] << 8 | message[10]);
         }
 
         private void ProcessEncryption(Span<byte> buffer)

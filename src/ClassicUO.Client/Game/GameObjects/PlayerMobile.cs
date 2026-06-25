@@ -1,5 +1,6 @@
 // SPDX-License-Identifier: BSD-2-Clause
 
+using System;
 using ClassicUO.Assets;
 using ClassicUO.Configuration;
 using ClassicUO.Game.Data;
@@ -47,6 +48,21 @@ namespace ClassicUO.Game.GameObjects
             }
         }
 
+        public uint CastingDuration => IsCasting ? _castingDuration : 0;
+
+        public uint CastingRemaining
+        {
+            get
+            {
+                if (!IsCasting)
+                {
+                    return 0;
+                }
+
+                return _castingEndTime > Time.Ticks ? _castingEndTime - Time.Ticks : 0;
+            }
+        }
+
         public ref Ability PrimaryAbility => ref Abilities[0];
         public ref Ability SecondaryAbility => ref Abilities[1];
         protected override bool IsWalking => LastStepTime > Time.Ticks - Constants.PLAYER_WALKING_DELAY;
@@ -71,7 +87,9 @@ namespace ClassicUO.Game.GameObjects
         private Direction _obstacleDodgeForwardDirection;
         private Direction _obstacleDodgeSideDirection;
         private bool _isCasting;
+        private uint _castingDuration;
         private uint _castingEndTime;
+        private uint _pendingBandageTargetUntil;
 
         private static readonly int[] _castingStopClilocs =
         {
@@ -322,12 +340,51 @@ namespace ClassicUO.Game.GameObjects
             }
 
             _isCasting = true;
-            _castingEndTime = Time.Ticks + 400 + (uint)(circle + protectionDelay) * 250;
+            _castingDuration = 400 + (uint)(circle + protectionDelay) * 250;
+            _castingEndTime = Time.Ticks + _castingDuration;
+        }
+
+        internal void NotifyItemDoubleClick(Item item)
+        {
+            if (item == null)
+            {
+                return;
+            }
+
+            if (item.Graphic == 0x0E21)
+            {
+                _pendingBandageTargetUntil = Time.Ticks + 5000;
+                return;
+            }
+
+            if (TryGetSpellStoneSpell(item, out int spellIndex))
+            {
+                StartCasting(spellIndex);
+            }
+        }
+
+        internal bool TryConsumePendingBandageTarget(uint targetSerial)
+        {
+            if (_pendingBandageTargetUntil == 0)
+            {
+                return false;
+            }
+
+            bool isPending = Time.Ticks <= _pendingBandageTargetUntil;
+            _pendingBandageTargetUntil = 0;
+
+            if (!isPending || targetSerial == 0)
+            {
+                return false;
+            }
+
+            return targetSerial != Serial || HitsMax == 0 || Hits < HitsMax;
         }
 
         internal void StopCasting()
         {
             _isCasting = false;
+            _castingDuration = 0;
             _castingEndTime = 0;
         }
 
@@ -418,6 +475,57 @@ namespace ClassicUO.Game.GameObjects
                 default:
                     return false;
             }
+        }
+
+        private bool TryGetSpellStoneSpell(Item item, out int spellIndex)
+        {
+            spellIndex = 0;
+
+            if (!IsPotentialSpellStone(item))
+            {
+                return false;
+            }
+
+            string itemText = item.Name;
+
+            if (World.OPL.TryGetNameAndData(item.Serial, out string name, out string data))
+            {
+                itemText = $"{itemText} {name} {data}";
+            }
+
+            if (string.IsNullOrWhiteSpace(itemText))
+            {
+                return false;
+            }
+
+            return TryFindSpellIndexByText(itemText, SpellsMagery.GetAllSpells, out spellIndex)
+                || TryFindSpellIndexByText(itemText, SpellsNecromancy.GetAllSpells, out spellIndex)
+                || TryFindSpellIndexByText(itemText, SpellsChivalry.GetAllSpells, out spellIndex)
+                || TryFindSpellIndexByText(itemText, SpellsBushido.GetAllSpells, out spellIndex)
+                || TryFindSpellIndexByText(itemText, SpellsNinjitsu.GetAllSpells, out spellIndex)
+                || TryFindSpellIndexByText(itemText, SpellsSpellweaving.GetAllSpells, out spellIndex)
+                || TryFindSpellIndexByText(itemText, SpellsMysticism.GetAllSpells, out spellIndex)
+                || TryFindSpellIndexByText(itemText, SpellsMastery.GetAllSpells, out spellIndex);
+        }
+
+        private bool IsPotentialSpellStone(Item item)
+        {
+            return item.Graphic == 0x0EFA || World.OPL.GetNameCliloc(item.Serial) == 1095377;
+        }
+
+        private static bool TryFindSpellIndexByText(string itemText, IReadOnlyDictionary<int, SpellDefinition> spells, out int spellIndex)
+        {
+            foreach (KeyValuePair<int, SpellDefinition> spell in spells)
+            {
+                if (!string.IsNullOrWhiteSpace(spell.Value.Name) && itemText.IndexOf(spell.Value.Name, StringComparison.OrdinalIgnoreCase) >= 0)
+                {
+                    spellIndex = spell.Value.ID;
+                    return true;
+                }
+            }
+
+            spellIndex = 0;
+            return false;
         }
 
         public void UpdateAbilities()

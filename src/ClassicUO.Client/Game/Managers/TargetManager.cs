@@ -297,6 +297,7 @@ namespace ClassicUO.Game.Managers
                                                                                    entity.Z,
                                                                                    _targetCursorId,
                                                                                    (byte)TargetingType);
+                                                StartBandageCooldownIfPending(entity.Serial);
 
                                                 ClearTargetingWithoutTargetCancelPacket();
 
@@ -353,6 +354,7 @@ namespace ClassicUO.Game.Managers
                                                                entity.Z,
                                                                _targetCursorId,
                                                                (byte)TargetingType);
+                            StartBandageCooldownIfPending(entity.Serial);
 
                             if (SerialHelper.IsMobile(serial) && LastTargetInfo.Serial != serial)
                             {
@@ -479,6 +481,7 @@ namespace ClassicUO.Game.Managers
             _lastDataBuffer[6] = (byte) TargetingType;
 
             NetClient.Socket.Send(_lastDataBuffer);
+            StartBandageCooldownIfPending(ReadTargetSerial(_lastDataBuffer));
             Mouse.CancelDoubleClick = true;
             ClearTargetingWithoutTargetCancelPacket();
         }
@@ -526,10 +529,29 @@ namespace ClassicUO.Game.Managers
                                             z,
                                             _targetCursorId,
                                             (byte)TargetingType);
+            StartBandageCooldownIfPending(0);
 
 
             Mouse.CancelDoubleClick = true;
             ClearTargetingWithoutTargetCancelPacket();
+        }
+
+        private void StartBandageCooldownIfPending(uint targetSerial)
+        {
+            if (_world.Player?.TryConsumePendingBandageTarget(targetSerial) == true)
+            {
+                SwingTimerGump.StartBandageCooldown(_world, targetSerial);
+            }
+        }
+
+        private static uint ReadTargetSerial(byte[] packet)
+        {
+            if (packet == null || packet.Length < 11)
+            {
+                return 0;
+            }
+
+            return (uint)(packet[7] << 24 | packet[8] << 16 | packet[9] << 8 | packet[10]);
         }
     }
 }

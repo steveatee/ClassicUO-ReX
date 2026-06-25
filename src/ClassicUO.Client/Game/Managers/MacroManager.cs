@@ -1289,10 +1289,12 @@ namespace ClassicUO.Game.Managers
                                 if (macro.Code == MacroType.BandageSelf)
                                 {
                                     _world.TargetManager.Target(_world.Player);
+                                    SwingTimerGump.StartBandageCooldown(_world, _world.Player.Serial);
                                 }
                                 else if (_world.TargetManager.LastTargetInfo.IsEntity)
                                 {
                                     _world.TargetManager.Target(_world.TargetManager.LastTargetInfo.Serial);
+                                    SwingTimerGump.StartBandageCooldown(_world, _world.TargetManager.LastTargetInfo.Serial);
                                 }
 
                                 WaitingBandageTarget = false;
@@ -1329,10 +1331,12 @@ namespace ClassicUO.Game.Managers
                             if (macro.Code == MacroType.BandageSelf)
                             {
                                 NetClient.Socket.Send_TargetSelectedObject(bandage.Serial, _world.Player.Serial);
+                                SwingTimerGump.StartBandageCooldown(_world, _world.Player.Serial);
                             }
                             else if (SerialHelper.IsMobile(_world.TargetManager.SelectedTarget))
                             {
                                 NetClient.Socket.Send_TargetSelectedObject(bandage.Serial, _world.TargetManager.SelectedTarget);
+                                SwingTimerGump.StartBandageCooldown(_world, _world.TargetManager.SelectedTarget);
                             }
                         }
                     }

@@ -4796,6 +4796,7 @@ namespace ClassicUO.Network
             }
 
             ConsumableCooldownGump.NotifyCliloc(world, cliloc, arguments);
+            SwingTimerGump.NotifyCliloc(world, cliloc);
             world.Player.NotifyCastingCliloc(cliloc);
 
             if (!string.IsNullOrWhiteSpace(affix))

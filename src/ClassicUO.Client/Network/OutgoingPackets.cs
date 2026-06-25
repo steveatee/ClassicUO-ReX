@@ -145,6 +145,11 @@ namespace ClassicUO.Network
 
             socket.Send(writer.BufferWritten);
 
+            if (Client.Game.UO.World?.Player != null && Client.Game.UO.World.Items.Get(serial) is Item item)
+            {
+                Client.Game.UO.World.Player.NotifyItemDoubleClick(item);
+            }
+
             writer.Dispose();
         }
 
@@ -541,6 +546,7 @@ namespace ClassicUO.Network
             }
 
             socket.Send(writer.BufferWritten);
+
             writer.Dispose();
         }
 
@@ -3526,6 +3532,12 @@ namespace ClassicUO.Network
 
 
             socket.Send(writer.BufferWritten);
+
+            if (Client.Game.UO.World?.Player != null && Client.Game.UO.World.Items.Get(serial) is Item { Graphic: 0x0E21 })
+            {
+                ClassicUO.Game.UI.Gumps.SwingTimerGump.StartBandageCooldown(Client.Game.UO.World, targetSerial);
+            }
+
             writer.Dispose();
         }
 

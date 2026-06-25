@@ -10,6 +10,7 @@ using ClassicUO.Game.Data;
 using ClassicUO.Game.GameObjects;
 using ClassicUO.Game.Managers;
 using ClassicUO.Game.Scenes;
+using ClassicUO.Game.UI.Gumps;
 using ClassicUO.Utility.Logging;
 using SDL3;
 
@@ -75,6 +76,15 @@ namespace ClassicUO.Utility.Platforms
             private readonly World _world;
             private const int ERROR_CLASS_ALREADY_EXISTS = 1410;
             public const uint WM_USER = 0x400;
+            private const int STAT_IS_CASTING = 6;
+            private const int STAT_TIMER_SWING = 100;
+            private const int STAT_TIMER_CASTING = 101;
+            private const int STAT_TIMER_APPLE = 102;
+            private const int STAT_TIMER_CONFLAG = 103;
+            private const int STAT_TIMER_HEAL = 104;
+            private const int STAT_TIMER_BANDAGE = 105;
+            private const int STAT_TIMER_GRAPES = 106;
+            private const int STAT_TIMER_GRAPES_COOLDOWN = 107;
 
             private uint _cmdID = WM_USER + 401;
 
@@ -276,7 +286,7 @@ namespace ClassicUO.Utility.Platforms
 
                     case UOAMessage.GET_STAT:
 
-                        if (_world.Player == null || wParam < 0 || wParam > 6)
+                        if (_world.Player == null || wParam < 0)
                         {
                             return 0;
                         }
@@ -289,7 +299,15 @@ namespace ClassicUO.Utility.Platforms
                             case 3: return _world.Player.Weight;
                             case 4: return _world.Player.HitsMax;
                             case 5: return (int)_world.Player.TithingPoints;
-                            case 6: return _world.Player.IsCasting ? 1 : 0;
+                            case STAT_IS_CASTING: return _world.Player.IsCasting ? 1 : 0;
+                            case STAT_TIMER_SWING: return (int)Math.Min(int.MaxValue, SwingTimerGump.GetRemainingTimer(_world, ClientTimerKind.Swing));
+                            case STAT_TIMER_CASTING: return (int)Math.Min(int.MaxValue, SwingTimerGump.GetRemainingTimer(_world, ClientTimerKind.Casting));
+                            case STAT_TIMER_APPLE: return (int)Math.Min(int.MaxValue, SwingTimerGump.GetRemainingTimer(_world, ClientTimerKind.EnchantedApple));
+                            case STAT_TIMER_CONFLAG: return (int)Math.Min(int.MaxValue, SwingTimerGump.GetRemainingTimer(_world, ClientTimerKind.ConflagrationPotion));
+                            case STAT_TIMER_HEAL: return (int)Math.Min(int.MaxValue, SwingTimerGump.GetRemainingTimer(_world, ClientTimerKind.HealingPotion));
+                            case STAT_TIMER_BANDAGE: return (int)Math.Min(int.MaxValue, SwingTimerGump.GetRemainingTimer(_world, ClientTimerKind.Bandage));
+                            case STAT_TIMER_GRAPES: return (int)Math.Min(int.MaxValue, SwingTimerGump.GetRemainingTimer(_world, ClientTimerKind.GrapesOfWrath));
+                            case STAT_TIMER_GRAPES_COOLDOWN: return (int)Math.Min(int.MaxValue, SwingTimerGump.GetRemainingTimer(_world, ClientTimerKind.GrapesOfWrathCooldown));
                         }
 
                         return 0;

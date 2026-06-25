@@ -17,7 +17,8 @@ namespace ClassicUO.Game.UI.Gumps
     {
         EnchantedApple,
         ConflagrationPotion,
-        HealingPotion
+        HealingPotion,
+        GrapesOfWrath
     }
 
     internal sealed class ConsumableCooldownGump : Gump
@@ -27,6 +28,8 @@ namespace ClassicUO.Game.UI.Gumps
         private const ushort HUE_GREEN = 0x3F;
         private const uint ENCHANTED_APPLE_COOLDOWN = 30000;
         private const uint CONFLAGRATION_COOLDOWN = 30000;
+        private const uint GRAPES_OF_WRATH_DURATION = 20000;
+        private const uint GRAPES_OF_WRATH_COOLDOWN = 120000;
         private const uint CONFLAGRATION_PENDING_TIME = 3000;
         private const uint HEALING_POTION_PENDING_TIME = 3000;
         private const uint LESSER_HEALING_POTION_COOLDOWN = 3000;
@@ -45,6 +48,7 @@ namespace ClassicUO.Game.UI.Gumps
         private const int GREATER_CONFLAGRATION_CLILOC = 1072098;
 
         private const uint APPLE_SUCCESS_CLILOC = 1074846;
+        private const uint GRAPES_OF_WRATH_SUCCESS_CLILOC = 1074847;
         private const uint APPLE_COOLDOWN_CLILOC = 1151180;
         private const uint GENERIC_ITEM_COOLDOWN_CLILOC = 1070772;
         private const uint CONFLAGRATION_COOLDOWN_CLILOC = 1072529;
@@ -154,6 +158,10 @@ namespace ClassicUO.Game.UI.Gumps
             {
                 case APPLE_SUCCESS_CLILOC:
                     StartCooldown(ConsumableCooldownKind.EnchantedApple, ENCHANTED_APPLE_COOLDOWN);
+                    break;
+
+                case GRAPES_OF_WRATH_SUCCESS_CLILOC:
+                    SwingTimerGump.StartGrapesOfWrathCooldown(GRAPES_OF_WRATH_DURATION, GRAPES_OF_WRATH_COOLDOWN);
                     break;
 
                 case APPLE_COOLDOWN_CLILOC:
@@ -369,6 +377,7 @@ namespace ClassicUO.Game.UI.Gumps
             {
                 ConsumableCooldownKind.EnchantedApple => "Apple",
                 ConsumableCooldownKind.ConflagrationPotion => "Conflag",
+                ConsumableCooldownKind.GrapesOfWrath => "Grapes",
                 _ => "Heal"
             };
         }
@@ -384,6 +393,7 @@ namespace ClassicUO.Game.UI.Gumps
             {
                 ConsumableCooldownKind.EnchantedApple => Color.LimeGreen,
                 ConsumableCooldownKind.ConflagrationPotion => Color.OrangeRed,
+                ConsumableCooldownKind.GrapesOfWrath => Color.MediumPurple,
                 _ => Color.Gold
             };
         }
