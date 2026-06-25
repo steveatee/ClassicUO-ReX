@@ -26,7 +26,8 @@ namespace ClassicUO.Game.UI.Gumps
         private readonly RenderedText _renderedText;
         private Texture2D _borderColor = SolidColorTextureCache.GetTexture(Color.Black);
         private bool _showHpBar;
-        private const float PLAYER_OVERHEAD_SCALE = 0.85f;
+        private const byte DEFAULT_OVERHEAD_FONT = 0xFF;
+        private const byte PLAYER_OVERHEAD_FONT = 0;
         private const int PLAYER_OVERHEAD_PADDING_X = 10;
         private const int PLAYER_CURSE_TIMER_HEIGHT = 6;
 
@@ -107,6 +108,7 @@ namespace ClassicUO.Game.UI.Gumps
 
                 Client.Game.UO.FileManager.Fonts.SetUseHTML(true);
                 Client.Game.UO.FileManager.Fonts.RecalculateWidthByInfo = true;
+                _renderedText.Font = DEFAULT_OVERHEAD_FONT;
 
                 int width = Client.Game.UO.FileManager.Fonts.GetWidthUnicode(_renderedText.Font, t);
 
@@ -142,6 +144,9 @@ namespace ClassicUO.Game.UI.Gumps
             if (!string.IsNullOrEmpty(entity.Name))
             {
                 string t = entity.Name;
+                bool usePlayerOverheadStyle = entity is Mobile mobile && ShouldUsePlayerOverheadStyle(mobile);
+
+                _renderedText.Font = usePlayerOverheadStyle ? PLAYER_OVERHEAD_FONT : DEFAULT_OVERHEAD_FONT;
 
                 int width = Client.Game.UO.FileManager.Fonts.GetWidthUnicode(_renderedText.Font, t);
 
@@ -166,7 +171,6 @@ namespace ClassicUO.Game.UI.Gumps
                 _showHpBar =
                     entity is Mobile
                     && (UseCustomMobileNameplate || ProfileManager.CurrentProfile.NameOverheadShowHpBar);
-                bool usePlayerOverheadStyle = entity is Mobile mobile && ShouldUsePlayerOverheadStyle(mobile);
 
                 if (UseCustomMobileNameplate)
                 {
@@ -174,12 +178,12 @@ namespace ClassicUO.Game.UI.Gumps
                     int nameHeight = GetPlayerOverheadNameHeight();
                     int curseTimerHeight = ProfileManager.CurrentProfile.TrackCurses ? PLAYER_CURSE_TIMER_HEIGHT : 0;
 
-                    Width = Math.Max((int)Math.Ceiling(width * PLAYER_OVERHEAD_SCALE) + PLAYER_OVERHEAD_PADDING_X, isPlayer ? 77 : 61);
+                    Width = Math.Max(width + PLAYER_OVERHEAD_PADDING_X, isPlayer ? 77 : 61);
                     Height = nameHeight + curseTimerHeight;
                 }
                 else if (usePlayerOverheadStyle)
                 {
-                    Width = _background.Width = Math.Max((int)Math.Ceiling(width * PLAYER_OVERHEAD_SCALE) + PLAYER_OVERHEAD_PADDING_X, 61);
+                    Width = _background.Width = Math.Max(width + PLAYER_OVERHEAD_PADDING_X, 61);
                     int curseTimerExtra = _showHpBar && ProfileManager.CurrentProfile.TrackCurses ? PLAYER_CURSE_TIMER_HEIGHT : 0;
                     Height = _background.Height = GetPlayerOverheadNameHeight() + curseTimerExtra;
                 }
@@ -712,9 +716,7 @@ namespace ClassicUO.Game.UI.Gumps
             bool usePlayerOverheadStyle = _showHpBar
                 && nameplateMobile != null
                 && ShouldUsePlayerOverheadStyle(nameplateMobile);
-            int renderedTextOffset = usePlayerOverheadStyle
-                ? Math.Max(0, Width - (int)Math.Ceiling(_renderedText.Width * PLAYER_OVERHEAD_SCALE)) >> 1
-                : Math.Max(0, Width - _renderedText.Width - 4) >> 1;
+            int renderedTextOffset = Math.Max(0, Width - _renderedText.Width - 4) >> 1;
 
             if (usePlayerOverheadStyle)
             {
@@ -762,10 +764,9 @@ namespace ClassicUO.Game.UI.Gumps
                     {
                         return _renderedText.Draw(
                             batcher,
-                            x + renderedTextOffset,
+                            x + 2 + renderedTextOffset,
                             y + 2,
-                            layerDepth + CHILD_LAYER_INCREMENT * 7,
-                            scale: PLAYER_OVERHEAD_SCALE
+                            layerDepth + CHILD_LAYER_INCREMENT * 7
                         );
                     }
 
@@ -878,7 +879,7 @@ namespace ClassicUO.Game.UI.Gumps
 
         private int GetPlayerOverheadNameHeight()
         {
-            return Math.Max((int)Math.Ceiling(_renderedText.Height * PLAYER_OVERHEAD_SCALE) + 4, 15);
+            return Math.Max(_renderedText.Height + 4, 15);
         }
 
         private void DrawCurseTimers(RenderLists renderLists, int x, int y, float layerDepth, Vector3 hueVector)
