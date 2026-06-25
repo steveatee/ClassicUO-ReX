@@ -2206,6 +2206,7 @@ namespace ClassicUO.Network
             short z = (short)p.ReadUInt16BE();
 
             ConsumableCooldownGump.NotifySoundEffect(world, index);
+            CurseTracker.NotifySoundEffect(world, index, x, y);
 
             Client.Game.Audio.PlaySoundWithDistance(world, index, x, y);
         }
@@ -2501,7 +2502,7 @@ namespace ClassicUO.Network
             }
 
             ConsumableCooldownGump.NotifyGraphicEffect(world, source, graphic, (ushort)hue);
-            CurseTracker.NotifyGraphicEffect(world, source, target, graphic, (ushort)hue);
+            CurseTracker.NotifyGraphicEffect(world, source, target, graphic, (ushort)hue, srcX, srcY, targetX, targetY);
 
             world.SpawnEffect(
                 type,

@@ -35,12 +35,18 @@ namespace ClassicUO.Game.Managers
         private const ushort CurseRemovalGraphic = 0x3709;
         private const ushort CorpseSkinGraphic = 0x373A;
         private const ushort CorpseSkinHue = 67;
+        private const ushort CurseEffectGraphic = 0x374A;
+        private const ushort CurseSpellSound = 0x01E1;
+        private const ushort HitCurseSound = 0x01EA;
         private const float AssumedTargetResist = 110.1f;
         private const float AssumedSpiritSpeak = 80.0f;
         private const int AssumedEvalIntFixed = 1200;
-        private const uint HitCurseDurationMs = 10_000;
+        private const uint HitCurseDurationMs = 30_000;
+        private const uint PendingCurseEffectWindowMs = 1_250;
 
         private static readonly Dictionary<uint, CurseState> _states = new Dictionary<uint, CurseState>();
+        private static readonly PendingCurseEffect[] _pendingCurseEffects = new PendingCurseEffect[6];
+        private static int _pendingCurseEffectCursor;
 
         public static void NotifyTargetSelected(World world, uint targetSerial)
         {
@@ -64,7 +70,7 @@ namespace ClassicUO.Game.Managers
             }
         }
 
-        public static void NotifyGraphicEffect(World world, uint source, uint target, ushort graphic, ushort hue)
+        public static void NotifyGraphicEffect(World world, uint source, uint target, ushort graphic, ushort hue, ushort srcX, ushort srcY, ushort targetX, ushort targetY)
         {
             if (!IsEnabled(world))
             {
@@ -83,6 +89,28 @@ namespace ClassicUO.Game.Managers
             {
                 StartCorpseSkinIfMobile(world, source);
                 StartCorpseSkinIfMobile(world, target);
+            }
+            else if (graphic == CurseEffectGraphic)
+            {
+                uint serial = GetEffectMobileSerial(world, source, target);
+
+                if (serial != 0)
+                {
+                    StorePendingCurseEffect(serial, srcX, srcY, targetX, targetY);
+                }
+            }
+        }
+
+        public static void NotifySoundEffect(World world, ushort sound, ushort x, ushort y)
+        {
+            if (!IsEnabled(world) || sound != CurseSpellSound && sound != HitCurseSound)
+            {
+                return;
+            }
+
+            if (TryConsumePendingCurseEffect(x, y, out uint serial))
+            {
+                Start(serial, sound == HitCurseSound ? TrackedCurseKind.HitCurse : TrackedCurseKind.Curse, sound == HitCurseSound ? HitCurseDurationMs : GetCurseDuration());
             }
         }
 
@@ -168,6 +196,64 @@ namespace ClassicUO.Game.Managers
             }
         }
 
+        private static uint GetEffectMobileSerial(World world, uint source, uint target)
+        {
+            if (IsTrackableMobile(world, source))
+            {
+                return source;
+            }
+
+            if (IsTrackableMobile(world, target))
+            {
+                return target;
+            }
+
+            return 0;
+        }
+
+        private static bool IsTrackableMobile(World world, uint serial)
+        {
+            if (serial == 0 || serial == world.Player.Serial || !SerialHelper.IsMobile(serial))
+            {
+                return false;
+            }
+
+            Entity entity = world.Get(serial);
+
+            return entity is Mobile && !entity.IsDestroyed;
+        }
+
+        private static void StorePendingCurseEffect(uint serial, ushort srcX, ushort srcY, ushort targetX, ushort targetY)
+        {
+            _pendingCurseEffects[_pendingCurseEffectCursor] = new PendingCurseEffect(serial, srcX, srcY, targetX, targetY, Time.Ticks + PendingCurseEffectWindowMs);
+            _pendingCurseEffectCursor = (_pendingCurseEffectCursor + 1) % _pendingCurseEffects.Length;
+        }
+
+        private static bool TryConsumePendingCurseEffect(ushort x, ushort y, out uint serial)
+        {
+            for (int i = 0; i < _pendingCurseEffects.Length; i++)
+            {
+                PendingCurseEffect pending = _pendingCurseEffects[i];
+
+                if (!pending.IsActive || pending.ExpiresAt < Time.Ticks)
+                {
+                    continue;
+                }
+
+                if (pending.Matches(x, y))
+                {
+                    serial = pending.Serial;
+                    _pendingCurseEffects[i] = default;
+
+                    return true;
+                }
+            }
+
+            serial = 0;
+
+            return false;
+        }
+
         private static bool IsEnabled(World world)
         {
             return world?.Player != null && ProfileManager.CurrentProfile.TrackCurses;
@@ -230,6 +316,37 @@ namespace ClassicUO.Game.Managers
             public uint Duration { get; }
             public uint EndAt { get; }
             public bool IsActive => Duration != 0 && EndAt > Time.Ticks;
+        }
+
+        private readonly struct PendingCurseEffect
+        {
+            public PendingCurseEffect(uint serial, ushort srcX, ushort srcY, ushort targetX, ushort targetY, uint expiresAt)
+            {
+                Serial = serial;
+                SrcX = srcX;
+                SrcY = srcY;
+                TargetX = targetX;
+                TargetY = targetY;
+                ExpiresAt = expiresAt;
+            }
+
+            public uint Serial { get; }
+            public ushort SrcX { get; }
+            public ushort SrcY { get; }
+            public ushort TargetX { get; }
+            public ushort TargetY { get; }
+            public uint ExpiresAt { get; }
+            public bool IsActive => Serial != 0;
+
+            public bool Matches(ushort x, ushort y)
+            {
+                return IsNear(SrcX, SrcY, x, y) || IsNear(TargetX, TargetY, x, y);
+            }
+
+            private static bool IsNear(ushort ax, ushort ay, ushort bx, ushort by)
+            {
+                return Math.Abs((int)ax - bx) <= 1 && Math.Abs((int)ay - by) <= 1;
+            }
         }
     }
 }
