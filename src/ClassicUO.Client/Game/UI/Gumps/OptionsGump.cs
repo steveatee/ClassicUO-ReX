@@ -1617,7 +1617,7 @@ namespace ClassicUO.Game.UI.Gumps
                 _customPlayerNameplate = AddCheckBox
                 (
                     null,
-                    "Show permanent mobile names with HP bars below characters",
+                    "Use custom player nameplates after properties load",
                     _currentProfile.CustomPlayerNameplate,
                     startX,
                     startY

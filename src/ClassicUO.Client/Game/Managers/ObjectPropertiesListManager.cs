@@ -107,6 +107,11 @@ namespace ClassicUO.Game.Managers
             return Array.Empty<int>();
         }
 
+        public int GetClilocCount(uint serial)
+        {
+            return _itemsProperties.TryGetValue(serial, out ItemProperty p) && p.Clilocs != null ? p.Clilocs.Length : 0;
+        }
+
         public void Remove(uint serial)
         {
             _itemsProperties.Remove(serial);

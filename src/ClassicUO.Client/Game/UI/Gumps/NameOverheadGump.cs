@@ -29,11 +29,12 @@ namespace ClassicUO.Game.UI.Gumps
         private const byte DEFAULT_OVERHEAD_FONT = 0xFF;
         private const int PLAYER_OVERHEAD_PADDING_X = 10;
         private const int PLAYER_CURSE_TIMER_HEIGHT = 6;
+        private const int CUSTOM_NAMEPLATE_MIN_PROPERTIES = 4;
 
         private bool UseCustomMobileNameplate =>
             ProfileManager.CurrentProfile.CustomPlayerNameplate
             && World.Get(LocalSerial) is Mobile mobile
-            && ShouldUsePlayerOverheadStyle(mobile);
+            && ShouldUseCustomPlayerNameplate(mobile);
 
         public NameOverheadGump(World world, uint serial) : base(world, serial, 0)
         {
@@ -137,7 +138,7 @@ namespace ClassicUO.Game.UI.Gumps
             if (!string.IsNullOrEmpty(entity.Name))
             {
                 string t = entity.Name;
-                bool usePlayerOverheadStyle = entity is Mobile mobile && ShouldUsePlayerOverheadStyle(mobile);
+                bool usePlayerOverheadStyle = entity is Mobile mobile && ShouldUseCustomPlayerNameplate(mobile);
 
                 _renderedText.Font = GetOverheadFont(usePlayerOverheadStyle);
                 _renderedText.IsUnicode = GetOverheadIsUnicode(usePlayerOverheadStyle);
@@ -702,7 +703,7 @@ namespace ClassicUO.Game.UI.Gumps
             Mobile nameplateMobile = World.Get(LocalSerial) as Mobile;
             bool usePlayerOverheadStyle = _showHpBar
                 && nameplateMobile != null
-                && ShouldUsePlayerOverheadStyle(nameplateMobile);
+                && ShouldUseCustomPlayerNameplate(nameplateMobile);
             int renderedTextOffset = Math.Max(0, Width - _renderedText.Width - 4) >> 1;
 
             if (usePlayerOverheadStyle)
@@ -752,7 +753,7 @@ namespace ClassicUO.Game.UI.Gumps
                         return _renderedText.Draw(
                             batcher,
                             x + 2 + renderedTextOffset,
-                            y + 2,
+                            y + 1,
                             layerDepth + CHILD_LAYER_INCREMENT * 7
                         );
                     }
@@ -859,14 +860,17 @@ namespace ClassicUO.Game.UI.Gumps
                  : Color.Red;
         }
 
-        private static bool ShouldUsePlayerOverheadStyle(Mobile mobile)
+        private bool ShouldUseCustomPlayerNameplate(Mobile mobile)
         {
-            return mobile.IsHuman && !mobile.IsDead && !mobile.IsRenamable && mobile.NotorietyFlag != NotorietyFlag.Invulnerable;
+            return ProfileManager.CurrentProfile.CustomPlayerNameplate
+                && mobile.IsHuman
+                && !mobile.IsDead
+                && World.OPL.GetClilocCount(mobile.Serial) >= CUSTOM_NAMEPLATE_MIN_PROPERTIES;
         }
 
         private int GetPlayerOverheadNameHeight()
         {
-            return Math.Max(_renderedText.Height + 4, 15);
+            return Math.Max(_renderedText.Height + 2, 13);
         }
 
         private static byte GetOverheadFont(bool usePlayerOverheadStyle)
