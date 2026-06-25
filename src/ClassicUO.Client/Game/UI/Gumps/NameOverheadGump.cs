@@ -697,6 +697,43 @@ namespace ClassicUO.Game.UI.Gumps
             }
 
             int renderedTextOffset = Math.Max(0, Width - _renderedText.Width - 4) >> 1;
+            if (UseCustomMobileNameplate && World.Get(LocalSerial) is Mobile nameplateMobile)
+            {
+                int nameHeight = Math.Max(_renderedText.Height + 4, 17);
+                int filledNameWidth = Math.Max(0, (Width - 2) * nameplateMobile.HitsPercentage / 100);
+                Color hpColor = GetNameplateHpColor(nameplateMobile);
+                float nameDepth = layerDepth + CHILD_LAYER_INCREMENT;
+
+                renderLists.AddGumpNoAtlas(batcher =>
+                {
+                    batcher.Draw(
+                        SolidColorTextureCache.GetTexture(Color.Black),
+                        new Rectangle(x, y, Width, nameHeight),
+                        hueVector,
+                        nameDepth
+                    );
+
+                    batcher.Draw(
+                        SolidColorTextureCache.GetTexture(new Color(90, 0, 0)),
+                        new Rectangle(x + 1, y + 1, Math.Max(0, Width - 2), Math.Max(0, nameHeight - 2)),
+                        hueVector,
+                        nameDepth + CHILD_LAYER_INCREMENT
+                    );
+
+                    if (filledNameWidth > 0)
+                    {
+                        batcher.Draw(
+                            SolidColorTextureCache.GetTexture(hpColor),
+                            new Rectangle(x + 1, y + 1, filledNameWidth, Math.Max(0, nameHeight - 2)),
+                            hueVector,
+                            nameDepth + CHILD_LAYER_INCREMENT * 2
+                        );
+                    }
+
+                    return true;
+                });
+            }
+
             renderLists.AddGumpNoAtlas(batcher =>
                 {
                     return _renderedText.Draw(
@@ -767,6 +804,24 @@ namespace ClassicUO.Game.UI.Gumps
             }
 
             return true;
+        }
+
+        private static Color GetNameplateHpColor(Mobile mobile)
+        {
+            if (mobile.IsPoisoned)
+            {
+                return Color.LimeGreen;
+            }
+
+            if (mobile.IsYellowHits)
+            {
+                return Color.Goldenrod;
+            }
+
+            return mobile.HitsPercentage >= 75 ? Color.Green
+                 : mobile.HitsPercentage >= 50 ? Color.YellowGreen
+                 : mobile.HitsPercentage >= 25 ? Color.Orange
+                 : Color.Red;
         }
 
         public override void Dispose()
