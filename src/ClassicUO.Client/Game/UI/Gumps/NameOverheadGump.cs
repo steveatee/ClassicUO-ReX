@@ -167,9 +167,10 @@ namespace ClassicUO.Game.UI.Gumps
                     bool isPlayer = World.Player != null && LocalSerial == World.Player.Serial;
                     const int customBarHeight = 7;
                     const int customGap = 3;
+                    int curseTimerHeight = ProfileManager.CurrentProfile.TrackCurses ? 9 : 0;
 
                     Width = Math.Max(width + 10, isPlayer ? 90 : 72);
-                    Height = _renderedText.Height + customGap + customBarHeight + 4;
+                    Height = _renderedText.Height + customGap + customBarHeight + curseTimerHeight + 4;
                 }
                 else
                 {
@@ -755,7 +756,8 @@ namespace ClassicUO.Game.UI.Gumps
             {
                 int barX = x;
                 int barHeight = UseCustomMobileNameplate ? 7 : Constants.OBJECT_HANDLES_HP_BAR_HEIGHT;
-                int barY = y + Height - barHeight;
+                int curseTimerHeight = UseCustomMobileNameplate && ProfileManager.CurrentProfile.TrackCurses ? 9 : 0;
+                int barY = y + Height - barHeight - curseTimerHeight;
                 int barWidth = Width;
                 int filledWidth = (barWidth - 2) * mob.HitsPercentage / 100;
                 Color hpColor = mob.HitsPercentage >= 80 ? Color.Green
@@ -801,6 +803,11 @@ namespace ClassicUO.Game.UI.Gumps
                     }
                     return true;
                 });
+
+                if (UseCustomMobileNameplate && ProfileManager.CurrentProfile.TrackCurses)
+                {
+                    DrawCurseTimers(renderLists, x, barY + barHeight + 1, layerDepth + CHILD_LAYER_INCREMENT * 4, hueVector);
+                }
             }
 
             return true;
@@ -822,6 +829,56 @@ namespace ClassicUO.Game.UI.Gumps
                  : mobile.HitsPercentage >= 50 ? Color.YellowGreen
                  : mobile.HitsPercentage >= 25 ? Color.Orange
                  : Color.Red;
+        }
+
+        private void DrawCurseTimers(RenderLists renderLists, int x, int y, float layerDepth, Vector3 hueVector)
+        {
+            TrackedCurseSnapshot[] snapshots = new TrackedCurseSnapshot[3];
+
+            if (!CurseTracker.TryGetSnapshots(LocalSerial, snapshots, out int count))
+            {
+                return;
+            }
+
+            const int barHeight = 2;
+            const int barGap = 1;
+
+            renderLists.AddGumpNoAtlas(batcher =>
+            {
+                for (int i = 0; i < count; i++)
+                {
+                    TrackedCurseSnapshot snapshot = snapshots[i];
+                    int width = Math.Max(1, (Width - 2) * (int)snapshot.Remaining / Math.Max(1, (int)snapshot.Duration));
+                    int barY = y + i * (barHeight + barGap);
+
+                    batcher.Draw(
+                        SolidColorTextureCache.GetTexture(Color.Black),
+                        new Rectangle(x, barY, Width, barHeight),
+                        hueVector,
+                        layerDepth
+                    );
+
+                    batcher.Draw(
+                        SolidColorTextureCache.GetTexture(GetCurseTimerColor(snapshot.Kind)),
+                        new Rectangle(x + 1, barY, width, barHeight),
+                        hueVector,
+                        layerDepth + CHILD_LAYER_INCREMENT
+                    );
+                }
+
+                return true;
+            });
+        }
+
+        private static Color GetCurseTimerColor(TrackedCurseKind kind)
+        {
+            return kind switch
+            {
+                TrackedCurseKind.CorpseSkin => Color.MediumPurple,
+                TrackedCurseKind.Curse => Color.Orange,
+                TrackedCurseKind.HitCurse => Color.DeepPink,
+                _ => Color.White
+            };
         }
 
         public override void Dispose()
