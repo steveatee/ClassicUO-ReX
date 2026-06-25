@@ -27,7 +27,6 @@ namespace ClassicUO.Game.UI.Gumps
         private Texture2D _borderColor = SolidColorTextureCache.GetTexture(Color.Black);
         private bool _showHpBar;
         private const byte DEFAULT_OVERHEAD_FONT = 0xFF;
-        private const byte PLAYER_OVERHEAD_FONT = 0;
         private const int PLAYER_OVERHEAD_PADDING_X = 10;
         private const int PLAYER_CURSE_TIMER_HEIGHT = 6;
 
@@ -109,19 +108,13 @@ namespace ClassicUO.Game.UI.Gumps
                 Client.Game.UO.FileManager.Fonts.SetUseHTML(true);
                 Client.Game.UO.FileManager.Fonts.RecalculateWidthByInfo = true;
                 _renderedText.Font = DEFAULT_OVERHEAD_FONT;
+                _renderedText.IsUnicode = true;
 
-                int width = Client.Game.UO.FileManager.Fonts.GetWidthUnicode(_renderedText.Font, t);
+                int width = GetTextWidth(_renderedText.Font, _renderedText.IsUnicode, t);
 
                 if (width > Constants.OBJECT_HANDLES_GUMP_WIDTH)
                 {
-                    t = Client.Game.UO.FileManager.Fonts.GetTextByWidthUnicode(
-                        _renderedText.Font,
-                        t.AsSpan(),
-                        Constants.OBJECT_HANDLES_GUMP_WIDTH,
-                        true,
-                        TEXT_ALIGN_TYPE.TS_CENTER,
-                        (ushort)FontStyle.BlackBorder
-                    );
+                    t = GetTextByWidth(_renderedText.Font, _renderedText.IsUnicode, t, Constants.OBJECT_HANDLES_GUMP_WIDTH);
 
                     width = Constants.OBJECT_HANDLES_GUMP_WIDTH;
                 }
@@ -146,20 +139,14 @@ namespace ClassicUO.Game.UI.Gumps
                 string t = entity.Name;
                 bool usePlayerOverheadStyle = entity is Mobile mobile && ShouldUsePlayerOverheadStyle(mobile);
 
-                _renderedText.Font = usePlayerOverheadStyle ? PLAYER_OVERHEAD_FONT : DEFAULT_OVERHEAD_FONT;
+                _renderedText.Font = GetOverheadFont(usePlayerOverheadStyle);
+                _renderedText.IsUnicode = GetOverheadIsUnicode(usePlayerOverheadStyle);
 
-                int width = Client.Game.UO.FileManager.Fonts.GetWidthUnicode(_renderedText.Font, t);
+                int width = GetTextWidth(_renderedText.Font, _renderedText.IsUnicode, t);
 
                 if (width > Constants.OBJECT_HANDLES_GUMP_WIDTH)
                 {
-                    t = Client.Game.UO.FileManager.Fonts.GetTextByWidthUnicode(
-                        _renderedText.Font,
-                        t.AsSpan(),
-                        Constants.OBJECT_HANDLES_GUMP_WIDTH,
-                        true,
-                        TEXT_ALIGN_TYPE.TS_CENTER,
-                        (ushort)FontStyle.BlackBorder
-                    );
+                    t = GetTextByWidth(_renderedText.Font, _renderedText.IsUnicode, t, Constants.OBJECT_HANDLES_GUMP_WIDTH);
 
                     width = Constants.OBJECT_HANDLES_GUMP_WIDTH;
                 }
@@ -880,6 +867,34 @@ namespace ClassicUO.Game.UI.Gumps
         private int GetPlayerOverheadNameHeight()
         {
             return Math.Max(_renderedText.Height + 4, 15);
+        }
+
+        private static byte GetOverheadFont(bool usePlayerOverheadStyle)
+        {
+            return usePlayerOverheadStyle && ProfileManager.CurrentProfile.OverrideAllFonts
+                ? ProfileManager.CurrentProfile.ChatFont
+                : DEFAULT_OVERHEAD_FONT;
+        }
+
+        private static bool GetOverheadIsUnicode(bool usePlayerOverheadStyle)
+        {
+            return !usePlayerOverheadStyle
+                || !ProfileManager.CurrentProfile.OverrideAllFonts
+                || ProfileManager.CurrentProfile.OverrideAllFontsIsUnicode;
+        }
+
+        private static int GetTextWidth(byte font, bool isUnicode, string text)
+        {
+            return isUnicode
+                ? Client.Game.UO.FileManager.Fonts.GetWidthUnicode(font, text)
+                : Client.Game.UO.FileManager.Fonts.GetWidthASCII(font, text);
+        }
+
+        private static string GetTextByWidth(byte font, bool isUnicode, string text, int width)
+        {
+            return isUnicode
+                ? Client.Game.UO.FileManager.Fonts.GetTextByWidthUnicode(font, text.AsSpan(), width, true, TEXT_ALIGN_TYPE.TS_CENTER, (ushort)FontStyle.BlackBorder)
+                : Client.Game.UO.FileManager.Fonts.GetTextByWidthASCII(font, text, width, true, TEXT_ALIGN_TYPE.TS_CENTER, (ushort)FontStyle.BlackBorder);
         }
 
         private void DrawCurseTimers(RenderLists renderLists, int x, int y, float layerDepth, Vector3 hueVector)
