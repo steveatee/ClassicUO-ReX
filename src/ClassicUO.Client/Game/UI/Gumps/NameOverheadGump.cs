@@ -30,6 +30,7 @@ namespace ClassicUO.Game.UI.Gumps
         private const int PLAYER_OVERHEAD_PADDING_X = 10;
         private const int PLAYER_CURSE_TIMER_HEIGHT = 6;
         private const int CUSTOM_NAMEPLATE_MIN_PROPERTIES = 4;
+        private const string CUSTOM_NAMEPLATE_PROPERTY_TEXT = "Queen's Loyalty";
 
         private bool UseCustomMobileNameplate =>
             ProfileManager.CurrentProfile.CustomPlayerNameplate
@@ -865,7 +866,17 @@ namespace ClassicUO.Game.UI.Gumps
             return ProfileManager.CurrentProfile.CustomPlayerNameplate
                 && mobile.IsHuman
                 && !mobile.IsDead
-                && World.OPL.GetClilocCount(mobile.Serial) >= CUSTOM_NAMEPLATE_MIN_PROPERTIES;
+                && (
+                    World.OPL.GetClilocCount(mobile.Serial) >= CUSTOM_NAMEPLATE_MIN_PROPERTIES
+                    || HasCustomNameplatePropertyText(mobile.Serial)
+                );
+        }
+
+        private bool HasCustomNameplatePropertyText(uint serial)
+        {
+            return World.OPL.TryGetNameAndData(serial, out _, out string data)
+                && data != null
+                && data.IndexOf(CUSTOM_NAMEPLATE_PROPERTY_TEXT, StringComparison.OrdinalIgnoreCase) >= 0;
         }
 
         private int GetPlayerOverheadNameHeight()
