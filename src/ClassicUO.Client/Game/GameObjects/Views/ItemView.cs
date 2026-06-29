@@ -159,7 +159,7 @@ namespace ClassicUO.Game.GameObjects
                 hueVec.Z = 0.5f;
             }
 
-            if (ProfileManager.CurrentProfile.InvisibleHousesEnabled && IsMulti)
+            if (ProfileManager.CurrentProfile.InvisibleHousesEnabled && World.Player != null)
             {
                 GameObject groundTile = World.Map.GetTile(X, Y);
 

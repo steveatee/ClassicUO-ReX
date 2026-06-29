@@ -586,6 +586,11 @@ namespace ClassicUO.Game.Scenes
         {
             retValue = false;
 
+            if (ShouldHideInvisibleHouseObject(obj))
+            {
+                return 1;
+            }
+
             byte height = 0;
 
             if (obj.AllowedToDraw)
@@ -859,6 +864,11 @@ namespace ClassicUO.Game.Scenes
 
                     if (screenY < _minPixel.Y || screenY > _maxPixel.Y)
                         continue;
+
+                    if (ShouldHideInvisibleHouseObject(obj))
+                    {
+                        continue;
+                    }
 
                     // Static or Multi — meshed objects are never foliage/trees/internal/animated
                     ref StaticTiles meshItemData = ref (obj is Static meshStatic
