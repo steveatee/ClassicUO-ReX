@@ -671,16 +671,11 @@ namespace ClassicUO.Game.UI.Gumps
 
             if (weapon != null && _weaponSpeeds.TryGetValue(weapon.Graphic, out ushort configuredSpeed))
             {
-                weaponTicks = configuredSpeed;
+                weaponTicks = GetWeaponTicks(weapon.Graphic, configuredSpeed);
             }
             else if (weapon == null)
             {
                 weaponTicks = BARE_HAND_TICKS;
-            }
-
-            if (weapon != null && (weapon.Graphic == 0x13B1 || weapon.Graphic == 0x13B2) && (weaponTicks == 20 || weaponTicks == 25))
-            {
-                weaponTicks = 17;
             }
 
             int staminaTicks = World.Player.Stamina / 30;
@@ -695,6 +690,21 @@ namespace ClassicUO.Game.UI.Gumps
             double final = Math.Min(modifiedTicks * 0.25, 10) * 1000;
 
             return Convert.ToUInt32(final);
+        }
+
+        private static ushort GetWeaponTicks(ushort graphic, ushort configuredSpeed)
+        {
+            if ((graphic == 0x13B1 || graphic == 0x13B2) && (configuredSpeed == 20 || configuredSpeed == 25))
+            {
+                return 17;
+            }
+
+            if (configuredSpeed > BARE_HAND_TICKS)
+            {
+                return (ushort)Math.Max(BARE_HAND_TICKS, (int)Math.Round(configuredSpeed * 0.4, MidpointRounding.AwayFromZero));
+            }
+
+            return configuredSpeed;
         }
 
         private static void LoadSwingTimerFile()
