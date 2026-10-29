@@ -727,15 +727,26 @@ namespace ClassicUO.Game.GameObjects
                     // When server sends more than 1 packet in an amount of time less than 100ms if mounted (or 200ms if walking mount)
                     // we need to remove the "teleport" effect.
                     // When delay == 0 means that we received multiple movement packets in a single frame, so the patch becomes quite useless.
-                    if (!mounted && Serial != World.Player && Steps.Count > 1 && delay > 0)
+                    if (!mounted && Serial != World.Player)
                     {
-                        mounted =
-                            delay
-                            <= (
-                                run
-                                    ? MovementSpeed.STEP_DELAY_MOUNT_RUN
-                                    : MovementSpeed.STEP_DELAY_MOUNT_WALK
-                            );
+                        // Dust-Light 1.1.1.140: other players in a mount-speed animal form (Ninjitsu wolf, kirin,
+                        // unicorn, ostards, llama, bake kitsune...) move at mount speed but the server sends no
+                        // speed mode for them, so animate them as mounted instead of guessing from packet timing.
+                        if (MovementSpeed.HasMountSpeedBody(Graphic))
+                        {
+                            mounted = true;
+                            run = step.Run || IsRunning;
+                        }
+                        else if (Steps.Count > 1 && delay > 0)
+                        {
+                            mounted =
+                                delay
+                                <= (
+                                    run
+                                        ? MovementSpeed.STEP_DELAY_MOUNT_RUN
+                                        : MovementSpeed.STEP_DELAY_MOUNT_WALK
+                                );
+                        }
                     }
 
                     int maxDelay =
@@ -776,10 +787,11 @@ namespace ClassicUO.Game.GameObjects
                             float steps = maxDelay / (float)Constants.CHARACTER_ANIMATION_DELAY;
                             float x = delay / (float)Constants.CHARACTER_ANIMATION_DELAY;
                             float y = x;
-                            Offset.Z = (sbyte)((step.Z - Z) * x * (4.0f / steps));
+                            // Dust-Light 1.1.1.140: keep sub-pixel offsets (no sbyte truncation) for smoother steps.
+                            Offset.Z = (step.Z - Z) * x * (4.0f / steps);
                             MovementSpeed.GetPixelOffset(step.Direction, ref x, ref y, steps);
-                            Offset.X = (sbyte)x;
-                            Offset.Y = (sbyte)y;
+                            Offset.X = x;
+                            Offset.Y = y;
                         }
                     }
                     else
@@ -852,16 +864,18 @@ namespace ClassicUO.Game.GameObjects
                             return;
                         }
 
+                        // Dust-Light 1.1.1.140: move to the new tile before updating the screen position so the
+                        // mobile is sorted against the right tile on the frame it arrives.
+                        if (TNext != null || TPrevious != null)
+                        {
+                            AddToTile();
+                        }
+
                         UpdateScreenPosition();
 
                         if (World.InGame && Serial == World.Player)
                         {
                             World.Player.CloseRangedGumps();
-                        }
-
-                        if (TNext != null || TPrevious != null)
-                        {
-                            AddToTile();
                         }
 
                         LastStepTime = Time.Ticks;

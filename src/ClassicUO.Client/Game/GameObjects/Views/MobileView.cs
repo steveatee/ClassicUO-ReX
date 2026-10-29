@@ -180,7 +180,7 @@ namespace ClassicUO.Game.GameObjects
 
                 if (DustLightVisuals.IsInFieldPreview(World, X, Y))
                 {
-                    overridedHue = DustLightVisuals.FIELD_PREVIEW_HUE;
+                    overridedHue = FieldPlacement.GetFieldHue(FieldPlacement.CurrentSpell);
                     hueVec.Y = 1;
                 }
             }

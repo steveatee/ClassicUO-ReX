@@ -196,7 +196,7 @@ namespace ClassicUO.Game.Scenes
             return result;
         }
 
-        public int DrawRenderLists(UltimaBatcher2D batcher, sbyte maxGroundZ, List<Chunk> visibleChunks, int offsetX, int offsetY, int maxScreenEffectSprites = 0)
+        public int DrawRenderLists(UltimaBatcher2D batcher, sbyte maxGroundZ, List<Chunk> visibleChunks, int offsetX, int offsetY, int maxScreenEffectSprites = 0, Action<UltimaBatcher2D> afterLand = null)
         {
             int result = 0;
 
@@ -219,6 +219,9 @@ namespace ClassicUO.Game.Scenes
             // Draw excluded land tiles (animated water, etc.)
             result += DrawRenderList(batcher, _tiles, maxGroundZ);
             result += DrawRenderList(batcher, _stretchedTiles, maxGroundZ);
+
+            // Ground overlays (field preview) go on top of the land but under statics and mobiles.
+            afterLand?.Invoke(batcher);
 
             // Draw chunk mesh statics from GPU buffers with per-frame visibility
             batcher.SetWorldOffset(offsetX, offsetY);

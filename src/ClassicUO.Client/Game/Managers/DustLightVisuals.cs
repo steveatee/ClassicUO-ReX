@@ -13,8 +13,6 @@ namespace ClassicUO.Game.Managers
 {
     internal static class DustLightVisuals
     {
-        public const ushort FIELD_PREVIEW_HUE = 0x0040;
-        public const ushort FIELD_SKIPPED_HUE = 0x0021; // field tile the server won't create
         public const ushort CASTING_SELF_HUE = 0x0023;
 
         private const ushort BRIGHT_WHITE_COLOR = 0x080A;
@@ -151,15 +149,10 @@ namespace ClassicUO.Game.Managers
             return false;
         }
 
-        /// <summary>Combined ground overlay: field preview wins over the range ring.</summary>
+        /// <summary>Ground hue overlays (currently the range ring).</summary>
         public static bool TryGetGroundOverlayHue(World world, GameObject obj, out ushort hue)
         {
-            if (FieldPlacement.TryGetTileState(world, obj.X, obj.Y, out bool placed))
-            {
-                hue = placed ? FIELD_PREVIEW_HUE : FIELD_SKIPPED_HUE;
-                return true;
-            }
-
+            // The field preview is drawn as an overlay (FieldPlacement.DrawOverlay), not as a tile hue.
             if (obj is Land)
             {
                 return TryGetRangeRingHue(world, obj.X, obj.Y, out hue);

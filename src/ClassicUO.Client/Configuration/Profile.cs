@@ -213,6 +213,7 @@ namespace ClassicUO.Configuration
         public ushort HighlightLastTargetTypeParaHue { get; set; } = 0x0044;
 
         public bool PreviewFields { get; set; }
+        public int FieldPreviewSkippedStyle { get; set; } // FieldPlacement.SKIPPED_*: 0 = faint grey outline, 1 = hidden
         public int FieldPlacementRules { get; set; } // FieldPlacement.RULES_*: 0 = UO Dreams (measured), 1 = RunUO, 2 = ServUO/TrueUO
 
         public bool BlockWoS { get; set; }

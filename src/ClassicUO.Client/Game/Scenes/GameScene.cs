@@ -402,6 +402,8 @@ namespace ClassicUO.Game.Scenes
             );
         }
 
+        private Action<UltimaBatcher2D> _drawGroundOverlays;
+
         // Dust-Light: optional cap on dynamic lights (0 = engine maximum).
         private static int GetDynamicLightCap()
         {
@@ -1033,7 +1035,8 @@ namespace ClassicUO.Game.Scenes
                 _visibleChunks,
                 _offset.X,
                 _offset.Y,
-                ProfileManager.CurrentProfile.MaxScreenEffectSprites
+                ProfileManager.CurrentProfile.MaxScreenEffectSprites,
+                _drawGroundOverlays ??= b => FieldPlacement.DrawOverlay(_world, b)
             );
 
 

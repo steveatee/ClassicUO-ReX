@@ -11,6 +11,9 @@
 
 using System;
 using ClassicUO.Assets;
+using ClassicUO.Renderer;
+using Microsoft.Xna.Framework;
+using Microsoft.Xna.Framework.Graphics;
 using ClassicUO.Configuration;
 using ClassicUO.Game.Data;
 using ClassicUO.Game.GameObjects;
@@ -46,6 +49,158 @@ namespace ClassicUO.Game.Managers
         private static object _keyTarget;
         private static int _keyTx, _keyTy, _keyTz, _keySpell, _keyPx, _keyPy, _keyRules;
         private static uint _keyTicks;
+
+        public const int SKIPPED_GREY = 0;
+        public const int SKIPPED_HIDDEN = 1;
+
+        /// <summary>
+        /// UO hue of each field when drawn as tiles (matches ItemView's "fields as tiles" colours).
+        /// Used for the preview overlay and the mobile tint.
+        /// </summary>
+        public static ushort GetFieldHue(int spellIndex)
+        {
+            switch (spellIndex)
+            {
+                case SPELL_FIRE_FIELD: return 0x0020;
+                case SPELL_PARALYZE_FIELD: return 0x0058;
+                case SPELL_ENERGY_FIELD: return 0x0070;
+                case SPELL_POISON_FIELD: return 0x0044;
+                case SPELL_WALL_OF_STONE: return 0x038A;
+                default: return 0x0040;
+            }
+        }
+
+        public static int CurrentSpell => _keySpell;
+
+        private static readonly Vector3 _overlayHue = new Vector3(0f, ShaderHueTranslator.SHADER_NONE, 1f);
+        private static Vector3 _flatNormal = new Vector3(0f, 0f, 1f);
+        private static int _colorSpell = -1;
+        private static Color _fill, _line;
+        private static readonly Color _skipFill = new Color(110, 110, 110) * 0.18f;
+        private static readonly Color _skipLine = new Color(150, 150, 150) * 0.65f;
+
+        /// <summary>
+        /// Draws the preview as translucent diamonds on the ground, in the field's own colour (faded).
+        /// Called right after the land is drawn so statics and mobiles still render on top.
+        /// </summary>
+        public static void DrawOverlay(World world, UltimaBatcher2D batcher)
+        {
+            if (!Update(world))
+            {
+                return;
+            }
+
+            if (_colorSpell != _keySpell)
+            {
+                _colorSpell = _keySpell;
+                Color baseColor = HueToColor(GetFieldHue(_keySpell));
+                Color faded = Color.Lerp(baseColor, Color.White, 0.25f);
+                _fill = faded * 0.45f;
+                _line = faded * 0.9f;
+            }
+
+            bool showSkipped = ProfileManager.CurrentProfile.FieldPreviewSkippedStyle != SKIPPED_HIDDEN;
+
+            for (int i = 0; i < _tileCount; i++)
+            {
+                ref TileResult t = ref _tiles[i];
+
+                if (!t.Placed && !showSkipped)
+                {
+                    continue;
+                }
+
+                Land land = GetLand(world, t.X, t.Y);
+
+                if (land == null || land.IsDestroyed)
+                {
+                    continue;
+                }
+
+                DrawDiamond(batcher, land, t.Placed ? _fill : _skipFill, t.Placed ? _line : _skipLine, land.CalculateDepthZ() + 0.8f);
+            }
+        }
+
+        private static Color HueToColor(ushort hue)
+        {
+            // cell 24 of the hue's 32-step ramp: a bright but not washed-out shade
+            uint c = Client.Game.UO.FileManager.Hues.GetPolygoneColor(24, hue);
+            return new Color((byte)(c & 0xFF), (byte)((c >> 8) & 0xFF), (byte)((c >> 16) & 0xFF));
+        }
+
+        private static Land GetLand(World world, int x, int y)
+        {
+            for (GameObject o = world.Map.GetTile(x, y, false); o != null; o = o.TNext)
+            {
+                if (o is Land l)
+                {
+                    return l;
+                }
+            }
+
+            return null;
+        }
+
+        private static void DrawDiamond(UltimaBatcher2D batcher, Land land, Color fill, Color line, float depth)
+        {
+            Texture2D fillTexture = SolidColorTextureCache.GetTexture(fill);
+            Texture2D lineTexture = SolidColorTextureCache.GetTexture(line);
+
+            int posX = land.RealScreenPosition.X;
+            int posY = land.RealScreenPosition.Y;
+            Vector2 top, right, left, bottom;
+
+            if (land.IsStretched)
+            {
+                posY += land.Z << 2;
+
+                batcher.DrawStretchedLand(
+                    fillTexture,
+                    new Vector2(posX, posY),
+                    fillTexture.Bounds,
+                    ref land.YOffsets,
+                    ref land.NormalTop,
+                    ref land.NormalRight,
+                    ref land.NormalLeft,
+                    ref land.NormalBottom,
+                    _overlayHue,
+                    depth
+                );
+
+                top = new Vector2(posX + 22, posY - land.YOffsets.Top);
+                right = new Vector2(posX + 44, posY + (22 - land.YOffsets.Right));
+                left = new Vector2(posX, posY + (22 - land.YOffsets.Left));
+                bottom = new Vector2(posX + 22, posY + (44 - land.YOffsets.Bottom));
+            }
+            else
+            {
+                UltimaBatcher2D.YOffsets offsets = default;
+
+                batcher.DrawStretchedLand(
+                    fillTexture,
+                    new Vector2(posX, posY),
+                    fillTexture.Bounds,
+                    ref offsets,
+                    ref _flatNormal,
+                    ref _flatNormal,
+                    ref _flatNormal,
+                    ref _flatNormal,
+                    _overlayHue,
+                    depth
+                );
+
+                top = new Vector2(posX + 22, posY);
+                right = new Vector2(posX + 44, posY + 22);
+                left = new Vector2(posX, posY + 22);
+                bottom = new Vector2(posX + 22, posY + 44);
+            }
+
+            float lineDepth = depth + 0.0001f;
+            batcher.DrawLine(lineTexture, top, right, _overlayHue, 1.4f, lineDepth);
+            batcher.DrawLine(lineTexture, right, bottom, _overlayHue, 1.4f, lineDepth);
+            batcher.DrawLine(lineTexture, bottom, left, _overlayHue, 1.4f, lineDepth);
+            batcher.DrawLine(lineTexture, left, top, _overlayHue, 1.4f, lineDepth);
+        }
 
         public static bool IsFieldSpell(int spellIndex) =>
             spellIndex == SPELL_WALL_OF_STONE || spellIndex == SPELL_FIRE_FIELD || spellIndex == SPELL_ENERGY_FIELD

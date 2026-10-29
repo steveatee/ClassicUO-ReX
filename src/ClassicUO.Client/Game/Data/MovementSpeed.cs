@@ -15,6 +15,26 @@ namespace ClassicUO.Game.Data
         public static bool FastRotation;
         public static int TurnDelay => FastRotation ? MovementTimingManager.GetTurnDelayFast() : MovementTimingManager.GetTurnDelay();
 
+        /// <summary>Bodies that move at mount speed (Ninjitsu / animal forms, ostards, llama...). From Dust-Light 1.1.1.140.</summary>
+        public static bool HasMountSpeedBody(ushort graphic)
+        {
+            switch (graphic)
+            {
+                case 0x0019: // wolf
+                case 0x007A: // unicorn
+                case 0x0084: // ki-rin
+                case 0x00D2: // desert ostard
+                case 0x00DA: // frenzied ostard
+                case 0x00DB: // forest ostard
+                case 0x00DC: // llama
+                case 0x00E1: // timber wolf
+                case 0x00F6: // bake kitsune
+                    return true;
+                default:
+                    return false;
+            }
+        }
+
         public static int TimeToCompleteMovement(bool run, bool mounted)
         {
             if (mounted)

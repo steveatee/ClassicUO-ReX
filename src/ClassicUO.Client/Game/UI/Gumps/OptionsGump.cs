@@ -46,7 +46,7 @@ namespace ClassicUO.Game.UI.Gumps
         private Checkbox _rangeRingOnCast, _rangeRingAlways, _colorStealth, _colorStealthSelf;
         private HSliderBar _rangeRingOnCastRange, _rangeRingAlwaysRange;
         private ClickableColorBox _rangeRingOnCastHue, _rangeRingAlwaysHue, _stealthHue, _lastTargetHue, _lastTargetPoisonHue, _lastTargetParaHue;
-        private Combobox _stealthNeon, _lastTargetType, _lastTargetPoisonType, _lastTargetParaType, _fieldPlacementRules;
+        private Combobox _stealthNeon, _lastTargetType, _lastTargetPoisonType, _lastTargetParaType, _fieldPlacementRules, _fieldPreviewSkipped;
         private Checkbox _transparentHouses;
         private HSliderBar _transparentHousesZ, _transparentHousesTransparency;
         private Checkbox _oldHealthLines, _multiUnderlines, _multiUnderlinesBig;
@@ -1762,10 +1762,12 @@ namespace ClassicUO.Game.UI.Gumps
             casting.Y = section2.Bounds.Bottom + 30;
 
             casting.Add(_tintSelfWhileCasting = AddCheckBox(null, "Tint yourself red while casting", _currentProfile.TintSelfWhileCasting, startX, startY));
-            casting.Add(_previewFields = AddCheckBox(null, "Preview field spells under the cursor (green = placed, red = skipped)", _currentProfile.PreviewFields, startX, startY));
+            casting.Add(_previewFields = AddCheckBox(null, "Preview field spells under the cursor (in the field's colour)", _currentProfile.PreviewFields, startX, startY));
             casting.PushIndent();
             casting.Add(AddLabel(null, "Server field rules", startX, startY));
             casting.AddRight(_fieldPlacementRules = AddCombobox(null, FieldPlacement.RuleNames, Math.Clamp(_currentProfile.FieldPlacementRules, 0, FieldPlacement.RuleNames.Length - 1), startX, startY, 160));
+            casting.Add(AddLabel(null, "Tiles the server will skip", startX, startY));
+            casting.AddRight(_fieldPreviewSkipped = AddCombobox(null, new[] { "Grey outline", "Don't show" }, Math.Clamp(_currentProfile.FieldPreviewSkippedStyle, 0, 1), startX, startY, 160));
             casting.PopIndent();
 
             casting.Add(_rangeRingOnCast = AddCheckBox(null, "Show range ring while casting", _currentProfile.LTHighlightRangeOnCast, startX, startY));
@@ -4244,6 +4246,7 @@ namespace ClassicUO.Game.UI.Gumps
                     _tintSelfWhileCasting.IsChecked = false;
                     _previewFields.IsChecked = false;
                     _fieldPlacementRules.SelectedIndex = 0;
+                    _fieldPreviewSkipped.SelectedIndex = 0;
                     _rangeRingOnCast.IsChecked = false;
                     _rangeRingOnCastRange.Value = 10;
                     _rangeRingAlways.IsChecked = false;
@@ -4796,6 +4799,7 @@ namespace ClassicUO.Game.UI.Gumps
             _currentProfile.TintSelfWhileCasting = _tintSelfWhileCasting.IsChecked;
             _currentProfile.PreviewFields = _previewFields.IsChecked;
             _currentProfile.FieldPlacementRules = _fieldPlacementRules.SelectedIndex;
+            _currentProfile.FieldPreviewSkippedStyle = _fieldPreviewSkipped.SelectedIndex;
             _currentProfile.LTHighlightRangeOnCast = _rangeRingOnCast.IsChecked;
             _currentProfile.LTHighlightRangeOnCastRange = _rangeRingOnCastRange.Value;
             _currentProfile.LTHighlightRangeOnCastHue = _rangeRingOnCastHue.Hue;
