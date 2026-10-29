@@ -1810,6 +1810,11 @@ namespace ClassicUO.Game.Managers
                         break;
                     }
 
+                case MacroType.ToggleAvoidTraps:
+                    ProfileManager.CurrentProfile.AvoidTraps = !ProfileManager.CurrentProfile.AvoidTraps;
+                    GameActions.Print(_world, ProfileManager.CurrentProfile.AvoidTraps ? "Avoid traps: on" : "Avoid traps: off");
+                    break;
+
                 // Dust-Light
                 case MacroType.ToggleInvisibleHouses:
                     ProfileManager.CurrentProfile.InvisibleHousesEnabled = !ProfileManager.CurrentProfile.InvisibleHousesEnabled;
@@ -2373,7 +2378,8 @@ namespace ClassicUO.Game.Managers
         UseObject,
         LookAtMouse,
         UseCounterBarSlot,
-        ToggleInvisibleHouses // Dust-Light; keep new entries at the end so saved macros keep their numbers
+        ToggleInvisibleHouses, // Dust-Light; keep new entries at the end so saved macros keep their numbers
+        ToggleAvoidTraps
     }
 
     internal enum MacroSubType

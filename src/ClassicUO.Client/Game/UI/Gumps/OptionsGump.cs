@@ -40,7 +40,7 @@ namespace ClassicUO.Game.UI.Gumps
         private Checkbox _nameOverheadAlwaysOn, _nameOverheadShowHpBar, _customPlayerNameplate, _invisibleHousesEnabled;
         private HSliderBar _invisibleHousesZ, _dontRemoveHouseBelowZ;
         private HSliderBar _movementTurnDelay, _movementTurnDelayFast;
-        private Checkbox _blockWalkWhileCasting, _startCastTimerFromSpellWords;
+        private Checkbox _blockWalkWhileCasting, _startCastTimerFromSpellWords, _avoidTraps;
         // Dust-Light ports
         private Checkbox _tintSelfWhileCasting, _previewFields, _blockWoS, _blockWoSFelOnly, _blockWoSArt, _blockEnergyF, _blockEnergyFFelOnly, _blockEnergyFArt;
         private Checkbox _rangeRingOnCast, _rangeRingAlways, _colorStealth, _colorStealthSelf;
@@ -1593,6 +1593,18 @@ namespace ClassicUO.Game.UI.Gumps
                     null,
                     "Don't step while casting (avoids server rubber-banding)",
                     _currentProfile.BlockWalkWhileCasting,
+                    startX,
+                    startY
+                )
+            );
+
+            movement.Add
+            (
+                _avoidTraps = AddCheckBox
+                (
+                    null,
+                    "Avoid traps when walking/pathing (saws, spikes, floor traps; macro: ToggleAvoidTraps)",
+                    _currentProfile.AvoidTraps,
                     startX,
                     startY
                 )
@@ -4233,6 +4245,7 @@ namespace ClassicUO.Game.UI.Gumps
                     _showTrapTiles.IsChecked = false;
                     _autoAvoidObstacles.IsChecked = false;
                     _blockWalkWhileCasting.IsChecked = true;
+                    _avoidTraps.IsChecked = false;
                     _startCastTimerFromSpellWords.IsChecked = true;
                     _movementTurnDelay.Value = Constants.TURN_DELAY;
                     _movementTurnDelayFast.Value = Constants.TURN_DELAY_FAST;
@@ -4298,6 +4311,7 @@ namespace ClassicUO.Game.UI.Gumps
             _currentProfile.EnablePathfind = _enablePathfind.IsChecked;
             _currentProfile.AutoAvoidObstacles = _autoAvoidObstacles.IsChecked;
             _currentProfile.BlockWalkWhileCasting = _blockWalkWhileCasting.IsChecked;
+            _currentProfile.AvoidTraps = _avoidTraps.IsChecked;
             _currentProfile.StartCastTimerFromSpellWords = _startCastTimerFromSpellWords.IsChecked;
             _currentProfile.MovementTurnDelay = _movementTurnDelay.Value;
             _currentProfile.MovementTurnDelayFast = _movementTurnDelayFast.Value;

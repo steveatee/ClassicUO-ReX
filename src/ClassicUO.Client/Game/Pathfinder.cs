@@ -177,7 +177,17 @@ namespace ClassicUO.Game
                                 }
                                 else
                                 {
-                                    dropFlags = graphicHelper >= 0x3946 && graphicHelper <= 0x3964 || graphicHelper == 0x0082;
+                                    // Stock behaviour walks through Energy Field / Wall of Stone (the server decides).
+                                    // With the Dust-Light "treat as blocking" options on, keep them as obstacles.
+                                    bool energyField = graphicHelper >= 0x3946 && graphicHelper <= 0x3964;
+                                    bool wallOfStone = graphicHelper == 0x0082;
+                                    bool felucca = _world.MapIndex == 0;
+                                    Profile pathProfile = ProfileManager.CurrentProfile;
+
+                                    bool blockEnergy = pathProfile.BlockEnergyF && (!pathProfile.BlockEnergyFFelOnly || felucca);
+                                    bool blockWall = pathProfile.BlockWoS && (!pathProfile.BlockWoSFelOnly || felucca);
+
+                                    dropFlags = energyField && !blockEnergy || wallOfStone && !blockWall;
                                 }
 
                                 break;
@@ -259,10 +269,24 @@ namespace ClassicUO.Game
                                     }
                                 }
 
+                                // Avoid traps: treat known trap tiles (saws, spikes, poison/gas and floor traps,
+                                // plus trap.txt / poisontrap.txt) as a character-height obstacle, like a rock.
+                                bool avoidTrap =
+                                    ProfileManager.CurrentProfile.AvoidTraps
+                                    && stepState != (int) PATH_STEP_STATE.PSS_DEAD_OR_GM
+                                    && stepState != (int) PATH_STEP_STATE.PSS_ON_SEA_HORSE
+                                    && !(x == _world.Player.X && y == _world.Player.Y) // never trap yourself on the tile you stand on
+                                    && StaticFilters.IsTrapMarker(graphicHelper, out _);
+
+                                if (avoidTrap)
+                                {
+                                    flags = (uint) PATH_OBJECT_FLAGS.POF_IMPASSABLE_OR_SURFACE;
+                                }
+
                                 if (flags != 0)
                                 {
                                     int objZ = obj.Z;
-                                    int staticHeight = itemdata.Height;
+                                    int staticHeight = avoidTrap ? Math.Max((int) itemdata.Height, Constants.DEFAULT_CHARACTER_HEIGHT) : itemdata.Height;
                                     int staticAverageZ = staticHeight;
 
                                     if (itemdata.IsBridge)
