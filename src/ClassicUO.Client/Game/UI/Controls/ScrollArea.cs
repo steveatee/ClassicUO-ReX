@@ -1,4 +1,4 @@
-﻿// SPDX-License-Identifier: BSD-2-Clause
+// SPDX-License-Identifier: BSD-2-Clause
 
 using ClassicUO.Game.Scenes;
 using ClassicUO.Input;
@@ -163,6 +163,7 @@ namespace ClassicUO.Game.UI.Controls
         private void CalculateScrollBarMaxValue()
         {
             _scrollBar.Height = ScrollMaxHeight >= 0 ? ScrollMaxHeight : Height;
+            _scrollBar.X = _isNormalScroll ? Width - 14 : Width - 19;
             bool maxValue = _scrollBar.Value == _scrollBar.MaxValue && _scrollBar.MaxValue != 0;
 
             int startX = 0, startY = 0, endX = 0, endY = 0;

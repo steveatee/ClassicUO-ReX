@@ -1073,6 +1073,7 @@ namespace ClassicUO.Network
                     }
 
                     UIManager.GetGump<ContainerGump>(cont)?.RequestUpdateContents();
+                    UIManager.GetGump<GridContainer>(cont)?.RequestUpdateContents();
 
                     if (
                         top != null
@@ -1528,14 +1529,31 @@ namespace ClassicUO.Network
                         playsound = true;
                     }
 
-                    UIManager.Add(
-                        new ContainerGump(world, item, graphic, playsound)
+                    if (ProfileManager.CurrentProfile?.GridContainerEnabled == true)
+                    {
+                        // Dust-Light: resizable grid instead of the classic container gump.
+                        GridContainer existingGrid = UIManager.GetGump<GridContainer>(serial);
+
+                        if (existingGrid != null)
                         {
-                            X = x,
-                            Y = y,
-                            InvalidateContents = true
+                            existingGrid.InvalidateContents = true;
                         }
-                    );
+                        else
+                        {
+                            UIManager.Add(new GridContainer(world, serial, graphic) { InvalidateContents = true });
+                        }
+                    }
+                    else
+                    {
+                        UIManager.Add(
+                            new ContainerGump(world, item, graphic, playsound)
+                            {
+                                X = x,
+                                Y = y,
+                                InvalidateContents = true
+                            }
+                        );
+                    }
 
                     UIManager.RemovePosition(serial);
                 }
@@ -1633,6 +1651,9 @@ namespace ClassicUO.Network
 
                             UIManager
                                 .GetGump<ContainerGump>(Client.Game.UO.GameCursor.ItemHold.Container)
+                                ?.RequestUpdateContents();
+                            UIManager
+                                .GetGump<GridContainer>(Client.Game.UO.GameCursor.ItemHold.Container)
                                 ?.RequestUpdateContents();
                         }
                         else
@@ -1763,6 +1784,17 @@ namespace ClassicUO.Network
                 }
 
                 GameActions.RequestWarMode(world.Player, false);
+
+                // Dust-Light: remember where we died for the world map marker.
+                world.Player.DeathX = world.Player.X;
+                world.Player.DeathY = world.Player.Y;
+                world.Player.DeathTick = Time.Ticks;
+            }
+            else
+            {
+                world.Player.DeathX = 0;
+                world.Player.DeathY = 0;
+                world.Player.DeathTick = 0;
             }
         }
 
@@ -6187,6 +6219,8 @@ namespace ClassicUO.Network
 
                         gump.RequestUpdateContents();
                     }
+
+                    UIManager.GetGump<GridContainer>(containerSerial)?.RequestUpdateContents();
                 }
             }
 
@@ -6225,6 +6259,9 @@ namespace ClassicUO.Network
                     {
                         UIManager
                             .GetGump<ContainerGump>(Client.Game.UO.GameCursor.ItemHold.Container)
+                            ?.RequestUpdateContents();
+                        UIManager
+                            .GetGump<GridContainer>(Client.Game.UO.GameCursor.ItemHold.Container)
                             ?.RequestUpdateContents();
                     }
                     else

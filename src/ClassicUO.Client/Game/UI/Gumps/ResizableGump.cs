@@ -1,4 +1,4 @@
-﻿// SPDX-License-Identifier: BSD-2-Clause
+// SPDX-License-Identifier: BSD-2-Clause
 
 using ClassicUO.Game.UI.Controls;
 using ClassicUO.Input;
@@ -14,6 +14,7 @@ namespace ClassicUO.Game.UI.Gumps
         private Point _lastSize, _savedSize, _beforeResizeSize;
         private int _minH;
         private int _minW;
+        private bool _alwaysShowResizeHandle;
 
         public class ResizeCompletedEventArgs(Point beforeResize)
         {
@@ -74,12 +75,32 @@ namespace ClassicUO.Game.UI.Gumps
             _minH = minH;
 
             OnResize();
+            SyncResizeHandleVisibility();
+        }
+
+        protected bool AlwaysShowResizeHandle
+        {
+            get => _alwaysShowResizeHandle;
+            set
+            {
+                _alwaysShowResizeHandle = value;
+                SyncResizeHandleVisibility();
+            }
+        }
+
+        private void SyncResizeHandleVisibility()
+        {
+            _button.IsVisible = _alwaysShowResizeHandle || _borderControl.IsVisible;
         }
 
         public bool ShowBorder
         {
             get => _borderControl.IsVisible;
-            set => _borderControl.IsVisible = _button.IsVisible = value;
+            set
+            {
+                _borderControl.IsVisible = value;
+                SyncResizeHandleVisibility();
+            }
         }
 
         public int BoderSize
@@ -179,6 +200,20 @@ namespace ClassicUO.Game.UI.Gumps
             _borderControl.Height = Height;
             _button.X = Width - (_button.Width >> 0) + 2;
             _button.Y = Height - (_button.Height >> 0) + 2;
+        }
+
+        protected void BringResizeChromeToFront()
+        {
+            Remove(_borderControl);
+            Remove(_button);
+            Add(_borderControl);
+            Add(_button);
+        }
+
+        protected void BringResizeButtonToFront()
+        {
+            Remove(_button);
+            Add(_button);
         }
     }
 }

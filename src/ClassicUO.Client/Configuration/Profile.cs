@@ -158,6 +158,77 @@ namespace ClassicUO.Configuration
         public int MovementTurnDelayFast { get; set; } = Constants.TURN_DELAY_FAST;
         public bool BlockWalkWhileCasting { get; set; } = true;
         public bool StartCastTimerFromSpellWords { get; set; } = true;
+        public bool TintSelfWhileCasting { get; set; }
+
+        // ---- Dust-Light ports ----
+        public int MaxScreenEffectSprites { get; set; } // 0 = unlimited
+        public int MaxDynamicLights { get; set; } // 0 = engine maximum
+        public bool RenderWeather { get; set; } = true;
+
+        // Grid container (Dust-Light)
+        public bool GridContainerEnabled { get; set; } = false;
+        public int GridContainersScale { get; set; } = 100;
+        public bool GridContainerScaleItems { get; set; } = false;
+        [JsonConverter(typeof(Point2Converter))] public Point BackpackGridPosition { get; set; } = new Point(100, 100);
+        [JsonConverter(typeof(Point2Converter))] public Point BackpackGridSize { get; set; } = new Point(300, 300);
+        public int Grid_DefaultColumns { get; set; } = 4;
+        public int Grid_DefaultRows { get; set; } = 4;
+        public bool EnableGridContainerAnchor { get; set; } = false;
+        public bool Grid_UseContainerHue { get; set; } = false;
+        public ushort AltGridContainerBackgroundHue { get; set; } = 0;
+        public int ContainerOpacity { get; set; } = 80;
+        public bool Grid_HideBorder { get; set; } = false;
+        public bool BackPackLocked { get; set; } = false;
+        public int GridContainerSearchMode { get; set; } = 0;
+        public int GridHightlightSize { get; set; } = 4;
+        public bool CorpseSingleClickLoot { get; set; } = false;
+        public ushort GridBorderHue { get; set; } = 0;
+        public int GridBorderAlpha { get; set; } = 100;
+        public bool GridEnableContPreview { get; set; } = true;
+        public bool GridHighlight_CorpseOnly { get; set; } = false;
+        public bool PvM_LootHighlightOnCorpse { get; set; } = false;
+
+        public bool ShowDeathOnWorldmap { get; set; }
+        public bool AlwaysShowOwnNameplate { get; set; }
+        public bool WorldMapShowGuild { get; set; }
+
+        public bool UseOldHealthBars { get; set; }
+        public bool MultipleUnderlinesSelfParty { get; set; }
+        public bool MultipleUnderlinesSelfPartyBigBars { get; set; }
+        public int MultipleUnderlinesSelfPartyTransparency { get; set; } = 10;
+        public bool TransparentHousesEnabled { get; set; }
+        public int TransparentHousesZ { get; set; } = 1;
+        public int TransparentHousesTransparency { get; set; } = 5;
+
+        public bool ColorStealth { get; set; }
+        public bool ColorStealthSelf { get; set; }
+        public ushort StealthHue { get; set; } = 0x0044;
+        public int StealthNeonType { get; set; } // 0=off 1=white 2=pink 3=ice 4=fire
+
+        public int HighlightLastTargetType { get; set; } // 0=off 1=white 2=pink 3=ice 4=fire 5=custom
+        public ushort HighlightLastTargetTypeHue { get; set; } = 0x0044;
+        public int HighlightLastTargetTypePoison { get; set; } // same scale, 6=bright poison green
+        public ushort HighlightLastTargetTypePoisonHue { get; set; } = 0x0044;
+        public int HighlightLastTargetTypePara { get; set; } // same scale, 6=bright paralyse purple
+        public ushort HighlightLastTargetTypeParaHue { get; set; } = 0x0044;
+
+        public bool PreviewFields { get; set; }
+
+        public bool BlockWoS { get; set; }
+        public bool BlockWoSFelOnly { get; set; }
+        public uint BlockWoSArt { get; set; } = 1872;
+        public bool BlockWoSArtForceAoS { get; set; }
+        public bool BlockEnergyF { get; set; }
+        public bool BlockEnergyFFelOnly { get; set; }
+        public uint BlockEnergyFArt { get; set; } = 1872;
+        public bool BlockEnergyFArtForceAoS { get; set; }
+
+        public bool LTHighlightRangeOnCast { get; set; }
+        public int LTHighlightRangeOnCastRange { get; set; } = 10;
+        public ushort LTHighlightRangeOnCastHue { get; set; } = 0x0074;
+        public bool LTHighlightRangeOnActivated { get; set; }
+        public int LTHighlightRangeOnActivatedRange { get; set; } = 10;
+        public ushort LTHighlightRangeOnActivatedHue { get; set; } = 0x0074;
         public bool SmoothMovements { get; set; } = true;
         public bool HoldDownKeyTab { get; set; } = true;
         public bool HoldShiftForContext { get; set; } = false;
@@ -673,6 +744,10 @@ namespace ClassicUO.Configuration
                                 case GumpType.NameOverHeadHandler:
                                     NameOverHeadHandlerGump.LastPosition = new Point(x, y);
                                     // Gump gets opened by NameOverHeadManager, we just want to save the last position from profile
+                                    break;
+
+                                case GumpType.GridContainer:
+                                    gump = new GridContainer(world, serial, 0);
                                     break;
                             }
 

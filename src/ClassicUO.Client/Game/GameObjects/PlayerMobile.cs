@@ -118,6 +118,9 @@ namespace ClassicUO.Game.GameObjects
         public short DamageMax;
         public short DamageMin;
         public long DeathScreenTimer;
+        public int DeathX; // Dust-Light: death location shown on the world map for 5 minutes
+        public int DeathY;
+        public uint DeathTick;
         public short DefenseChanceIncrease;
         public Lock DexLock;
         public ushort Dexterity;

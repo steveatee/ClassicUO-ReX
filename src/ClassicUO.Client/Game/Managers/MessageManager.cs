@@ -190,6 +190,7 @@ namespace ClassicUO.Game.Managers
 
                         if (castSpell != null)
                         {
+                            GameActions.LastSpellIndex = castSpell.ID;
                             _world.Player.StartCasting(castSpell.ID);
                         }
                     }

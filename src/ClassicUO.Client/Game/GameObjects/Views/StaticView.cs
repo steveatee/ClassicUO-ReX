@@ -73,6 +73,12 @@ namespace ClassicUO.Game.GameObjects
                 return true;
             }
 
+            if (DustLightVisuals.TryGetGroundOverlayHue(World, this, out ushort overlayHue))
+            {
+                hue = overlayHue;
+                partial = false;
+            }
+
             bool isTree = StaticFilters.IsTree(graphic, out _);
 
             // Trees and foliage stay visible inside CoT circle

@@ -1,5 +1,6 @@
 ﻿// SPDX-License-Identifier: BSD-2-Clause
 
+using System;
 using ClassicUO.Configuration;
 using ClassicUO.Game.Managers;
 using ClassicUO.Game.Scenes;
@@ -86,8 +87,19 @@ namespace ClassicUO.Game.GameObjects
                 partial = false;
             }
 
+            if (DustLightVisuals.TryGetGroundOverlayHue(World, this, out ushort overlayHue))
+            {
+                hue = overlayHue;
+                partial = false;
+            }
+
             bool cot = TransparentTest(World.Player.Z + 5);
             Vector3 hueVec = ShaderHueTranslator.GetHueVector(hue, partial, AlphaHue / 255f, circletrans: cot);
+
+            if (DustLightVisuals.IsTransparentHousePiece(World, this))
+            {
+                hueVec.Z = Math.Min(hueVec.Z, DustLightVisuals.TransparentHouseAlpha);
+            }
 
             if (IsHousePreview)
             {

@@ -258,7 +258,9 @@ namespace ClassicUO.Game.Scenes
         private void UpdateObjectHandles(Entity obj, bool useObjectHandles)
         {
             bool keepCustomPlayerHandle =
-                ProfileManager.CurrentProfile.CustomPlayerNameplate && obj is Mobile;
+                ProfileManager.CurrentProfile.CustomPlayerNameplate && obj is Mobile
+                // Dust-Light: keep your own nameplate (with its HP bar) up without holding Ctrl+Shift.
+                || ProfileManager.CurrentProfile.AlwaysShowOwnNameplate && obj == _world.Player;
 
             if ((useObjectHandles && _world.NameOverHeadManager.IsAllowed(obj)) || keepCustomPlayerHandle)
             {
@@ -627,6 +629,14 @@ namespace ClassicUO.Game.Scenes
                     return 0;
                 }
 
+                // Dust-Light transparent houses: semi-transparent pieces must go through the CPU transparent
+                // list (like fading roofs) so they don't write depth and hide mobiles behind them.
+                if (DustLightVisuals.IsTransparentHousePiece(_world, obj))
+                {
+                    PushToRenderQueue(obj, true, allowSelection);
+                    return 0;
+                }
+
                 mesh.Statics.SetVisible(obj.MeshSpriteIndex, obj.AlphaHue, cot);
                 ApplyMeshHue(obj, mesh.Statics);
 
@@ -673,7 +683,7 @@ namespace ClassicUO.Game.Scenes
                     || StaticFilters.IsRock(obj.Graphic)
                 );
 
-            PushToRenderQueue(obj, isShadow, allowSelection);
+            PushToRenderQueue(obj, isShadow || DustLightVisuals.IsTransparentHousePiece(_world, obj), allowSelection);
             return 0;
         }
 
@@ -699,6 +709,12 @@ namespace ClassicUO.Game.Scenes
             else if (obj is Multi m)
             {
                 partial = m.ItemData.IsPartialHue;
+            }
+
+            if (DustLightVisuals.TryGetGroundOverlayHue(_world, obj, out ushort overlayHue))
+            {
+                hue = overlayHue;
+                partial = false;
             }
 
             if (TileMarkerManager.Instance.IsTileMarked(obj.X, obj.Y, _world.Map.Index, out ushort markedHue))
@@ -926,6 +942,12 @@ namespace ClassicUO.Game.Scenes
                     if (meshFadingOut)
                     {
                         PushToRenderQueue(obj, true, false);
+                        continue;
+                    }
+
+                    if (DustLightVisuals.IsTransparentHousePiece(_world, obj))
+                    {
+                        PushToRenderQueue(obj, true, meshAllowSelection);
                         continue;
                     }
 

@@ -1,4 +1,4 @@
-﻿// SPDX-License-Identifier: BSD-2-Clause
+// SPDX-License-Identifier: BSD-2-Clause
 
 using System.Collections.Generic;
 using ClassicUO.Configuration;
@@ -11,16 +11,13 @@ using ClassicUO.Utility.Logging;
 
 namespace ClassicUO.Game.Managers
 {
-    internal class WMapEntity
+    internal sealed class WMapEntity
     {
+        internal static readonly Dictionary<uint, string> NameCache = new Dictionary<uint, string>();
+
         public WMapEntity(uint serial)
         {
             Serial = serial;
-
-            //var mob = World.Mobiles.Get(serial);
-
-            //if (mob != null)
-            //    GetName();
         }
 
         public bool IsGuild;
@@ -29,17 +26,82 @@ namespace ClassicUO.Game.Managers
         public readonly uint Serial;
         public int X, Y, HP, Map;
 
-        //public string GetName()
-        //{
-        //    Entity e = World.Get(Serial);
+        internal static void CacheName(uint serial, string name)
+        {
+            if (string.IsNullOrEmpty(name))
+            {
+                return;
+            }
 
-        //    if (e != null && !e.IsDestroyed && !string.IsNullOrEmpty(e.Name) && Name != e.Name)
-        //    {
-        //        Name = e.Name;
-        //    }
+            NameCache[serial] = name;
+        }
 
-        //    return string.IsNullOrEmpty(Name) ? "<out of range>" : Name;
-        //}
+        internal string GetResolvedName(World world)
+        {
+            Entity e = world.Get(Serial);
+
+            if (e != null && !e.IsDestroyed && !string.IsNullOrEmpty(e.Name))
+            {
+                Name = e.Name;
+                NameCache[Serial] = Name;
+            }
+
+            if (string.IsNullOrEmpty(Name) && world.Party != null)
+            {
+                for (int i = 0; i < 10; i++)
+                {
+                    PartyMember pm = world.Party.Members[i];
+
+                    if (pm != null && pm.Serial == Serial && !string.IsNullOrEmpty(pm.Name))
+                    {
+                        Name = pm.Name;
+                        NameCache[Serial] = Name;
+                        break;
+                    }
+                }
+            }
+
+            if (NameCache.TryGetValue(Serial, out string cached))
+            {
+                return string.IsNullOrEmpty(Name) ? cached : Name;
+            }
+
+            return string.IsNullOrEmpty(Name) ? "<friend>" : Name;
+        }
+
+        internal static string GetDisplayNameForMobile(World world, Mobile mobile)
+        {
+            if (mobile == null)
+            {
+                return string.Empty;
+            }
+
+            if (!string.IsNullOrEmpty(mobile.Name))
+            {
+                return mobile.Name;
+            }
+
+            if (NameCache.TryGetValue(mobile.Serial, out string cached) && !string.IsNullOrEmpty(cached))
+            {
+                return cached;
+            }
+
+            if (world.Party != null)
+            {
+                for (int i = 0; i < 10; i++)
+                {
+                    PartyMember pm = world.Party.Members[i];
+
+                    if (pm != null && pm.Serial == mobile.Serial && !string.IsNullOrEmpty(pm.Name))
+                    {
+                        NameCache[mobile.Serial] = pm.Name;
+                        return pm.Name;
+                    }
+                }
+            }
+
+            return string.Empty;
+        }
     }
 
     internal sealed class WorldMapEntityManager
@@ -55,10 +117,12 @@ namespace ClassicUO.Game.Managers
         {
             get
             {
+                var p = ProfileManager.CurrentProfile;
+
                 return ((_world.ClientFeatures.Flags & CharacterListFlags.CLF_NEW_MOVEMENT_SYSTEM) == 0 || _ackReceived) &&
                         (NetClient.Socket.Encryption == null || NetClient.Socket.Encryption.EncryptionType == 0) &&
-                        ProfileManager.CurrentProfile != null && ProfileManager.CurrentProfile.WorldMapShowParty &&
-                        UIManager.GetGump<WorldMapGump>() != null; // horrible, but works
+                        p != null && (p.WorldMapShowParty || p.WorldMapShowGuild) &&
+                        UIManager.GetGump<WorldMapGump>() != null;
             }
         }
 
@@ -124,6 +188,11 @@ namespace ClassicUO.Game.Managers
                 }
             }
 
+            if (!string.IsNullOrEmpty(name))
+            {
+                WMapEntity.CacheName(serial, name);
+            }
+
             if (!Entities.TryGetValue(serial, out WMapEntity entity) || entity == null)
             {
                 entity = new WMapEntity(serial)
@@ -148,6 +217,11 @@ namespace ClassicUO.Game.Managers
                 if (string.IsNullOrEmpty(entity.Name) && !string.IsNullOrEmpty(name))
                 {
                     entity.Name = name;
+                }
+
+                if (!string.IsNullOrEmpty(entity.Name))
+                {
+                    WMapEntity.CacheName(serial, entity.Name);
                 }
             }
         }
@@ -197,6 +271,8 @@ namespace ClassicUO.Game.Managers
             return entity;
         }
 
+        public WMapEntity GetEntity(Mobile mob) => mob == null ? null : GetEntity(mob.Serial);
+
         public void RequestServerPartyGuildInfo(bool force = false)
         {
             if (!force && !Enabled)
@@ -206,14 +282,7 @@ namespace ClassicUO.Game.Managers
 
             if (_world.InGame && _lastPacketSend < Time.Ticks)
             {
-                //GameActions.Print($"SENDING PACKET! {Time.Ticks}");
-
                 _lastPacketSend = Time.Ticks + 250;
-
-                //if (!force && !_can_send)
-                //{
-                //    return;
-                //}
 
                 NetClient.Socket.Send_QueryGuildPosition();
 

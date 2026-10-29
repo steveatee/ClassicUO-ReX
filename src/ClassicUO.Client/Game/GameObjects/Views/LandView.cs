@@ -39,6 +39,11 @@ namespace ClassicUO.Game.GameObjects
                 hue = Constants.DEAD_RANGE_COLOR;
             }
 
+            if (DustLightVisuals.TryGetGroundOverlayHue(World, this, out ushort overlayHue))
+            {
+                hue = overlayHue;
+            }
+
             if (TileMarkerManager.Instance.IsTileMarked(X, Y, World.Map.Index, out ushort markedHue))
             {
                 hue = markedHue;

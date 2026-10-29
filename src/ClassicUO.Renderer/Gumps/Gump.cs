@@ -7,6 +7,7 @@ namespace ClassicUO.Renderer.Gumps
     {
         private readonly TextureAtlas _atlas;
         private readonly SpriteInfo[] _spriteInfos;
+        private readonly bool[] _failedSprites;
         private readonly PixelPicker _picker = new PixelPicker();
         private readonly GumpsLoader _gumpsLoader;
 
@@ -15,11 +16,15 @@ namespace ClassicUO.Renderer.Gumps
             _gumpsLoader = gumpsLoader;
             _atlas = new TextureAtlas(device, 4096, 4096, SurfaceFormat.Color);
             _spriteInfos = new SpriteInfo[gumpsLoader.File.Entries.Length];
+            _failedSprites = new bool[gumpsLoader.File.Entries.Length];
         }
 
         public ref readonly SpriteInfo GetGump(uint idx)
         {
             if (idx >= _spriteInfos.Length)
+                return ref SpriteInfo.Empty;
+
+            if (_failedSprites[idx])
                 return ref SpriteInfo.Empty;
 
             ref var spriteInfo = ref _spriteInfos[idx];
@@ -37,6 +42,11 @@ namespace ClassicUO.Renderer.Gumps
                     );
 
                     _picker.Set(idx, gumpInfo.Width, gumpInfo.Height, gumpInfo.Pixels);
+                }
+                else
+                {
+                    _failedSprites[idx] = true;
+                    return ref SpriteInfo.Empty;
                 }
             }
 

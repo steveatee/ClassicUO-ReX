@@ -60,6 +60,12 @@ namespace ClassicUO.Game.UI.Controls
             {
                 return false;
             }
+
+            if (Client.Game.UO.Gumps.GetGump(BUTTON_UP_0).Texture == null)
+            {
+                return false;
+            }
+
             float layerDepth = layerDepthRef;
 
             renderLists.AddGumpWithAtlas(batcher =>

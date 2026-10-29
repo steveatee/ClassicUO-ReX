@@ -3,6 +3,7 @@
 using ClassicUO.Assets;
 using ClassicUO.Configuration;
 using ClassicUO.Game.Data;
+using ClassicUO.Game.Managers;
 using ClassicUO.Game.Scenes;
 using ClassicUO.Renderer;
 using ClassicUO.Utility;
@@ -98,6 +99,19 @@ namespace ClassicUO.Game.GameObjects
             else if (IsHidden)
             {
                 overridedHue = 0x038E;
+
+                // Dust-Light: optional stealth tint, and fade yourself while hidden.
+                if (Serial == World.Player.Serial && ProfileManager.CurrentProfile.ColorStealthSelf)
+                {
+                    bool stealthTinted = DustLightVisuals.IsStealthTintEnabled(ProfileManager.CurrentProfile);
+
+                    if (stealthTinted)
+                    {
+                        overridedHue = DustLightVisuals.StealthHue(overridedHue);
+                    }
+
+                    hueVec.Z = Math.Min(1f, AlphaHue / 255f * (stealthTinted ? 0.52f : 0.72f));
+                }
             }
             else
             {
@@ -133,6 +147,13 @@ namespace ClassicUO.Game.GameObjects
                             overridedHue = ProfileManager.CurrentProfile.InvulnerableHue;
                         }
                     }
+
+                    // Dust-Light: tint yourself while a spell is casting.
+                    if (ProfileManager.CurrentProfile.TintSelfWhileCasting && Serial == World.Player.Serial && World.Player.IsCasting)
+                    {
+                        overridedHue = DustLightVisuals.CASTING_SELF_HUE;
+                        hueVec.Y = 1;
+                    }
                 }
             }
 
@@ -145,6 +166,22 @@ namespace ClassicUO.Game.GameObjects
                 if (isAttack || isUnderMouse)
                 {
                     overridedHue = Notoriety.GetHue(NotorietyFlag);
+                }
+
+                // Dust-Light: last-target highlight (with poison / paralyse variants) and field preview.
+                if (
+                    World.TargetManager.LastTargetInfo.Serial == Serial
+                    && DustLightVisuals.TryGetLastTargetHue(this, overridedHue != 0 ? overridedHue : Notoriety.GetHue(NotorietyFlag), out ushort lastTargetHue)
+                )
+                {
+                    overridedHue = lastTargetHue;
+                    hueVec.Y = 1;
+                }
+
+                if (DustLightVisuals.IsInFieldPreview(World, X, Y))
+                {
+                    overridedHue = DustLightVisuals.FIELD_PREVIEW_HUE;
+                    hueVec.Y = 1;
                 }
             }
 

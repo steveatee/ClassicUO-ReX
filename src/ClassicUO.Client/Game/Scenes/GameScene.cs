@@ -402,10 +402,18 @@ namespace ClassicUO.Game.Scenes
             );
         }
 
+        // Dust-Light: optional cap on dynamic lights (0 = engine maximum).
+        private static int GetDynamicLightCap()
+        {
+            int cap = ProfileManager.CurrentProfile?.MaxDynamicLights ?? 0;
+
+            return cap <= 0 ? LightsLoader.MAX_LIGHTS_DATA_INDEX_COUNT : Math.Min(cap, LightsLoader.MAX_LIGHTS_DATA_INDEX_COUNT);
+        }
+
         public void AddLight(GameObject obj, GameObject lightObject, int x, int y)
         {
             if (
-                _lightCount >= LightsLoader.MAX_LIGHTS_DATA_INDEX_COUNT
+                _lightCount >= GetDynamicLightCap()
                 || !UseLights && !UseAltLights
                 || obj == null
             )
@@ -1024,7 +1032,8 @@ namespace ClassicUO.Game.Scenes
                 _maxGroundZ,
                 _visibleChunks,
                 _offset.X,
-                _offset.Y
+                _offset.Y,
+                ProfileManager.CurrentProfile.MaxScreenEffectSprites
             );
 
 
@@ -1043,7 +1052,10 @@ namespace ClassicUO.Game.Scenes
             }
 
             // draw weather
-            _world.Weather.Draw(batcher, 0, 0, MAX_LAYER_DEPTH - 1);
+            if (ProfileManager.CurrentProfile.RenderWeather)
+            {
+                _world.Weather.Draw(batcher, 0, 0, MAX_LAYER_DEPTH - 1);
+            }
 
             DrawSelection(batcher, MAX_LAYER_DEPTH);
 

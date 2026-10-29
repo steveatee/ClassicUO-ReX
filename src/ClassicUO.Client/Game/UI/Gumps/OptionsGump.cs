@@ -41,6 +41,18 @@ namespace ClassicUO.Game.UI.Gumps
         private HSliderBar _invisibleHousesZ, _dontRemoveHouseBelowZ;
         private HSliderBar _movementTurnDelay, _movementTurnDelayFast;
         private Checkbox _blockWalkWhileCasting, _startCastTimerFromSpellWords;
+        // Dust-Light ports
+        private Checkbox _tintSelfWhileCasting, _previewFields, _blockWoS, _blockWoSFelOnly, _blockWoSArt, _blockEnergyF, _blockEnergyFFelOnly, _blockEnergyFArt;
+        private Checkbox _rangeRingOnCast, _rangeRingAlways, _colorStealth, _colorStealthSelf;
+        private HSliderBar _rangeRingOnCastRange, _rangeRingAlwaysRange;
+        private ClickableColorBox _rangeRingOnCastHue, _rangeRingAlwaysHue, _stealthHue, _lastTargetHue, _lastTargetPoisonHue, _lastTargetParaHue;
+        private Combobox _stealthNeon, _lastTargetType, _lastTargetPoisonType, _lastTargetParaType;
+        private Checkbox _transparentHouses;
+        private HSliderBar _transparentHousesZ, _transparentHousesTransparency;
+        private Checkbox _oldHealthLines, _multiUnderlines, _multiUnderlinesBig;
+        private HSliderBar _multiUnderlinesTransparency;
+        private Checkbox _alwaysShowOwnNameplate, _showDeathOnWorldmap, _gridContainerEnabled, _renderWeather;
+        private HSliderBar _maxScreenEffectSprites, _maxDynamicLights;
         private HSliderBar _cellSize;
         private Checkbox _containerScaleItems, _containerDoubleClickToLoot, _relativeDragAnDropItems, _useLargeContianersGumps, _highlightContainersWhenMouseIsOver;
 
@@ -1723,6 +1735,115 @@ namespace ClassicUO.Game.UI.Gumps
                     200
                 )
             );
+
+
+            section2.Add
+            (
+                _transparentHouses = AddCheckBox
+                (
+                    null,
+                    "Make house pieces above you transparent instead",
+                    _currentProfile.TransparentHousesEnabled,
+                    startX,
+                    startY
+                )
+            );
+
+            section2.Add(AddLabel(null, "Transparent height threshold", startX, startY));
+            section2.AddRight(_transparentHousesZ = AddHSlider(null, 1, 25, _currentProfile.TransparentHousesZ, startX, startY, 200));
+
+            section2.Add(AddLabel(null, "Transparency (1 = faint, 9 = solid)", startX, startY));
+            section2.AddRight(_transparentHousesTransparency = AddHSlider(null, 1, 9, _currentProfile.TransparentHousesTransparency, startX, startY, 200));
+
+            string[] neonNames = { "Off", "Bright white", "Bright pink", "Bright ice", "Bright fire", "Custom hue" };
+
+            // ---- Casting & fields ----
+            SettingsSection casting = AddSettingsSection(box, "Casting & Fields");
+            casting.Y = section2.Bounds.Bottom + 30;
+
+            casting.Add(_tintSelfWhileCasting = AddCheckBox(null, "Tint yourself red while casting", _currentProfile.TintSelfWhileCasting, startX, startY));
+            casting.Add(_previewFields = AddCheckBox(null, "Preview field spells under the cursor", _currentProfile.PreviewFields, startX, startY));
+
+            casting.Add(_rangeRingOnCast = AddCheckBox(null, "Show range ring while casting", _currentProfile.LTHighlightRangeOnCast, startX, startY));
+            casting.PushIndent();
+            casting.Add(AddLabel(null, "Range", startX, startY));
+            casting.AddRight(_rangeRingOnCastRange = AddHSlider(null, 1, 20, _currentProfile.LTHighlightRangeOnCastRange, startX, startY, 150));
+            casting.Add(_rangeRingOnCastHue = AddColorBox(null, startX, startY, _currentProfile.LTHighlightRangeOnCastHue, ""));
+            casting.AddRight(AddLabel(null, "Ring colour", 0, 0), 2);
+            casting.PopIndent();
+
+            casting.Add(_rangeRingAlways = AddCheckBox(null, "Always show range ring", _currentProfile.LTHighlightRangeOnActivated, startX, startY));
+            casting.PushIndent();
+            casting.Add(AddLabel(null, "Range", startX, startY));
+            casting.AddRight(_rangeRingAlwaysRange = AddHSlider(null, 1, 20, _currentProfile.LTHighlightRangeOnActivatedRange, startX, startY, 150));
+            casting.Add(_rangeRingAlwaysHue = AddColorBox(null, startX, startY, _currentProfile.LTHighlightRangeOnActivatedHue, ""));
+            casting.AddRight(AddLabel(null, "Ring colour", 0, 0), 2);
+            casting.PopIndent();
+
+            casting.Add(_blockWoS = AddCheckBox(null, "Treat Wall of Stone as blocking for walking/pathing", _currentProfile.BlockWoS, startX, startY));
+            casting.PushIndent();
+            casting.Add(_blockWoSFelOnly = AddCheckBox(null, "Felucca only", _currentProfile.BlockWoSFelOnly, startX, startY));
+            casting.Add(_blockWoSArt = AddCheckBox(null, "Replace Wall of Stone art with a stone tile", _currentProfile.BlockWoSArtForceAoS, startX, startY));
+            casting.PopIndent();
+
+            casting.Add(_blockEnergyF = AddCheckBox(null, "Treat Energy Field as blocking for walking/pathing", _currentProfile.BlockEnergyF, startX, startY));
+            casting.PushIndent();
+            casting.Add(_blockEnergyFFelOnly = AddCheckBox(null, "Felucca only", _currentProfile.BlockEnergyFFelOnly, startX, startY));
+            casting.Add(_blockEnergyFArt = AddCheckBox(null, "Replace Energy Field art with a tile", _currentProfile.BlockEnergyFArtForceAoS, startX, startY));
+            casting.PopIndent();
+
+            // ---- Stealth & last target ----
+            SettingsSection highlight = AddSettingsSection(box, "Stealth & Last Target");
+            highlight.Y = casting.Bounds.Bottom + 30;
+
+            highlight.Add(_colorStealth = AddCheckBox(null, "Colour stealth footsteps", _currentProfile.ColorStealth, startX, startY));
+            highlight.PushIndent();
+            highlight.Add(_stealthHue = AddColorBox(null, startX, startY, _currentProfile.StealthHue, ""));
+            highlight.AddRight(AddLabel(null, "Stealth colour", 0, 0), 2);
+            highlight.Add(AddLabel(null, "Neon override", startX, startY));
+            highlight.AddRight(_stealthNeon = AddCombobox(null, new[] { "Off", "Bright white", "Bright pink", "Bright ice", "Bright fire" }, Math.Clamp(_currentProfile.StealthNeonType, 0, 4), startX, startY, 120));
+            highlight.Add(_colorStealthSelf = AddCheckBox(null, "Also tint and fade yourself while hidden", _currentProfile.ColorStealthSelf, startX, startY));
+            highlight.PopIndent();
+
+            highlight.Add(AddLabel(null, "Last target colour", startX, startY));
+            highlight.AddRight(_lastTargetType = AddCombobox(null, neonNames, Math.Clamp(_currentProfile.HighlightLastTargetType, 0, 5), startX, startY, 120));
+            highlight.Add(_lastTargetHue = AddColorBox(null, startX, startY, _currentProfile.HighlightLastTargetTypeHue, ""));
+            highlight.AddRight(AddLabel(null, "Custom", 0, 0), 2);
+
+            highlight.Add(AddLabel(null, "...when poisoned", startX, startY));
+            highlight.AddRight(_lastTargetPoisonType = AddCombobox(null, new[] { "Off", "Bright white", "Bright pink", "Bright ice", "Bright fire", "Custom hue", "Bright green" }, Math.Clamp(_currentProfile.HighlightLastTargetTypePoison, 0, 6), startX, startY, 120));
+            highlight.Add(_lastTargetPoisonHue = AddColorBox(null, startX, startY, _currentProfile.HighlightLastTargetTypePoisonHue, ""));
+            highlight.AddRight(AddLabel(null, "Custom", 0, 0), 2);
+
+            highlight.Add(AddLabel(null, "...when paralysed", startX, startY));
+            highlight.AddRight(_lastTargetParaType = AddCombobox(null, new[] { "Off", "Bright white", "Bright pink", "Bright ice", "Bright fire", "Custom hue", "Bright purple" }, Math.Clamp(_currentProfile.HighlightLastTargetTypePara, 0, 6), startX, startY, 120));
+            highlight.Add(_lastTargetParaHue = AddColorBox(null, startX, startY, _currentProfile.HighlightLastTargetTypeParaHue, ""));
+            highlight.AddRight(AddLabel(null, "Custom", 0, 0), 2);
+
+            // ---- Health lines ----
+            SettingsSection lines = AddSettingsSection(box, "Health Lines");
+            lines.Y = highlight.Bounds.Bottom + 30;
+
+            lines.Add(_oldHealthLines = AddCheckBox(null, "Old-style thin HP underlines", _currentProfile.UseOldHealthBars, startX, startY));
+            lines.Add(_multiUnderlines = AddCheckBox(null, "HP / mana / stamina underlines for you and party", _currentProfile.MultipleUnderlinesSelfParty, startX, startY));
+            lines.PushIndent();
+            lines.Add(_multiUnderlinesBig = AddCheckBox(null, "Larger underlines", _currentProfile.MultipleUnderlinesSelfPartyBigBars, startX, startY));
+            lines.Add(AddLabel(null, "Opacity (1-10)", startX, startY));
+            lines.AddRight(_multiUnderlinesTransparency = AddHSlider(null, 1, 10, _currentProfile.MultipleUnderlinesSelfPartyTransparency, startX, startY, 150));
+            lines.PopIndent();
+
+            // ---- Display & performance ----
+            SettingsSection display = AddSettingsSection(box, "Display & Performance");
+            display.Y = lines.Bounds.Bottom + 30;
+
+            display.Add(_alwaysShowOwnNameplate = AddCheckBox(null, "Always show your own nameplate", _currentProfile.AlwaysShowOwnNameplate, startX, startY));
+            display.Add(_showDeathOnWorldmap = AddCheckBox(null, "Show death location on world map (5 min)", _currentProfile.ShowDeathOnWorldmap, startX, startY));
+            display.Add(_gridContainerEnabled = AddCheckBox(null, "Use resizable grid containers", _currentProfile.GridContainerEnabled, startX, startY));
+            display.Add(_renderWeather = AddCheckBox(null, "Draw weather (rain/snow)", _currentProfile.RenderWeather, startX, startY));
+            display.Add(AddLabel(null, "Max effect sprites (0 = no limit)", startX, startY));
+            display.AddRight(_maxScreenEffectSprites = AddHSlider(null, 0, 500, _currentProfile.MaxScreenEffectSprites, startX, startY, 150));
+            display.Add(AddLabel(null, "Max dynamic lights (0 = no limit)", startX, startY));
+            display.AddRight(_maxDynamicLights = AddHSlider(null, 0, LightsLoader.MAX_LIGHTS_DATA_INDEX_COUNT, _currentProfile.MaxDynamicLights, startX, startY, 150));
 
             Add(rightArea, PAGE);
         }
@@ -4116,6 +4237,37 @@ namespace ClassicUO.Game.UI.Gumps
                     _invisibleHousesEnabled.IsChecked = false;
                     _invisibleHousesZ.Value = 1;
                     _dontRemoveHouseBelowZ.Value = 6;
+                    _tintSelfWhileCasting.IsChecked = false;
+                    _previewFields.IsChecked = false;
+                    _rangeRingOnCast.IsChecked = false;
+                    _rangeRingOnCastRange.Value = 10;
+                    _rangeRingAlways.IsChecked = false;
+                    _rangeRingAlwaysRange.Value = 10;
+                    _blockWoS.IsChecked = false;
+                    _blockWoSFelOnly.IsChecked = false;
+                    _blockWoSArt.IsChecked = false;
+                    _blockEnergyF.IsChecked = false;
+                    _blockEnergyFFelOnly.IsChecked = false;
+                    _blockEnergyFArt.IsChecked = false;
+                    _colorStealth.IsChecked = false;
+                    _colorStealthSelf.IsChecked = false;
+                    _stealthNeon.SelectedIndex = 0;
+                    _lastTargetType.SelectedIndex = 0;
+                    _lastTargetPoisonType.SelectedIndex = 0;
+                    _lastTargetParaType.SelectedIndex = 0;
+                    _transparentHouses.IsChecked = false;
+                    _transparentHousesZ.Value = 1;
+                    _transparentHousesTransparency.Value = 5;
+                    _oldHealthLines.IsChecked = false;
+                    _multiUnderlines.IsChecked = false;
+                    _multiUnderlinesBig.IsChecked = false;
+                    _multiUnderlinesTransparency.Value = 10;
+                    _alwaysShowOwnNameplate.IsChecked = false;
+                    _showDeathOnWorldmap.IsChecked = false;
+                    _gridContainerEnabled.IsChecked = false;
+                    _renderWeather.IsChecked = true;
+                    _maxScreenEffectSprites.Value = 0;
+                    _maxDynamicLights.Value = 0;
 
                     break;
             }
@@ -4634,6 +4786,72 @@ namespace ClassicUO.Game.UI.Gumps
             _currentProfile.InvisibleHousesEnabled = _invisibleHousesEnabled.IsChecked;
             _currentProfile.InvisibleHousesZ = _invisibleHousesZ.Value;
             _currentProfile.DontRemoveHouseBelowZ = _dontRemoveHouseBelowZ.Value;
+
+            // Dust-Light ports
+            _currentProfile.TintSelfWhileCasting = _tintSelfWhileCasting.IsChecked;
+            _currentProfile.PreviewFields = _previewFields.IsChecked;
+            _currentProfile.LTHighlightRangeOnCast = _rangeRingOnCast.IsChecked;
+            _currentProfile.LTHighlightRangeOnCastRange = _rangeRingOnCastRange.Value;
+            _currentProfile.LTHighlightRangeOnCastHue = _rangeRingOnCastHue.Hue;
+            _currentProfile.LTHighlightRangeOnActivated = _rangeRingAlways.IsChecked;
+            _currentProfile.LTHighlightRangeOnActivatedRange = _rangeRingAlwaysRange.Value;
+            _currentProfile.LTHighlightRangeOnActivatedHue = _rangeRingAlwaysHue.Hue;
+
+            bool fieldsChanged =
+                _currentProfile.BlockWoS != _blockWoS.IsChecked
+                || _currentProfile.BlockWoSFelOnly != _blockWoSFelOnly.IsChecked
+                || _currentProfile.BlockEnergyF != _blockEnergyF.IsChecked
+                || _currentProfile.BlockEnergyFFelOnly != _blockEnergyFFelOnly.IsChecked;
+
+            _currentProfile.BlockWoS = _blockWoS.IsChecked;
+            _currentProfile.BlockWoSFelOnly = _blockWoSFelOnly.IsChecked;
+            _currentProfile.BlockWoSArtForceAoS = _blockWoSArt.IsChecked;
+            _currentProfile.BlockEnergyF = _blockEnergyF.IsChecked;
+            _currentProfile.BlockEnergyFFelOnly = _blockEnergyFFelOnly.IsChecked;
+            _currentProfile.BlockEnergyFArtForceAoS = _blockEnergyFArt.IsChecked;
+
+            if (fieldsChanged)
+            {
+                // Put the tiledata back; fields re-apply their flags the next time they're drawn.
+                DustLightVisuals.RestoreAllFieldPassability();
+            }
+
+            _currentProfile.ColorStealth = _colorStealth.IsChecked;
+            _currentProfile.ColorStealthSelf = _colorStealthSelf.IsChecked;
+            _currentProfile.StealthHue = _stealthHue.Hue;
+            _currentProfile.StealthNeonType = _stealthNeon.SelectedIndex;
+            _currentProfile.HighlightLastTargetType = _lastTargetType.SelectedIndex;
+            _currentProfile.HighlightLastTargetTypeHue = _lastTargetHue.Hue;
+            _currentProfile.HighlightLastTargetTypePoison = _lastTargetPoisonType.SelectedIndex;
+            _currentProfile.HighlightLastTargetTypePoisonHue = _lastTargetPoisonHue.Hue;
+            _currentProfile.HighlightLastTargetTypePara = _lastTargetParaType.SelectedIndex;
+            _currentProfile.HighlightLastTargetTypeParaHue = _lastTargetParaHue.Hue;
+
+            bool transparentHousesChanged =
+                _currentProfile.TransparentHousesEnabled != _transparentHouses.IsChecked
+                || _currentProfile.TransparentHousesZ != _transparentHousesZ.Value
+                || _currentProfile.TransparentHousesTransparency != _transparentHousesTransparency.Value;
+
+            _currentProfile.TransparentHousesEnabled = _transparentHouses.IsChecked;
+            _currentProfile.TransparentHousesZ = _transparentHousesZ.Value;
+            _currentProfile.TransparentHousesTransparency = _transparentHousesTransparency.Value;
+
+            if (transparentHousesChanged)
+            {
+                MarkUsedChunksDirty();
+            }
+
+            _currentProfile.UseOldHealthBars = _oldHealthLines.IsChecked;
+            _currentProfile.MultipleUnderlinesSelfParty = _multiUnderlines.IsChecked;
+            _currentProfile.MultipleUnderlinesSelfPartyBigBars = _multiUnderlinesBig.IsChecked;
+            _currentProfile.MultipleUnderlinesSelfPartyTransparency = _multiUnderlinesTransparency.Value;
+
+            _currentProfile.AlwaysShowOwnNameplate = _alwaysShowOwnNameplate.IsChecked;
+            _currentProfile.ShowDeathOnWorldmap = _showDeathOnWorldmap.IsChecked;
+            _currentProfile.GridContainerEnabled = _gridContainerEnabled.IsChecked;
+            _currentProfile.RenderWeather = _renderWeather.IsChecked;
+            _currentProfile.MaxScreenEffectSprites = _maxScreenEffectSprites.Value;
+            _currentProfile.MaxDynamicLights = _maxDynamicLights.Value;
 
             if (_currentProfile.ShowSwingTimer != _showSwingTimer.IsChecked)
             {

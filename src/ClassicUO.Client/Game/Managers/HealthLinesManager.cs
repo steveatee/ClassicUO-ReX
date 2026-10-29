@@ -1,10 +1,12 @@
-﻿// SPDX-License-Identifier: BSD-2-Clause
+// SPDX-License-Identifier: BSD-2-Clause
 
+using System;
 using ClassicUO.Configuration;
 using ClassicUO.Game.Data;
 using ClassicUO.Game.GameObjects;
 using ClassicUO.Renderer;
 using Microsoft.Xna.Framework;
+using Microsoft.Xna.Framework.Graphics;
 
 namespace ClassicUO.Game.Managers
 {
@@ -14,9 +16,13 @@ namespace ClassicUO.Game.Managers
         private const int BAR_HEIGHT = 8;
         private const int BAR_WIDTH_HALF = BAR_WIDTH >> 1;
         private const int BAR_HEIGHT_HALF = BAR_HEIGHT >> 1;
+        private const int OLD_BAR_HEIGHT = 3;
 
         const ushort BACKGROUND_GRAPHIC = 0x1068;
         const ushort HP_GRAPHIC = 0x1069;
+
+        private static readonly Texture2D _oldEdge = SolidColorTextureCache.GetTexture(Color.Black);
+        private static readonly Texture2D _oldBack = SolidColorTextureCache.GetTexture(Color.Red);
 
         private readonly World _world;
 
@@ -170,9 +176,264 @@ namespace ClassicUO.Game.Managers
 
                 if ((isEnabled && mode >= 1) || newTargSystem || forceDraw)
                 {
-                    DrawHealthLine(batcher, mobile, p.X, p.Y, offsetY, passive, newTargSystem, layerDepth);
+                    var prof = ProfileManager.CurrentProfile;
+
+                    if (prof != null && prof.UseOldHealthBars)
+                    {
+                        DrawOldHealthLine(
+                            batcher,
+                            mobile,
+                            p.X,
+                            p.Y + 4,
+                            passive && !newTargSystem,
+                            layerDepth
+                        );
+                    }
+                    else
+                    {
+                        DrawHealthLine(batcher, mobile, p.X, p.Y, offsetY, passive, newTargSystem, layerDepth);
+                    }
                 }
             }
+        }
+
+        private static (Color hpcolor, int hpw, int manaw, int stamw) CalcUnderlines(
+            Mobile mobile,
+            int barWidth,
+            float alphaMod
+        )
+        {
+            Color hpcolor;
+
+            if (mobile.IsParalyzed)
+            {
+                hpcolor = Color.AliceBlue;
+            }
+            else if (mobile.IsYellowHits)
+            {
+                hpcolor = Color.Orange;
+            }
+            else if (mobile.IsPoisoned)
+            {
+                hpcolor = Color.LimeGreen;
+            }
+            else
+            {
+                hpcolor = Color.CornflowerBlue;
+            }
+
+            hpcolor *= alphaMod;
+
+            int currenthp = mobile.Hits;
+            int maxhp = mobile.HitsMax;
+            int currentmana = mobile.Mana;
+            int maxmana = mobile.ManaMax;
+            int currentstam = mobile.Stamina;
+            int maxstam = mobile.StaminaMax;
+
+            int hpw = 0;
+            int manaw = 0;
+            int stamw = 0;
+
+            if (maxhp > 0)
+            {
+                hpw = currenthp * 100 / maxhp;
+                hpw = hpw > 100 ? 100 : hpw;
+                if (hpw > 1)
+                {
+                    hpw = barWidth * hpw / 100;
+                }
+            }
+
+            if (maxmana > 0)
+            {
+                manaw = currentmana * 100 / maxmana;
+                manaw = manaw > 100 ? 100 : manaw;
+                if (manaw > 1)
+                {
+                    manaw = barWidth * manaw / 100;
+                }
+            }
+
+            if (maxstam > 0)
+            {
+                stamw = currentstam * 100 / maxstam;
+                stamw = stamw > 100 ? 100 : stamw;
+                if (stamw > 1)
+                {
+                    stamw = barWidth * stamw / 100;
+                }
+            }
+
+            return (hpcolor, hpw, manaw, stamw);
+        }
+
+        private void DrawOldHealthLine(
+            UltimaBatcher2D batcher,
+            Mobile mobile,
+            int x,
+            int y,
+            bool passive,
+            float layerDepth
+        )
+        {
+            if (mobile == null)
+            {
+                return;
+            }
+
+            var prof = ProfileManager.CurrentProfile;
+            float alphaMod = prof != null
+                ? Math.Clamp(prof.MultipleUnderlinesSelfPartyTransparency / 10f, 0.1f, 1f)
+                : 1f;
+
+            Vector3 hueVec = ShaderHueTranslator.GetHueVector(0, false, 1f);
+
+            bool multi =
+                prof != null
+                && prof.MultipleUnderlinesSelfParty
+                && (mobile == _world.Player || _world.Party.Contains(mobile.Serial));
+
+            if (multi)
+            {
+                int bigW;
+                int bigH;
+                int bigHalf;
+                int ySpacing = 1;
+
+                if (prof.MultipleUnderlinesSelfPartyBigBars)
+                {
+                    bigW = 50;
+                    bigH = 4;
+                    bigHalf = bigW / 2 - 17;
+                }
+                else
+                {
+                    bigW = 34;
+                    bigH = 3;
+                    bigHalf = bigW / 2 - 17;
+                }
+
+                Texture2D edgeH = SolidColorTextureCache.GetTexture(Color.Black * alphaMod);
+                Texture2D backH = SolidColorTextureCache.GetTexture(Color.Red * alphaMod);
+                Texture2D edgeM = SolidColorTextureCache.GetTexture(Color.Black * alphaMod);
+                Texture2D backM = SolidColorTextureCache.GetTexture(Color.Red * alphaMod);
+                Texture2D edgeS = SolidColorTextureCache.GetTexture(Color.Black * alphaMod);
+                Texture2D backS = SolidColorTextureCache.GetTexture(Color.Red * alphaMod);
+
+                (Color hpcolor, int maxhp, int maxmana, int maxstam) = CalcUnderlines(mobile, bigW, alphaMod);
+                Color manaColor = Color.CornflowerBlue * alphaMod;
+
+                batcher.Draw(
+                    edgeH,
+                    new Rectangle(x - 1 - bigHalf, y - 1, bigW + 2, bigH + 1),
+                    hueVec,
+                    layerDepth
+                );
+                batcher.Draw(
+                    backH,
+                    new Rectangle(x - bigHalf + maxhp, y, bigW - maxhp, bigH),
+                    hueVec,
+                    layerDepth
+                );
+                batcher.Draw(
+                    SolidColorTextureCache.GetTexture(hpcolor),
+                    new Rectangle(x - bigHalf, y, maxhp, bigH),
+                    hueVec,
+                    layerDepth
+                );
+
+                batcher.Draw(
+                    edgeM,
+                    new Rectangle(x - 1 - bigHalf, y + bigH + ySpacing - 1, bigW + 2, bigH + 1),
+                    hueVec,
+                    layerDepth
+                );
+                batcher.Draw(
+                    backM,
+                    new Rectangle(x - bigHalf + maxmana, y + bigH + ySpacing, bigW - maxmana, bigH),
+                    hueVec,
+                    layerDepth
+                );
+                batcher.Draw(
+                    SolidColorTextureCache.GetTexture(manaColor),
+                    new Rectangle(x - bigHalf, y + bigH + ySpacing, maxmana, bigH),
+                    hueVec,
+                    layerDepth
+                );
+
+                batcher.Draw(
+                    edgeS,
+                    new Rectangle(
+                        x - 1 - bigHalf,
+                        y + bigH + bigH + ySpacing + ySpacing - 1,
+                        bigW + 2,
+                        bigH + 2
+                    ),
+                    hueVec,
+                    layerDepth
+                );
+                batcher.Draw(
+                    backS,
+                    new Rectangle(
+                        x - bigHalf + maxstam,
+                        y + bigH + bigH + ySpacing + ySpacing,
+                        bigW - maxstam,
+                        bigH
+                    ),
+                    hueVec,
+                    layerDepth
+                );
+                batcher.Draw(
+                    SolidColorTextureCache.GetTexture(Color.Goldenrod * alphaMod), // stamina (Dust-Light reused the mana colour here)
+                    new Rectangle(x - bigHalf, y + bigH + bigH + ySpacing + ySpacing, maxstam, bigH),
+                    hueVec,
+                    layerDepth
+                );
+
+                return;
+            }
+
+            batcher.Draw(
+                _oldEdge,
+                new Rectangle(x - 1, y - 1, BAR_WIDTH + 2, OLD_BAR_HEIGHT + 2),
+                hueVec,
+                layerDepth
+            );
+            batcher.Draw(
+                _oldBack,
+                new Rectangle(x, y, BAR_WIDTH, OLD_BAR_HEIGHT),
+                hueVec,
+                layerDepth
+            );
+
+            Color color;
+
+            if (mobile.IsParalyzed)
+            {
+                color = Color.AliceBlue;
+            }
+            else if (mobile.IsYellowHits)
+            {
+                color = Color.Orange;
+            }
+            else if (mobile.IsPoisoned)
+            {
+                color = Color.LimeGreen;
+            }
+            else
+            {
+                color = Color.CornflowerBlue;
+            }
+
+            int per = BAR_WIDTH * mobile.HitsPercentage / 100;
+
+            batcher.Draw(
+                SolidColorTextureCache.GetTexture(color),
+                new Rectangle(x, y, per, OLD_BAR_HEIGHT),
+                hueVec,
+                layerDepth
+            );
         }
 
         private void DrawHealthLine(

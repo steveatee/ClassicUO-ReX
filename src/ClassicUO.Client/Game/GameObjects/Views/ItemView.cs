@@ -103,11 +103,28 @@ namespace ClassicUO.Game.GameObjects
                     }
                 }
 
+                // Dust-Light: keep WoS / Energy Field impassable for the walker, and optional replacement art.
+                DustLightVisuals.UpdateFieldPassability(World, Graphic);
+
+                if (DustLightVisuals.TryReplaceFieldArt(Graphic, hue, out ushort fieldGraphic, out ushort fieldHue))
+                {
+                    graphic = fieldGraphic;
+                    hue = fieldHue;
+                    partial = false;
+                }
+
                 if (ItemData.IsContainer && SelectedObject.SelectedContainer == this)
                 {
                     hue = 0x0035;
                     partial = false;
                 }
+            }
+
+            // Dust-Light: colour the stealth footstep art.
+            if (DustLightVisuals.IsStealthArt(graphic) && DustLightVisuals.IsStealthTintEnabled(ProfileManager.CurrentProfile))
+            {
+                hue = DustLightVisuals.StealthHue(hue);
+                partial = false;
             }
 
             if (
@@ -157,6 +174,11 @@ namespace ClassicUO.Game.GameObjects
             )
             {
                 hueVec.Z = 0.5f;
+            }
+
+            if (DustLightVisuals.IsTransparentHousePiece(World, this))
+            {
+                hueVec.Z = Math.Min(hueVec.Z, DustLightVisuals.TransparentHouseAlpha);
             }
 
             if (ProfileManager.CurrentProfile.InvisibleHousesEnabled && World.Player != null)
@@ -522,6 +544,11 @@ namespace ClassicUO.Game.GameObjects
                 if (OnGround && !IsMulti)
                 {
                     graphic = StaticArtReplacements.ReplaceFixedGroundItem(graphic, (Flags & Flags.Movable) != 0);
+
+                    if (DustLightVisuals.TryReplaceFieldArt(Graphic, Hue, out ushort fieldGraphic, out _))
+                    {
+                        graphic = fieldGraphic;
+                    }
                 }
 
                 if (Client.Game.UO.Arts.GetArt(graphic).Texture != null)

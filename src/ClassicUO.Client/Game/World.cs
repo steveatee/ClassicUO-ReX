@@ -281,6 +281,7 @@ namespace ClassicUO.Game
                             else if (SerialHelper.IsItem(container.Serial))
                             {
                                 UIManager.GetGump<ContainerGump>(container.Serial)?.RequestUpdateContents();
+                                UIManager.GetGump<GridContainer>(container.Serial)?.RequestUpdateContents();
 
                                 if (container.Graphic == 0x2006)
                                 {

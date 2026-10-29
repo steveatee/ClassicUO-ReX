@@ -82,6 +82,7 @@ namespace ClassicUO.Game.UI.Gumps
         private bool _showMobiles = true;
         private bool _showMultis = true;
         private bool _showPartyMembers = true;
+        private bool _showGuildMembers;
         private bool _showPlayerBar = true;
         private bool _showPlayerName = true;
         private int _zoomIndex = 4;
@@ -92,6 +93,10 @@ namespace ClassicUO.Game.UI.Gumps
         private int _mapLoading;
         private uint _mapLoadingTime;
         private Task _loadingTask;
+        private uint _nextServerInfoRequestTime;
+        private readonly string _loadingMapText = "Please wait, I'm making the map file...";
+        private readonly Vector2 _loadingMapTextSize;
+        private static readonly Texture2D _blackTexture = SolidColorTextureCache.GetTexture(Color.Black);
 
         public WorldMapGump(World world) : base
         (
@@ -120,6 +125,7 @@ namespace ClassicUO.Game.UI.Gumps
 
             LoadMarkers();
             LoadZones();
+            _loadingMapTextSize = Fonts.Bold.MeasureString(_loadingMapText.AsSpan());
 
             BuildGump();
         }
@@ -183,8 +189,9 @@ namespace ClassicUO.Game.UI.Gumps
 
             _flipMap = ProfileManager.CurrentProfile.WorldMapFlipMap;
             _showPartyMembers = ProfileManager.CurrentProfile.WorldMapShowParty;
+            _showGuildMembers = ProfileManager.CurrentProfile.WorldMapShowGuild;
 
-            World.WMapManager.SetEnable(_showPartyMembers);
+            World.WMapManager.SetEnable(_showPartyMembers || _showGuildMembers);
 
             _zoomIndex = ProfileManager.CurrentProfile.WorldMapZoomIndex;
 
@@ -226,6 +233,7 @@ namespace ClassicUO.Game.UI.Gumps
             ProfileManager.CurrentProfile.WorldMapTopMost = TopMost;
             ProfileManager.CurrentProfile.WorldMapFreeView = FreeView;
             ProfileManager.CurrentProfile.WorldMapShowParty = _showPartyMembers;
+            ProfileManager.CurrentProfile.WorldMapShowGuild = _showGuildMembers;
 
             ProfileManager.CurrentProfile.WorldMapZoomIndex = _zoomIndex;
 
@@ -299,11 +307,38 @@ namespace ClassicUO.Game.UI.Gumps
                 {
                     _showPartyMembers = !_showPartyMembers;
 
-                    World.WMapManager.SetEnable(_showPartyMembers);
+                    World.WMapManager.SetEnable(_showPartyMembers || _showGuildMembers);
                     SaveSettings();
                 },
                 true,
                 _showPartyMembers
+            );
+
+            _options["show_guild_members"] = new ContextMenuItemEntry
+            (
+                "Show guild members",
+                () =>
+                {
+                    _showGuildMembers = !_showGuildMembers;
+
+                    GameActions.Say("[guildtracking", ProfileManager.CurrentProfile?.SpeechHue ?? 0);
+                    World.WMapManager.SetEnable(_showPartyMembers || _showGuildMembers);
+                    SaveSettings();
+
+                    UIManager.Add(
+                        new MessageBoxGump(
+                            World,
+                            380,
+                            150,
+                            _showGuildMembers
+                                ? "Guild tracking is ENABLED.\nWorld map will show guild members when server sends positions."
+                                : "Guild tracking is DISABLED.\nGuild members will no longer update on world map.",
+                            null
+                        )
+                    );
+                },
+                true,
+                _showGuildMembers
             );
 
             _options["show_mobiles"] = new ContextMenuItemEntry(ResGumps.ShowMobiles, () => { _showMobiles = !_showMobiles; SaveSettings(); }, true, _showMobiles);
@@ -509,6 +544,7 @@ namespace ClassicUO.Game.UI.Gumps
 
             ContextMenu.Add("", null);
             ContextMenu.Add(_options["show_party_members"]);
+            ContextMenu.Add(_options["show_guild_members"]);
             ContextMenu.Add(_options["show_mobiles"]);
             ContextMenu.Add(_options["show_multis"]);
             ContextMenu.Add(_options["show_coordinates"]);
@@ -538,7 +574,11 @@ namespace ClassicUO.Game.UI.Gumps
             if (_map.Index != World.MapIndex && !_freeView)
                 ChangeMap(World.MapIndex);
 
-            World.WMapManager.RequestServerPartyGuildInfo();
+            if (Time.Ticks >= _nextServerInfoRequestTime)
+            {
+                _nextServerInfoRequestTime = Time.Ticks + 150;
+                World.WMapManager.RequestServerPartyGuildInfo();
+            }
         }
 
         public void ChangeMap(int index)
@@ -1910,7 +1950,7 @@ namespace ClassicUO.Game.UI.Gumps
             {
                 batcher.Draw
                 (
-                    SolidColorTextureCache.GetTexture(Color.Black),
+                    _blackTexture,
                     new Rectangle
                     (
                         gX,
@@ -1926,14 +1966,13 @@ namespace ClassicUO.Game.UI.Gumps
                 {
                     if (batcher.ClipBegin(gX, gY, gWidth, gHeight))
                     {
-                        var str = "Please wait, I'm making the map file...".AsSpan();
+                        var str = _loadingMapText.AsSpan();
                         //str = str[..(str.Length - (int)_mapLoadingTime % 3)];
 
                         //if (Time.Ticks > _mapLoadingTime)
                         //    _mapLoadingTime = Time.Ticks + 1000;
 
-                        var strSize = Fonts.Bold.MeasureString(str);
-                        var pos = strSize * -0.5f;
+                        var pos = _loadingMapTextSize * -0.5f;
                         pos.X += gX + halfWidth;
                         pos.Y += gY + halfHeight;
                         batcher.DrawString(Fonts.Bold, str, pos, new Vector3(38, 1, 1), layerDepth);
@@ -2129,6 +2168,7 @@ namespace ClassicUO.Game.UI.Gumps
                                 if (string.IsNullOrEmpty(wme.Name) && !string.IsNullOrEmpty(mob.Name))
                                 {
                                     wme.Name = mob.Name;
+                                    WMapEntity.CacheName(mob.Serial, mob.Name);
                                 }
                             }
                             else
@@ -2154,7 +2194,7 @@ namespace ClassicUO.Game.UI.Gumps
                         {
                             WMapEntity wme = World.WMapManager.GetEntity(mob.Serial);
 
-                            if (wme != null && wme.IsGuild)
+                            if (_showGuildMembers && wme != null && wme.IsGuild)
                             {
                                 DrawWMEntity
                                 (
@@ -2175,7 +2215,7 @@ namespace ClassicUO.Game.UI.Gumps
 
             foreach (WMapEntity wme in World.WMapManager.Entities.Values)
             {
-                if (wme.IsGuild && !World.Party.Contains(wme.Serial))
+                if (_showGuildMembers && wme.IsGuild && !World.Party.Contains(wme.Serial))
                 {
                     DrawWMEntity
                     (
@@ -2211,6 +2251,11 @@ namespace ClassicUO.Game.UI.Gumps
                                 {
                                     wme.Name = partyMember.Name;
                                 }
+                            }
+
+                            if (!string.IsNullOrEmpty(partyMember.Name))
+                            {
+                                WMapEntity.CacheName(partyMember.Serial, partyMember.Name);
                             }
 
                             DrawMobile
@@ -2249,6 +2294,62 @@ namespace ClassicUO.Game.UI.Gumps
                             }
                         }
                     }
+                }
+            }
+
+            if ((Time.Ticks - World.Player.DeathTick) > 300000
+                && World.Player.DeathX != 0
+                && World.Player.DeathY != 0
+                && World.Player.DeathTick != 0)
+            {
+                World.Player.DeathTick = 0;
+                World.Player.DeathX = 0;
+                World.Player.DeathY = 0;
+            }
+
+            if (ProfileManager.CurrentProfile.ShowDeathOnWorldmap)
+            {
+                if (World.Player.DeathX != 0 && World.Player.DeathY != 0 && World.Player.DeathTick != 0)
+                {
+                    int sx = World.Player.DeathX - _center.X;
+                    int sy = World.Player.DeathY - _center.Y;
+
+                    Point pdrot = RotatePoint(sx, sy, Zoom, 1, _flipMap ? 45f : 0f);
+
+                    pdrot.X += gX + halfWidth;
+                    pdrot.Y += gY + halfHeight;
+
+                    const int DOT_SIZE = 4;
+                    const int DOT_SIZE_HALF = DOT_SIZE >> 1;
+
+                    Vector3 hueVecDeath = ShaderHueTranslator.GetHueVector(0);
+
+                    batcher.Draw(
+                        SolidColorTextureCache.GetTexture(Color.YellowGreen),
+                        new Rectangle(pdrot.X - DOT_SIZE_HALF, pdrot.Y - DOT_SIZE_HALF, DOT_SIZE, DOT_SIZE),
+                        hueVecDeath,
+                        layerDepth
+                    );
+
+                    int psx = World.Player.X - _center.X;
+                    int psy = World.Player.Y - _center.Y;
+
+                    Point prot = RotatePoint(psx, psy, Zoom, 1, _flipMap ? 45f : 0f);
+
+                    prot.X += gX + halfWidth;
+                    prot.Y += gY + halfHeight;
+
+                    Vector2 start = new Vector2(pdrot.X - DOT_SIZE_HALF, pdrot.Y - DOT_SIZE_HALF);
+                    Vector2 end = new Vector2(prot.X, prot.Y);
+
+                    batcher.DrawLine(
+                        SolidColorTextureCache.GetTexture(Color.YellowGreen),
+                        start,
+                        end,
+                        hueVecDeath,
+                        1,
+                        layerDepth
+                    );
                 }
             }
 
@@ -2407,9 +2508,11 @@ namespace ClassicUO.Game.UI.Gumps
                 layerDepth
             );
 
-            if (drawName && !string.IsNullOrEmpty(mobile.Name))
+            string displayName = drawName ? WMapEntity.GetDisplayNameForMobile(World, mobile) : string.Empty;
+
+            if (drawName && !string.IsNullOrEmpty(displayName))
             {
-                Vector2 size = Fonts.Regular.MeasureString(mobile.Name);
+                Vector2 size = Fonts.Regular.MeasureString(displayName);
 
                 if (rot.X + size.X / 2 > x + Width - 8)
                 {
@@ -2438,7 +2541,7 @@ namespace ClassicUO.Game.UI.Gumps
                 batcher.DrawString
                 (
                     Fonts.Regular,
-                    mobile.Name,
+                    displayName,
                     xx + 1,
                     yy + 1,
                     hueVector,
@@ -2452,7 +2555,7 @@ namespace ClassicUO.Game.UI.Gumps
                 batcher.DrawString
                 (
                     Fonts.Regular,
-                    mobile.Name,
+                    displayName,
                     xx,
                     yy,
                     hueVector,
@@ -2909,8 +3012,13 @@ namespace ClassicUO.Game.UI.Gumps
 
             if (_showGroupName)
             {
-                string name = entity.Name ?? ResGumps.OutOfRange;
-                Vector2 size = Fonts.Regular.MeasureString(entity.Name ?? name);
+                string name = entity.GetResolvedName(World);
+                if (string.IsNullOrEmpty(name))
+                {
+                    name = ResGumps.OutOfRange;
+                }
+
+                Vector2 size = Fonts.Regular.MeasureString(name);
 
                 if (rot.X + size.X / 2 > x + Width - 8)
                 {
