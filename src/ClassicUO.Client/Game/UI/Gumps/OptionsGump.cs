@@ -1801,7 +1801,7 @@ namespace ClassicUO.Game.UI.Gumps
             casting.Add(_blockWoS = AddCheckBox(null, "Treat Wall of Stone as blocking for walking/pathing", _currentProfile.BlockWoS, startX, startY));
             casting.PushIndent();
             casting.Add(_blockWoSFelOnly = AddCheckBox(null, "Felucca only", _currentProfile.BlockWoSFelOnly, startX, startY));
-            casting.Add(_blockWoSArt = AddCheckBox(null, "Replace Wall of Stone art with a stone tile", _currentProfile.BlockWoSArtForceAoS, startX, startY));
+            casting.Add(_blockWoSArt = AddCheckBox(null, "Show Wall of Stone as a low block (same as the rock blocker replacement)", _currentProfile.BlockWoSArtForceAoS, startX, startY));
             casting.PopIndent();
 
             casting.Add(_blockEnergyF = AddCheckBox(null, "Treat Energy Field as blocking for walking/pathing", _currentProfile.BlockEnergyF, startX, startY));

@@ -463,7 +463,8 @@ namespace ClassicUO.Game.Data
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public static bool IsWallOfStone(ushort g)
         {
-            return g == 0x82;
+            // 0x0082 on RunUO/ServUO; UO Dreams' Wall of Stone uses 0x0080 (seen in field_dump.csv).
+            return g == 0x82 || g == 0x80;
         }
     }
 }
