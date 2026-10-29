@@ -106,7 +106,7 @@ namespace ClassicUO.Game.GameObjects
 
             ushort hue = Hue;
 
-            if (ProfileManager.CurrentProfile.NoColorObjectsOutOfRange && Distance > World.ClientViewRange)
+            if (ProfileManager.CurrentProfile.NoColorObjectsOutOfRange && Distance > World.OutOfRangeColorDistance)
             {
                 hue = Constants.OUT_RANGE_COLOR;
             }

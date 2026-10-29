@@ -3,6 +3,7 @@
 using ClassicUO.Assets;
 using ClassicUO.Configuration;
 using ClassicUO.Game.Data;
+using ClassicUO.Game.Managers;
 using ClassicUO.Game.Scenes;
 using ClassicUO.Renderer;
 using ClassicUO.Utility;
@@ -84,7 +85,7 @@ namespace ClassicUO.Game.GameObjects
             }
             else if (
                 ProfileManager.CurrentProfile.NoColorObjectsOutOfRange
-                && Distance > World.ClientViewRange
+                && Distance > World.OutOfRangeColorDistance
             )
             {
                 overridedHue = Constants.OUT_RANGE_COLOR;
@@ -134,6 +135,12 @@ namespace ClassicUO.Game.GameObjects
                         }
                     }
                 }
+            }
+
+            if (FieldPreviewManager.TryGetPreviewHue(World, this, out ushort previewHue))
+            {
+                overridedHue = previewHue;
+                hueVec.Y = 1;
             }
 
             bool isAttack = Serial == World.TargetManager.LastAttack;

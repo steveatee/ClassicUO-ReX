@@ -3,6 +3,7 @@
 using ClassicUO.Configuration;
 using ClassicUO.Assets;
 using ClassicUO.Game.Managers;
+using ClassicUO.Game.Map;
 using ClassicUO.Renderer;
 using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Graphics;
@@ -29,7 +30,7 @@ namespace ClassicUO.Game.GameObjects
             }
             else if (
                 ProfileManager.CurrentProfile.NoColorObjectsOutOfRange
-                && Distance > World.ClientViewRange
+                && Distance > World.OutOfRangeColorDistance
             )
             {
                 hue = Constants.OUT_RANGE_COLOR;
@@ -42,6 +43,11 @@ namespace ClassicUO.Game.GameObjects
             if (TileMarkerManager.Instance.IsTileMarked(X, Y, World.Map.Index, out ushort markedHue))
             {
                 hue = markedHue;
+            }
+
+            if (FieldPreviewManager.TryGetPreviewHue(World, this, out ushort previewHue))
+            {
+                hue = previewHue;
             }
 
             Vector3 hueVec;
@@ -61,9 +67,38 @@ namespace ClassicUO.Game.GameObjects
             }
             hueVec.Z = 1f;
 
+            if (TileMarkerManager.Instance.IsTileMarked(X, Y, World.Map.Index, out markedHue))
+            {
+                hueVec.X = markedHue;
+                hueVec.Y = IsStretched
+                    ? ShaderHueTranslator.SHADER_LAND_HUED
+                    : ShaderHueTranslator.SHADER_HUED;
+                hueVec.Z = 1f;
+            }
+
             if (IsStretched)
             {
                 posY += Z << 2;
+
+                if (TerrainVisualizer.UseFlatColors)
+                {
+                    Texture2D texture = TerrainVisualizer.GetLandTexture(this);
+
+                    batcher.DrawStretchedLand(
+                        texture,
+                        new Vector2(posX, posY),
+                        texture.Bounds,
+                        ref YOffsets,
+                        ref NormalTop,
+                        ref NormalRight,
+                        ref NormalLeft,
+                        ref NormalBottom,
+                        hueVec,
+                        depth + 0.5f
+                    );
+
+                    return true;
+                }
 
                 ref readonly var texmapInfo = ref Client.Game.UO.Texmaps.GetTexmap(
                     Client.Game.UO.FileManager.TileData.LandData[Graphic].TexID
@@ -99,6 +134,28 @@ namespace ClassicUO.Game.GameObjects
             }
             else
             {
+                if (TerrainVisualizer.UseFlatColors)
+                {
+                    Texture2D texture = TerrainVisualizer.GetLandTexture(this);
+                    UltimaBatcher2D.YOffsets offsets = default;
+                    Vector3 flatNormal = new Vector3(0f, 0f, 1f);
+
+                    batcher.DrawStretchedLand(
+                        texture,
+                        new Vector2(posX, posY),
+                        texture.Bounds,
+                        ref offsets,
+                        ref flatNormal,
+                        ref flatNormal,
+                        ref flatNormal,
+                        ref flatNormal,
+                        hueVec,
+                        depth + 0.5f
+                    );
+
+                    return true;
+                }
+
                 ref readonly var artInfo = ref Client.Game.UO.Arts.GetLand(Graphic);
 
                 if (artInfo.Texture != null)

@@ -98,6 +98,7 @@ namespace ClassicUO.Configuration
         public bool EnabledSpellHue { get; set; }
         public bool EnabledSpellFormat { get; set; }
         public string SpellDisplayFormat { get; set; } = "{power} [{spell}]";
+        public bool UseEnglishSpellNamesOverhead { get; set; }
         public ushort PoisonHue { get; set; } = 0x0044;
         public ushort ParalyzedHue { get; set; } = 0x014C;
         public ushort InvulnerableHue { get; set; } = 0x0030;
@@ -119,10 +120,13 @@ namespace ClassicUO.Configuration
         public int MobileHPShowWhen { get; set; } // 0 = Always, 1 - <100%
         public bool DrawRoofs { get; set; } = true;
         public bool TreeToStumps { get; set; }
+        public int TreeType { get; set; } // 0 = normal, 1 = stump, 2 = tile
+        public int BlockerType { get; set; } // 0 = normal, 1 = stump/rock, 2 = tile
         public bool EnableCaveBorder { get; set; }
         public bool HideVegetation { get; set; }
         public int FieldsType { get; set; } // 0 = normal, 1 = static, 2 = tile
         public bool NoColorObjectsOutOfRange { get; set; }
+        public int OutOfRangeColorRadius { get; set; } = 18;
         public bool UseCircleOfTransparency { get; set; }
         public int CircleOfTransparencyRadius { get; set; } = Constants.MAX_CIRCLE_OF_TRANSPARENCY_RADIUS / 2;
         public int CircleOfTransparencyType { get; set; } // 0 = normal, 1 = like original client
@@ -146,6 +150,7 @@ namespace ClassicUO.Configuration
         // movements
         public bool EnablePathfind { get; set; }
         public bool UseShiftToPathfind { get; set; }
+        public bool AutoAvoidObstacules { get; set; }
         public bool AlwaysRun { get; set; }
         public bool AlwaysRunUnlessHidden { get; set; }
         public bool FastRotation { get; set; }
@@ -218,10 +223,18 @@ namespace ClassicUO.Configuration
         public bool NameOverheadShowHpBar { get; set; } = true;
         public bool CustomPlayerNameplate { get; set; }
         public bool InvisibleHousesEnabled { get; set; }
-        public int InvisibleHousesZ { get; set; } = 10;
+        public int InvisibleHousesZ { get; set; }
         public int DontRemoveHouseBelowZ { get; set; } = 6;
         public bool ShowTargetRangeIndicator { get; set; }
         public bool PartyInviteGump { get; set; }
+        public bool UCCLinesEnabled { get; set; }
+        [JsonConverter(typeof(Point2Converter))] public Point UCCLinesLocation { get; set; } = new Point(25, 25);
+        public bool UCCLinesShowLastTarget { get; set; }
+        public bool UCCLinesHuntingMode { get; set; }
+        public bool UCCLinesHuntingBlue { get; set; }
+        public bool UCCLinesHuntingRed { get; set; }
+        public bool UCCLinesHuntingOrange { get; set; }
+        public bool UCCLinesHuntingCriminal { get; set; }
         public bool CustomBarsToggled { get; set; }
         public bool CBBlackBGToggled { get; set; }
 
@@ -247,6 +260,10 @@ namespace ClassicUO.Configuration
         public int AuraUnderFeetType { get; set; } // 0 = NO, 1 = in warmode, 2 = ctrl+shift, 3 = always
         public bool AuraOnMouse { get; set; } = true;
         public bool AnimatedWaterEffect { get; set; } = false;
+        public bool UseFlatTerrainColors { get; set; }
+        public bool ShowTerrainGridOverlay { get; set; }
+        public bool PreviewFieldTiles { get; set; }
+        public bool DisableWeatherEffects { get; set; }
 
         public bool PartyAura { get; set; }
 

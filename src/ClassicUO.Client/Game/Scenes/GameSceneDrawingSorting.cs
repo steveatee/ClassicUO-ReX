@@ -258,7 +258,9 @@ namespace ClassicUO.Game.Scenes
         private void UpdateObjectHandles(Entity obj, bool useObjectHandles)
         {
             bool keepCustomPlayerHandle =
-                ProfileManager.CurrentProfile.CustomPlayerNameplate && obj is Mobile;
+                ProfileManager.CurrentProfile.CustomPlayerNameplate
+                && obj is Mobile mobile
+                && mobile.NotorietyFlag != NotorietyFlag.Invulnerable;
 
             if ((useObjectHandles && _world.NameOverHeadManager.IsAllowed(obj)) || keepCustomPlayerHandle)
             {
@@ -392,25 +394,7 @@ namespace ClassicUO.Game.Scenes
 
         private bool ShouldHideInvisibleHouseObject(GameObject obj)
         {
-            if (!ProfileManager.CurrentProfile.InvisibleHousesEnabled)
-            {
-                return false;
-            }
-
-            if (obj is not Static && obj is not Multi)
-            {
-                return false;
-            }
-
-            GameObject groundTile = _world.Map.GetTile(obj.X, obj.Y);
-
-            if (groundTile == null)
-            {
-                return false;
-            }
-
-            return (obj.Z - _world.Player.Z) > ProfileManager.CurrentProfile.InvisibleHousesZ
-                && (obj.Z - groundTile.Z) > ProfileManager.CurrentProfile.DontRemoveHouseBelowZ;
+            return HouseHiding.ShouldHide(_world, obj);
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
@@ -672,7 +656,7 @@ namespace ClassicUO.Game.Scenes
             int hue = obj.Hue;
             bool partial = false;
 
-            if (profile.NoColorObjectsOutOfRange && obj.Distance > _world.ClientViewRange)
+            if (profile.NoColorObjectsOutOfRange && obj.Distance > _world.OutOfRangeColorDistance)
             {
                 hue = Constants.OUT_RANGE_COLOR;
             }
@@ -687,6 +671,12 @@ namespace ClassicUO.Game.Scenes
             else if (obj is Multi m)
             {
                 partial = m.ItemData.IsPartialHue;
+            }
+
+            if (TileMarkerManager.Instance.IsTileMarked(obj.X, obj.Y, _world.Map.Index, out ushort markedHue))
+            {
+                hue = markedHue;
+                partial = false;
             }
 
             float hueX, hueY;
@@ -852,6 +842,12 @@ namespace ClassicUO.Game.Scenes
                         ? ref meshStatic.ItemData
                         : ref Unsafe.As<Multi>(obj).ItemData);
 
+                    if (ShouldHideInvisibleHouseObject(obj))
+                    {
+                        obj.AlphaHue = 0;
+                        continue;
+                    }
+
                     // Simplified ProcessAlpha for meshed statics: skip IsFoliage branch (never true)
                     bool meshAllowSelection = true;
                     bool meshFadingOut = false;
@@ -986,7 +982,7 @@ namespace ClassicUO.Game.Scenes
                                 continue;
                             }
 
-                            if (itemData.IsFoliage && profile.TreeToStumps)
+                            if (itemData.IsFoliage && profile.TreeToStumps && profile.TreeType == 0)
                             {
                                 continue;
                             }
@@ -1028,7 +1024,7 @@ namespace ClassicUO.Game.Scenes
 
                             if (!itemData.IsMultiMovable)
                             {
-                                if (itemData.IsFoliage && profile.TreeToStumps)
+                                if (itemData.IsFoliage && profile.TreeToStumps && profile.TreeType == 0)
                                 {
                                     continue;
                                 }
@@ -1128,6 +1124,7 @@ namespace ClassicUO.Game.Scenes
                                 !itemData.IsMultiMovable
                                 && itemData.IsFoliage
                                 && profile.TreeToStumps
+                                && profile.TreeType == 0
                             )
                             {
                                 continue;

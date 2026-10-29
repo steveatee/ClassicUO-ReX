@@ -1,117 +1,83 @@
-// SPDX-License-Identifier: BSD-2-Clause
-
-using ClassicUO.Configuration;
+using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Text.Json;
 
 namespace ClassicUO.Game.Managers
 {
-    internal sealed class TileMarkerManager
+    internal class TileMarkerManager
     {
-        public static TileMarkerManager Instance { get; } = new TileMarkerManager();
+        public static TileMarkerManager Instance { get; private set; } = new TileMarkerManager();
 
-        private readonly Dictionary<long, ushort> _markedTiles = new Dictionary<long, ushort>();
-        private bool _isLoaded;
+        private Dictionary<string, ushort> markedTiles = new Dictionary<string, ushort>();
 
-        private TileMarkerManager()
-        {
-        }
+        private string savePath = Path.Combine(CUOEnviroment.ExecutablePath, "Data", "Profiles", "TileMarkers.json");
+
+        private TileMarkerManager() { Load(); }
 
         public void AddTile(int x, int y, int map, ushort hue)
         {
-            EnsureLoaded();
-            _markedTiles[MakeKey(x, y, map)] = hue;
+            markedTiles[FormatLocKey(x, y, map)] = hue; // indexer handles add and update
         }
 
         public void RemoveTile(int x, int y, int map)
         {
-            EnsureLoaded();
-            _markedTiles.Remove(MakeKey(x, y, map));
+            markedTiles.Remove(FormatLocKey(x, y, map));
         }
 
         public bool IsTileMarked(int x, int y, int map, out ushort hue)
         {
-            EnsureLoaded();
-            return _markedTiles.TryGetValue(MakeKey(x, y, map), out hue);
+            return markedTiles.TryGetValue(FormatLocKey(x, y, map), out hue);
         }
 
         public void Save()
         {
-            EnsureLoaded();
-
             try
             {
-                string profilePath = ProfileManager.ProfilePath;
+                string directory = Path.GetDirectoryName(savePath);
+                if (!string.IsNullOrWhiteSpace(directory))
+                    Directory.CreateDirectory(directory);
 
-                if (string.IsNullOrEmpty(profilePath))
-                {
-                    return;
-                }
+                var lines = new List<string>();
+                foreach (var kvp in markedTiles)
+                    lines.Add($"{kvp.Key}={kvp.Value}");
 
-                Directory.CreateDirectory(profilePath);
-                string json = JsonSerializer.Serialize(_markedTiles);
-                File.WriteAllText(GetSavePath(profilePath), json);
+                File.WriteAllLines(savePath, lines);
             }
-            catch
+            catch (Exception ex)
             {
+                Console.WriteLine($"[TileMarker] Failed to save: {ex.Message}");
             }
         }
 
-        private void EnsureLoaded()
+        private void Load()
         {
-            if (_isLoaded)
-            {
+            if (!File.Exists(savePath))
                 return;
-            }
-
-            _isLoaded = true;
 
             try
             {
-                string profilePath = ProfileManager.ProfilePath;
-
-                if (string.IsNullOrEmpty(profilePath))
+                foreach (string line in File.ReadAllLines(savePath))
                 {
-                    return;
-                }
+                    int sep = line.LastIndexOf('=');
+                    if (sep < 0) continue;
 
-                string savePath = GetSavePath(profilePath);
+                    string key = line.Substring(0, sep);
+                    string val = line.Substring(sep + 1);
 
-                if (!File.Exists(savePath))
-                {
-                    return;
-                }
-
-                string json = File.ReadAllText(savePath);
-                var data = JsonSerializer.Deserialize<Dictionary<long, ushort>>(json);
-
-                if (data != null)
-                {
-                    foreach (var entry in data)
-                    {
-                        _markedTiles[entry.Key] = entry.Value;
-                    }
+                    if (ushort.TryParse(val, out ushort hue))
+                        markedTiles[key] = hue;
                 }
             }
-            catch
+            catch (Exception ex)
             {
+                Console.WriteLine($"[TileMarker] Failed to load: {ex.Message}");
             }
         }
 
-        private static string GetSavePath(string profilePath)
+        private static string FormatLocKey(int x, int y, int map)
         {
-            return Path.Combine(profilePath, "tilemarkers.json");
-        }
-
-        private static long MakeKey(int x, int y, int map)
-        {
-            unchecked
-            {
-                return ((long)map & 0xFFFFL) << 48
-                     | ((long)x & 0xFFFFFFL) << 24
-                     | ((long)y & 0xFFFFFFL);
-            }
+            return $"{x}.{y}.{map}";
         }
     }
 }

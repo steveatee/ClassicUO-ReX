@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: BSD-2-Clause
 using ClassicUO.Game;
 using ClassicUO.Game.GameObjects;
+using ClassicUO.Game.Managers;
 using ClassicUO.Game.Map;
 using ClassicUO.Renderer;
 using System;
@@ -147,6 +148,14 @@ namespace ClassicUO.Game.Scenes
             // Draw excluded land tiles (animated water, etc.)
             result += DrawRenderList(batcher, _tiles, maxGroundZ);
             result += DrawRenderList(batcher, _stretchedTiles, maxGroundZ);
+
+            if (TerrainVisualizer.ShowGridOverlay)
+            {
+                foreach (var chunk in visibleChunks)
+                    TerrainVisualizer.DrawGrid(batcher, chunk, maxGroundZ, 1f);
+            }
+
+            FieldPreviewManager.DrawOverlay(batcher, maxGroundZ);
 
             // Draw chunk mesh statics from GPU buffers with per-frame visibility
             batcher.SetWorldOffset(offsetX, offsetY);

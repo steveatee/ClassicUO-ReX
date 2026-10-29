@@ -108,6 +108,7 @@ namespace ClassicUO.Game.Map
         public bool IsDirty = true;
 
         private bool _animatedWaterEffect;
+        private bool _flatTerrainColors;
         private TextureBucketTracker _landBuckets = new(16);
         private TextureBucketTracker _staticsBuckets = new(32);
 
@@ -129,6 +130,7 @@ namespace ClassicUO.Game.Map
                 return;
 
             _animatedWaterEffect = profile.AnimatedWaterEffect;
+            _flatTerrainColors = profile.UseFlatTerrainColors;
 
             // Pass 1: count sprites per texture
             _landBuckets.Clear();
@@ -226,11 +228,15 @@ namespace ClassicUO.Game.Map
             if (!land.AllowedToDraw || land.IsDestroyed)
                 return;
 
-            if (_animatedWaterEffect && land.TileData.IsWet)
+            if (!_flatTerrainColors && _animatedWaterEffect && land.TileData.IsWet)
                 return;
 
             Texture2D texture;
-            if (land.IsStretched)
+            if (_flatTerrainColors)
+            {
+                texture = TerrainVisualizer.GetLandTexture(land);
+            }
+            else if (land.IsStretched)
             {
                 ref readonly var texmapInfo = ref Client.Game.UO.Texmaps.GetTexmap(
                     Client.Game.UO.FileManager.TileData.LandData[land.Graphic].TexID
@@ -262,7 +268,9 @@ namespace ClassicUO.Game.Map
             if (!staticObj.AllowedToDraw || staticObj.IsDestroyed)
                 return;
 
-            CountStaticLike(ref staticObj.ItemData, staticObj.Graphic);
+            ushort graphic = StaticArtReplacements.Replace(staticObj.Graphic);
+            ref StaticTiles itemData = ref Client.Game.UO.FileManager.TileData.StaticData[graphic];
+            CountStaticLike(ref itemData, graphic);
         }
 
         private void CountMulti(Multi multi)
@@ -273,7 +281,9 @@ namespace ClassicUO.Game.Map
             if (multi.State != 0)
                 return;
 
-            CountStaticLike(ref multi.ItemData, multi.Graphic);
+            ushort graphic = StaticArtReplacements.Replace(multi.Graphic);
+            ref StaticTiles itemData = ref Client.Game.UO.FileManager.TileData.StaticData[graphic];
+            CountStaticLike(ref itemData, graphic);
         }
 
         private void CountStaticLike(ref StaticTiles itemData, ushort graphic)
@@ -297,7 +307,7 @@ namespace ClassicUO.Game.Map
             if (!land.AllowedToDraw || land.IsDestroyed)
                 return;
 
-            if (_animatedWaterEffect && land.TileData.IsWet)
+            if (!_flatTerrainColors && _animatedWaterEffect && land.TileData.IsWet)
                 return;
 
             ushort hue = land.Hue;
@@ -322,7 +332,52 @@ namespace ClassicUO.Game.Map
             int baseX = (land.X - land.Y) * 22 - 22;
             int baseY = (land.X + land.Y) * 22 - (land.Z << 2) - 22;
 
-            if (land.IsStretched)
+            if (_flatTerrainColors)
+            {
+                Texture2D texture = TerrainVisualizer.GetLandTexture(land);
+                int idx = _landBuckets.GetNextIndex(texture);
+                land.MeshSpriteIndex = idx;
+
+                if (land.IsStretched)
+                {
+                    WriteStretchedLand(
+                        idx,
+                        texture,
+                        texture.Bounds,
+                        baseX,
+                        baseY + (land.Z << 2),
+                        ref land.YOffsets,
+                        ref land.NormalTop,
+                        ref land.NormalRight,
+                        ref land.NormalLeft,
+                        ref land.NormalBottom,
+                        hueVec,
+                        depth
+                    );
+                }
+                else
+                {
+                    YOffsets offsets = default;
+                    Vector3 flatNormal = new Vector3(0f, 0f, 1f);
+                    WriteStretchedLand(
+                        idx,
+                        texture,
+                        texture.Bounds,
+                        baseX,
+                        baseY,
+                        ref offsets,
+                        ref flatNormal,
+                        ref flatNormal,
+                        ref flatNormal,
+                        ref flatNormal,
+                        hueVec,
+                        depth
+                    );
+                }
+
+                land.InChunkMesh = true;
+            }
+            else if (land.IsStretched)
             {
                 ref readonly var texmapInfo = ref Client.Game.UO.Texmaps.GetTexmap(
                     Client.Game.UO.FileManager.TileData.LandData[land.Graphic].TexID
@@ -399,7 +454,9 @@ namespace ClassicUO.Game.Map
             if (!staticObj.AllowedToDraw || staticObj.IsDestroyed)
                 return;
 
-            TryAddStaticLike(staticObj, ref staticObj.ItemData, staticObj.Graphic, staticObj.Hue);
+            ushort graphic = StaticArtReplacements.Replace(staticObj.Graphic);
+            ref StaticTiles itemData = ref Client.Game.UO.FileManager.TileData.StaticData[graphic];
+            TryAddStaticLike(staticObj, ref itemData, graphic, staticObj.Hue);
         }
 
         private void TryAddMulti(Multi multi)
@@ -410,7 +467,9 @@ namespace ClassicUO.Game.Map
             if (multi.State != 0)
                 return;
 
-            TryAddStaticLike(multi, ref multi.ItemData, multi.Graphic, multi.Hue);
+            ushort graphic = StaticArtReplacements.Replace(multi.Graphic);
+            ref StaticTiles itemData = ref Client.Game.UO.FileManager.TileData.StaticData[graphic];
+            TryAddStaticLike(multi, ref itemData, graphic, multi.Hue);
         }
 
         private void TryAddStaticLike(GameObject obj, ref StaticTiles itemData, ushort graphic, ushort hue)

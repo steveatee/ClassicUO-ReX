@@ -19,6 +19,7 @@ namespace ClassicUO.Game
     internal static class GameActions
     {
         public static int LastSpellIndex { get; set; } = 1;
+        public static int LastSpellIndexCursor { get; set; }
         public static int LastSkillIndex { get; set; } = 1;
 
 
@@ -635,6 +636,7 @@ namespace ClassicUO.Game
             if (index >= 0)
             {
                 LastSpellIndex = index;
+                LastSpellIndexCursor = index;
                 Socket.Send_CastSpellFromBook(index, bookSerial);
             }
         }
@@ -644,6 +646,7 @@ namespace ClassicUO.Game
             if (index >= 0)
             {
                 LastSpellIndex = index;
+                LastSpellIndexCursor = index;
                 Socket.Send_CastSpell(index);
             }
         }

@@ -69,7 +69,7 @@ namespace ClassicUO.Game.GameObjects
                 hue = Constants.HIGHLIGHT_CURRENT_OBJECT_HUE;
                 partial = false;
             }
-            else if (currentProfile.NoColorObjectsOutOfRange && Distance > World.ClientViewRange)
+            else if (currentProfile.NoColorObjectsOutOfRange && Distance > World.OutOfRangeColorDistance)
             {
                 hue = Constants.OUT_RANGE_COLOR;
                 partial = false;
@@ -80,8 +80,32 @@ namespace ClassicUO.Game.GameObjects
                 partial = false;
             }
 
+            if (HouseHiding.ShouldHide(World, this))
+            {
+                return false;
+            }
+
+            if (TileMarkerManager.Instance.IsTileMarked(X, Y, World.Map.Index, out ushort markedHue))
+            {
+                hue = markedHue;
+                partial = false;
+            }
+
+            if (FieldPreviewManager.TryGetPreviewHue(World, this, out ushort previewHue))
+            {
+                hue = previewHue;
+                partial = false;
+            }
+
             bool cot = TransparentTest(World.Player.Z + 5);
             Vector3 hueVec = ShaderHueTranslator.GetHueVector(hue, partial, AlphaHue / 255f, circletrans: cot);
+
+            if (TileMarkerManager.Instance.IsTileMarked(X, Y, World.Map.Index, out markedHue))
+            {
+                hueVec.X = markedHue;
+                hueVec.Y = ShaderHueTranslator.SHADER_HUED;
+                hueVec.Z = 1f;
+            }
 
             if (IsHousePreview)
             {

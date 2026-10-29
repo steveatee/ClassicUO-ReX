@@ -28,6 +28,8 @@ namespace ClassicUO.Game.Map
         public long LastAccessTime;
         public LinkedListNode<int> Node;
         public readonly ChunkMesh Mesh = new ChunkMesh();
+        internal ulong GridObstructionMask;
+        internal bool GridObstructionCacheDirty = true;
 
         public int X;
         public int Y;
@@ -49,6 +51,8 @@ namespace ClassicUO.Game.Map
             c.LastAccessTime = Time.Ticks + Constants.CLEAR_TEXTURES_DELAY;
             c.X = x;
             c.Y = y;
+            c.GridObstructionMask = 0;
+            c.GridObstructionCacheDirty = true;
 
             return c;
         }
@@ -164,6 +168,7 @@ namespace ClassicUO.Game.Map
         public void AddGameObject(GameObject obj, int x, int y)
         {
             Mesh.MarkDirtyIfNeeded(obj);
+            GridObstructionCacheDirty = true;
             obj.RemoveFromTile();
 
             short priorityZ = obj.Z;
@@ -343,6 +348,7 @@ namespace ClassicUO.Game.Map
         public void RemoveGameObject(GameObject obj, int x, int y)
         {
             Mesh.MarkDirtyIfNeeded(obj);
+            GridObstructionCacheDirty = true;
             ref GameObject firstNode = ref Tiles[x, y];
 
             if (firstNode == null || obj == null)
@@ -410,6 +416,8 @@ namespace ClassicUO.Game.Map
             Node = null;
 
             IsDestroyed = true;
+            GridObstructionMask = 0;
+            GridObstructionCacheDirty = true;
 
             if (_pool.Count < Constants.PREDICTABLE_CHUNKS)
             {

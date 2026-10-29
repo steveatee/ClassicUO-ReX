@@ -6,6 +6,7 @@ using ClassicUO.Game.Data;
 using ClassicUO.Game.GameObjects;
 using ClassicUO.Game.Managers;
 using ClassicUO.Game.UI.Gumps;
+using ClassicUO.Game.Map;
 using ClassicUO.Input;
 using ClassicUO.Network;
 using ClassicUO.Renderer;
@@ -118,6 +119,18 @@ namespace ClassicUO.Game.Scenes
             if (!ProfileManager.CurrentProfile.TopbarGumpIsDisabled)
             {
                 TopBarGump.Create(_world);
+            }
+
+            if (ProfileManager.CurrentProfile.UCCLinesEnabled)
+            {
+                UIManager.Add
+                (
+                    new UCCLinesGump(_world)
+                    {
+                        X = ProfileManager.CurrentProfile.UCCLinesLocation.X,
+                        Y = ProfileManager.CurrentProfile.UCCLinesLocation.Y
+                    }
+                );
             }
 
             NetClient.Socket.Disconnected += SocketOnDisconnected;
@@ -1114,6 +1127,7 @@ namespace ClassicUO.Game.Scenes
         public override void DrawUI(UltimaBatcher2D batcher)
         {
             _healthLinesManager.Draw(batcher, 0f);
+            UIManager.GetGump<UCCLinesGump>()?.DrawOverlay(batcher);
 
             if (!UIManager.IsMouseOverWorld)
             {

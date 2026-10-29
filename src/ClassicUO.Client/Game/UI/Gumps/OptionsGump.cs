@@ -34,12 +34,16 @@ namespace ClassicUO.Game.UI.Gumps
         private Combobox _auraType;
         private Combobox _autoOpenCorpseOptions;
         private InputField _autoOpenCorpseRange;
+        private InputField _outOfRangeColorRadius;
 
         //experimental
         private Checkbox _autoOpenDoors, _autoOpenCorpse, _skipEmptyCorpse, _disableTabBtn, _disableCtrlQWBtn, _disableDefaultHotkeys, _disableArrowBtn, _disableAutoMove, _overrideContainerLocation, _smoothDoors, _showTargetRangeIndicator, _customBars, _customBarsBBG, _saveHealthbars;
         private Checkbox _nameOverheadAlwaysOn, _nameOverheadShowHpBar, _customPlayerNameplate, _invisibleHousesEnabled;
-        private HSliderBar _invisibleHousesZ;
-        private HSliderBar _cellSize;
+        private Checkbox _flatTerrainColors, _terrainGridOverlay, _disableWeatherEffects;
+        private Checkbox _previewFieldTiles, _useEnglishSpellNamesOverhead;
+        private Checkbox _uccLinesEnabled, _uccLinesLastTarget, _uccLinesHuntingMode, _uccLinesBlue, _uccLinesRed, _uccLinesOrange, _uccLinesCriminal;
+        private Combobox _treeReplacementType, _blockerReplacementType;
+        private HSliderBar _cellSize, _invisibleHousesZ, _dontRemoveHouseBelowZ;
         private Checkbox _containerScaleItems, _containerDoubleClickToLoot, _relativeDragAnDropItems, _useLargeContianersGumps, _highlightContainersWhenMouseIsOver;
 
 
@@ -79,6 +83,7 @@ namespace ClassicUO.Game.UI.Gumps
         private Checkbox _hideScreenshotStoredInMessage;
         private Checkbox _highlightObjects, /*_smoothMovements,*/
                          _enablePathfind,
+                         _autoAvoidObstacules,
                          _useShiftPathfind,
                          _alwaysRun,
                          _alwaysRunUnlessHidden,
@@ -1607,10 +1612,97 @@ namespace ClassicUO.Game.UI.Gumps
                 )
             );
 
-            SettingsSection section2 = AddSettingsSection(box, "Invisible Houses");
+            SettingsSection section2 = AddSettingsSection(box, "UCC Lines");
             section2.Y = section.Bounds.Bottom + 30;
 
             section2.Add
+            (
+                _uccLinesEnabled = AddCheckBox
+                (
+                    null,
+                    "Enable UCC lines overlay",
+                    _currentProfile.UCCLinesEnabled,
+                    startX,
+                    startY
+                )
+            );
+
+            section2.Add
+            (
+                _uccLinesLastTarget = AddCheckBox
+                (
+                    null,
+                    "Show line to last target",
+                    _currentProfile.UCCLinesShowLastTarget,
+                    startX,
+                    startY
+                )
+            );
+
+            section2.Add
+            (
+                _uccLinesHuntingMode = AddCheckBox
+                (
+                    null,
+                    "Enable hunting mode",
+                    _currentProfile.UCCLinesHuntingMode,
+                    startX,
+                    startY
+                )
+            );
+
+            section2.Add
+            (
+                _uccLinesBlue = AddCheckBox
+                (
+                    null,
+                    "Hunting mode: blue",
+                    _currentProfile.UCCLinesHuntingBlue,
+                    startX,
+                    startY
+                )
+            );
+
+            section2.Add
+            (
+                _uccLinesRed = AddCheckBox
+                (
+                    null,
+                    "Hunting mode: red",
+                    _currentProfile.UCCLinesHuntingRed,
+                    startX,
+                    startY
+                )
+            );
+
+            section2.Add
+            (
+                _uccLinesOrange = AddCheckBox
+                (
+                    null,
+                    "Hunting mode: orange",
+                    _currentProfile.UCCLinesHuntingOrange,
+                    startX,
+                    startY
+                )
+            );
+
+            section2.Add
+            (
+                _uccLinesCriminal = AddCheckBox
+                (
+                    null,
+                    "Hunting mode: criminal",
+                    _currentProfile.UCCLinesHuntingCriminal,
+                    startX,
+                    startY
+                )
+            );
+
+            SettingsSection section3 = AddSettingsSection(box, "Invisible Houses");
+            section3.Y = section2.Bounds.Bottom + 30;
+
+            section3.Add
             (
                 _invisibleHousesEnabled = AddCheckBox
                 (
@@ -1622,18 +1714,155 @@ namespace ClassicUO.Game.UI.Gumps
                 )
             );
 
-            section2.Add(AddLabel(null, "Height threshold", startX, startY));
-            section2.AddRight
+            section3.Add(AddLabel(null, "Hide when above player Z by at least", 0, 0));
+            section3.Add
             (
                 _invisibleHousesZ = AddHSlider
                 (
                     null,
-                    1,
-                    25,
+                    0,
+                    100,
                     _currentProfile.InvisibleHousesZ,
                     startX,
                     startY,
                     200
+                )
+            );
+
+            section3.Add(AddLabel(null, "Keep pieces close to the foundation (Z delta)", 0, 0));
+            section3.Add
+            (
+                _dontRemoveHouseBelowZ = AddHSlider
+                (
+                    null,
+                    1,
+                    100,
+                    _currentProfile.DontRemoveHouseBelowZ,
+                    startX,
+                    startY,
+                    200
+                )
+            );
+
+            SettingsSection section4 = AddSettingsSection(box, "Terrain Visuals");
+            section4.Y = section3.Bounds.Bottom + 30;
+
+            section4.Add
+            (
+                _flatTerrainColors = AddCheckBox
+                (
+                    null,
+                    "Use flat terrain colors instead of land art",
+                    _currentProfile.UseFlatTerrainColors,
+                    startX,
+                    startY
+                )
+            );
+
+            section4.Add
+            (
+                _terrainGridOverlay = AddCheckBox
+                (
+                    null,
+                    "Show terrain tile grid overlay",
+                    _currentProfile.ShowTerrainGridOverlay,
+                    startX,
+                    startY
+                )
+            );
+
+            section4.Add
+            (
+                _autoAvoidObstacules = AddCheckBox
+                (
+                    null,
+                    "Auto-avoid obstacles",
+                    _currentProfile.AutoAvoidObstacules,
+                    startX,
+                    startY
+                )
+            );
+
+            section4.Add
+            (
+                _previewFieldTiles = AddCheckBox
+                (
+                    null,
+                    "Preview field tiles while targeting",
+                    _currentProfile.PreviewFieldTiles,
+                    startX,
+                    startY
+                )
+            );
+
+            section4.Add
+            (
+                _disableWeatherEffects = AddCheckBox
+                (
+                    null,
+                    "Disable weather effects",
+                    _currentProfile.DisableWeatherEffects,
+                    startX,
+                    startY
+                )
+            );
+
+            section4.Add
+            (
+                _useEnglishSpellNamesOverhead = AddCheckBox
+                (
+                    null,
+                    "Use English spell names overhead",
+                    _currentProfile.UseEnglishSpellNamesOverhead,
+                    startX,
+                    startY
+                )
+            );
+
+            section4.Add(AddLabel(null, "Out-of-range color radius", startX, startY));
+            section4.AddRight
+            (
+                _outOfRangeColorRadius = AddInputField
+                (
+                    null,
+                    startX,
+                    startY,
+                    60,
+                    TEXTBOX_HEIGHT,
+                    numbersOnly: true,
+                    maxCharCount: 2
+                )
+            );
+            _outOfRangeColorRadius.SetText(_currentProfile.OutOfRangeColorRadius.ToString());
+
+            SettingsSection section5 = AddSettingsSection(box, "Tree and Blocker Art");
+            section5.Y = section4.Bounds.Bottom + 30;
+
+            section5.Add(AddLabel(null, "Tree Replacement", startX, startY));
+            section5.AddRight
+            (
+                _treeReplacementType = AddCombobox
+                (
+                    null,
+                    new[] { "Normal", "Stump", "Tile" },
+                    _currentProfile.TreeType,
+                    startX,
+                    startY,
+                    120
+                )
+            );
+
+            section5.Add(AddLabel(null, "Blocker Replacement", startX, startY));
+            section5.AddRight
+            (
+                _blockerReplacementType = AddCombobox
+                (
+                    null,
+                    new[] { "Normal", "Stump/Rock", "Tile" },
+                    _currentProfile.BlockerType,
+                    startX,
+                    startY,
+                    120
                 )
             );
 
@@ -3892,6 +4121,23 @@ namespace ClassicUO.Game.UI.Gumps
                     _disableAutoMove.IsChecked = false;
 
                     break;
+
+                case 13: // custom
+                    _customPlayerNameplate.IsChecked = false;
+                    _uccLinesEnabled.IsChecked = false;
+                    _uccLinesLastTarget.IsChecked = false;
+                    _uccLinesHuntingMode.IsChecked = false;
+                    _uccLinesBlue.IsChecked = false;
+                    _uccLinesRed.IsChecked = false;
+                    _uccLinesOrange.IsChecked = false;
+                    _uccLinesCriminal.IsChecked = false;
+                    _invisibleHousesEnabled.IsChecked = false;
+                    _invisibleHousesZ.Value = 0;
+                    _dontRemoveHouseBelowZ.Value = 6;
+                    _treeReplacementType.SelectedIndex = 0;
+                    _blockerReplacementType.SelectedIndex = 0;
+
+                    break;
             }
         }
 
@@ -3908,11 +4154,13 @@ namespace ClassicUO.Game.UI.Gumps
             _currentProfile.HighlightGameObjects = _highlightObjects.IsChecked;
             _currentProfile.ReduceFPSWhenInactive = _reduceFPSWhenInactive.IsChecked;
             _currentProfile.EnablePathfind = _enablePathfind.IsChecked;
+            _currentProfile.AutoAvoidObstacules = _autoAvoidObstacules.IsChecked;
             _currentProfile.UseShiftToPathfind = _useShiftPathfind.IsChecked;
             _currentProfile.AlwaysRun = _alwaysRun.IsChecked;
             _currentProfile.AlwaysRunUnlessHidden = _alwaysRunUnlessHidden.IsChecked;
             _currentProfile.FastRotation = _fastRotation.IsChecked;
             MovementSpeed.FastRotation = _fastRotation.IsChecked;
+
             _currentProfile.ShowMobilesHP = _showHpMobile.IsChecked;
             _currentProfile.HighlightMobilesByPoisoned = _highlightByPoisoned.IsChecked;
             _currentProfile.HighlightMobilesByParalize = _highlightByParalyzed.IsChecked;
@@ -3970,6 +4218,14 @@ namespace ClassicUO.Game.UI.Gumps
             _currentProfile.FieldsType = _fieldsType.SelectedIndex;
             _currentProfile.HideVegetation = _hideVegetation.IsChecked;
             _currentProfile.NoColorObjectsOutOfRange = _noColorOutOfRangeObjects.IsChecked;
+
+            if (!int.TryParse(_outOfRangeColorRadius.Text, out int outOfRangeColorRadius))
+            {
+                outOfRangeColorRadius = 18;
+                _outOfRangeColorRadius.SetText(outOfRangeColorRadius.ToString());
+            }
+
+            _currentProfile.OutOfRangeColorRadius = Math.Clamp(outOfRangeColorRadius, 0, Constants.MAX_VIEW_RANGE);
             _currentProfile.UseCircleOfTransparency = _useCircleOfTransparency.IsChecked;
             _currentProfile.CircleOfTransparencyRadius = _circleOfTranspRadius.Value;
             _currentProfile.CircleOfTransparencyType = _cotType.SelectedIndex;
@@ -4362,8 +4618,62 @@ namespace ClassicUO.Game.UI.Gumps
             _currentProfile.NameOverheadToggled = _nameOverheadAlwaysOn.IsChecked;
             _currentProfile.NameOverheadShowHpBar = _nameOverheadShowHpBar.IsChecked;
             _currentProfile.CustomPlayerNameplate = _customPlayerNameplate.IsChecked;
+            bool updateUccLines = _currentProfile.UCCLinesEnabled != _uccLinesEnabled.IsChecked;
+            _currentProfile.UCCLinesEnabled = _uccLinesEnabled.IsChecked;
+            _currentProfile.UCCLinesShowLastTarget = _uccLinesLastTarget.IsChecked;
+            _currentProfile.UCCLinesHuntingMode = _uccLinesHuntingMode.IsChecked;
+            _currentProfile.UCCLinesHuntingBlue = _uccLinesBlue.IsChecked;
+            _currentProfile.UCCLinesHuntingRed = _uccLinesRed.IsChecked;
+            _currentProfile.UCCLinesHuntingOrange = _uccLinesOrange.IsChecked;
+            _currentProfile.UCCLinesHuntingCriminal = _uccLinesCriminal.IsChecked;
             _currentProfile.InvisibleHousesEnabled = _invisibleHousesEnabled.IsChecked;
             _currentProfile.InvisibleHousesZ = _invisibleHousesZ.Value;
+            _currentProfile.DontRemoveHouseBelowZ = _dontRemoveHouseBelowZ.Value;
+            bool rebuildTerrainMeshes =
+                _currentProfile.UseFlatTerrainColors != _flatTerrainColors.IsChecked;
+            _currentProfile.UseFlatTerrainColors = _flatTerrainColors.IsChecked;
+            _currentProfile.ShowTerrainGridOverlay = _terrainGridOverlay.IsChecked;
+            _currentProfile.PreviewFieldTiles = _previewFieldTiles.IsChecked;
+            _currentProfile.DisableWeatherEffects = _disableWeatherEffects.IsChecked;
+            _currentProfile.UseEnglishSpellNamesOverhead = _useEnglishSpellNamesOverhead.IsChecked;
+            _currentProfile.TreeType = _treeReplacementType.SelectedIndex;
+            _currentProfile.BlockerType = _blockerReplacementType.SelectedIndex;
+
+            if (rebuildTerrainMeshes)
+            {
+                foreach (var chunk in World.Map.GetUsedChunks())
+                {
+                    chunk.Mesh.IsDirty = true;
+                }
+            }
+
+            if (_currentProfile.DisableWeatherEffects)
+            {
+                World.Weather.Reset();
+            }
+
+            if (updateUccLines)
+            {
+                UCCLinesGump uccLinesGump = UIManager.GetGump<UCCLinesGump>();
+
+                if (_currentProfile.UCCLinesEnabled)
+                {
+                    uccLinesGump?.Dispose();
+
+                    UIManager.Add
+                    (
+                        new UCCLinesGump(World)
+                        {
+                            X = _currentProfile.UCCLinesLocation.X,
+                            Y = _currentProfile.UCCLinesLocation.Y
+                        }
+                    );
+                }
+                else
+                {
+                    uccLinesGump?.Dispose();
+                }
+            }
 
 
             bool updateHealthBars = _currentProfile.CustomBarsToggled != _customBars.IsChecked;

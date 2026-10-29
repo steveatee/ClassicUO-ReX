@@ -26,9 +26,12 @@ namespace ClassicUO.Game.UI.Gumps
         private readonly RenderedText _renderedText;
         private Texture2D _borderColor = SolidColorTextureCache.GetTexture(Color.Black);
         private bool _showHpBar;
+        private const int CUSTOM_BAR_HEIGHT = 11;
         private bool UseCustomMobileNameplate =>
             ProfileManager.CurrentProfile.CustomPlayerNameplate
-            && SerialHelper.IsMobile(LocalSerial);
+            && SerialHelper.IsMobile(LocalSerial)
+            && World.Get(LocalSerial) is Mobile mobile
+            && mobile.NotorietyFlag != NotorietyFlag.Invulnerable;
 
         public NameOverheadGump(World world, uint serial) : base(world, serial, 0)
         {
@@ -164,12 +167,10 @@ namespace ClassicUO.Game.UI.Gumps
 
                 if (UseCustomMobileNameplate)
                 {
-                    bool isPlayer = World.Player != null && LocalSerial == World.Player.Serial;
-                    const int customBarHeight = 7;
                     const int customGap = 3;
 
-                    Width = Math.Max(width + 10, isPlayer ? 90 : 72);
-                    Height = _renderedText.Height + customGap + customBarHeight + 4;
+                    Width = Math.Max(width + 10, 72);
+                    Height = _renderedText.Height + customGap + CUSTOM_BAR_HEIGHT + 4;
                 }
                 else
                 {
@@ -592,17 +593,7 @@ namespace ClassicUO.Game.UI.Gumps
                     return false;
                 }
 
-                if (UseCustomMobileNameplate)
-                {
-                    x =
-                        (int)(m.RealScreenPosition.X - m.FrameInfo.X + 22 + m.Offset.X)
-                        + (m.FrameInfo.Width >> 1);
-                    y =
-                        (int)(m.RealScreenPosition.Y - m.FrameInfo.Y + 22 + (m.Offset.Y - m.Offset.Z))
-                        + m.FrameInfo.Height
-                        + 12;
-                }
-                else if (_positionLocked)
+                if (_positionLocked && !UseCustomMobileNameplate)
                 {
                     x = _lockedPosition.X;
                     y = _lockedPosition.Y;
@@ -662,29 +653,47 @@ namespace ClassicUO.Game.UI.Gumps
 
             Vector3 hueVector = ShaderHueTranslator.GetHueVector(0);
 
-            Point p = Client.Game.Scene.Camera.WorldToScreen(new Point(x, y));
-            x = p.X - (Width >> 1);
-            y = p.Y - (Height >> 1);
-
             var camera = Client.Game.Scene.Camera;
-            x += camera.Bounds.X;
-            y += camera.Bounds.Y;
-
-            if (x < camera.Bounds.X || x + Width > camera.Bounds.Right)
-            {
-                return false;
-            }
-
-            if (y < camera.Bounds.Y || y + Height > camera.Bounds.Bottom)
-            {
-                return false;
-            }
+            Point p = Client.Game.Scene.Camera.WorldToScreen(new Point(x, y));
             float layerDepth = layerDepthRef;
+            int textX;
+            int textY;
+            int barX;
+            int barY;
+            int totalTop;
+            int totalBottom;
 
-            X = x;
-            Y = y;
-            if (!UseCustomMobileNameplate)
+            if (UseCustomMobileNameplate && World.Get(LocalSerial) is Mobile customMob)
             {
+                int centerScreenX = p.X + camera.Bounds.X;
+                int spriteTopWorld =
+                    (int)(customMob.RealScreenPosition.Y - customMob.FrameInfo.Y + 22 + (customMob.Offset.Y - customMob.Offset.Z));
+                int spriteBottomWorld = spriteTopWorld + customMob.FrameInfo.Height;
+                int spriteTopScreenY = camera.WorldToScreen(new Point(x, spriteTopWorld)).Y + camera.Bounds.Y;
+                int spriteBottomScreenY = camera.WorldToScreen(new Point(x, spriteBottomWorld)).Y + camera.Bounds.Y;
+
+                textX = centerScreenX - (Width >> 1) + 2 + (Math.Max(0, Width - _renderedText.Width - 4) >> 1);
+                textY = spriteTopScreenY - _renderedText.Height - 6;
+                barX = centerScreenX - (Width >> 1);
+                barY = spriteBottomScreenY + 4;
+                X = barX;
+                Y = textY;
+                totalTop = textY;
+                totalBottom = barY + CUSTOM_BAR_HEIGHT;
+            }
+            else
+            {
+                x = p.X - (Width >> 1) + camera.Bounds.X;
+                y = p.Y - (Height >> 1) + camera.Bounds.Y;
+                X = x;
+                Y = y;
+                textX = x + 2 + (Math.Max(0, Width - _renderedText.Width - 4) >> 1);
+                textY = y + 2;
+                barX = x;
+                barY = y + Height - Constants.OBJECT_HANDLES_HP_BAR_HEIGHT;
+                totalTop = y;
+                totalBottom = y + Height;
+
                 renderLists.AddGumpNoAtlas(
                     batcher =>
                     {
@@ -696,15 +705,24 @@ namespace ClassicUO.Game.UI.Gumps
                 base.AddToRenderLists(renderLists, x, y, ref layerDepthRef);
             }
 
-            int renderedTextOffset = Math.Max(0, Width - _renderedText.Width - 4) >> 1;
+            if (X < camera.Bounds.X || X + Width > camera.Bounds.Right)
+            {
+                return false;
+            }
+
+            if (totalTop < camera.Bounds.Y || totalBottom > camera.Bounds.Bottom)
+            {
+                return false;
+            }
+
             renderLists.AddGumpNoAtlas(batcher =>
                 {
                     return _renderedText.Draw(
                         batcher,
                         Width,
                         Height,
-                        x + 2 + renderedTextOffset,
-                        y + 2,
+                        textX,
+                        textY,
                         Width,
                         Height,
                         0,
@@ -716,10 +734,8 @@ namespace ClassicUO.Game.UI.Gumps
 
             if (_showHpBar && World.Get(LocalSerial) is Mobile mob)
             {
-                int barX = x;
-                int barHeight = UseCustomMobileNameplate ? 7 : Constants.OBJECT_HANDLES_HP_BAR_HEIGHT;
-                int barY = y + Height - barHeight;
                 int barWidth = Width;
+                int barHeight = UseCustomMobileNameplate ? CUSTOM_BAR_HEIGHT : Constants.OBJECT_HANDLES_HP_BAR_HEIGHT;
                 int filledWidth = (barWidth - 2) * mob.HitsPercentage / 100;
                 Color hpColor = mob.HitsPercentage >= 80 ? Color.Green
                               : mob.HitsPercentage >= 50 ? Color.YellowGreen

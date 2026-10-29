@@ -16,6 +16,7 @@ using ClassicUO.Game.Scenes;
 using ClassicUO.Utility.Logging;
 using ClassicUO.Assets;
 using ClassicUO.Network;
+using System;
 
 namespace ClassicUO.Game
 {
@@ -107,6 +108,21 @@ namespace ClassicUO.Game
         public Map.Map Map { get; private set; }
 
         public byte ClientViewRange { get; set; } = Constants.MAX_VIEW_RANGE;
+
+        public int OutOfRangeColorDistance
+        {
+            get
+            {
+                int configuredRadius = ProfileManager.CurrentProfile?.OutOfRangeColorRadius ?? 0;
+
+                if (configuredRadius <= 0)
+                {
+                    return ClientViewRange;
+                }
+
+                return Math.Clamp(configuredRadius, Constants.MIN_VIEW_RANGE, Constants.MAX_VIEW_RANGE);
+            }
+        }
 
         public bool SkillsRequested { get; set; }
 

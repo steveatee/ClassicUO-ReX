@@ -522,6 +522,182 @@ namespace ClassicUO.Game.GameObjects
 
         public bool Walk(Direction direction, bool run)
         {
+            if (ProfileManager.CurrentProfile.AutoAvoidObstacules)
+            {
+                return WalkAutoAvoid(direction, run);
+            }
+
+            return WalkDefault(direction, run);
+        }
+
+        private bool WalkAutoAvoid(Direction direction, bool run)
+        {
+            if (Walker.WalkingFailed || Walker.LastStepRequestTime > Time.Ticks || Walker.StepsCount >= Constants.MAX_STEP_COUNT || Client.Game.UO.Version >= ClientVersion.CV_60142 && IsParalyzed)
+            {
+                return false;
+            }
+
+            run |= ProfileManager.CurrentProfile.AlwaysRun;
+
+            if (SpeedMode >= CharacterSpeedType.CantRun || Stamina <= 1 && !IsDead || IsHidden && ProfileManager.CurrentProfile.AlwaysRunUnlessHidden)
+            {
+                run = false;
+            }
+
+            int x = X;
+            int y = Y;
+            sbyte z = Z;
+            Direction oldDirection = Direction;
+
+            bool emptyStack = Steps.Count == 0;
+
+            if (!emptyStack)
+            {
+                ref Step walkStep = ref Steps.Back();
+                x = walkStep.X;
+                y = walkStep.Y;
+                z = walkStep.Z;
+                oldDirection = (Direction)walkStep.Direction;
+            }
+
+            sbyte oldZ = z;
+            ushort walkTime = (ushort)MovementSpeed.TurnDelay;
+
+            if (IsCardinalDirection(direction))
+            {
+                if (IsObstacle(direction, x, y, z))
+                {
+                    Direction newDirection = TryToAvoid(direction, x, y, z);
+
+                    if (!IsObstacle(newDirection, x, y, z))
+                    {
+                        direction = newDirection;
+                        World.Player.ClearSteps();
+                        World.Player.SetInWorldTile((ushort)x, (ushort)y, z);
+                    }
+                    else
+                    {
+                        return false;
+                    }
+                }
+            }
+
+            if ((oldDirection & Direction.Mask) == (direction & Direction.Mask))
+            {
+                Direction newDir = direction;
+                int newX = x;
+                int newY = y;
+                sbyte newZ = z;
+
+                if (!Pathfinder.CanWalkObstacules(ref newDir, ref newX, ref newY, ref newZ))
+                {
+                    return false;
+                }
+
+                if ((direction & Direction.Mask) != newDir)
+                {
+                    direction = newDir;
+                }
+                else
+                {
+                    direction = newDir;
+                    x = newX;
+                    y = newY;
+                    z = newZ;
+
+                    walkTime = (ushort)MovementSpeed.TimeToCompleteMovement(run, IsMounted || SpeedMode == CharacterSpeedType.FastUnmount || SpeedMode == CharacterSpeedType.FastUnmountAndCantRun || IsFlying);
+                }
+            }
+            else
+            {
+                Direction newDir = direction;
+                int newX = x;
+                int newY = y;
+                sbyte newZ = z;
+
+                if (!Pathfinder.CanWalkObstacules(ref newDir, ref newX, ref newY, ref newZ))
+                {
+                    if ((oldDirection & Direction.Mask) == newDir)
+                    {
+                        return false;
+                    }
+                }
+
+                if ((oldDirection & Direction.Mask) == newDir)
+                {
+                    x = newX;
+                    y = newY;
+                    z = newZ;
+
+                    walkTime = (ushort)MovementSpeed.TimeToCompleteMovement(run, IsMounted || SpeedMode == CharacterSpeedType.FastUnmount || SpeedMode == CharacterSpeedType.FastUnmountAndCantRun || IsFlying);
+                }
+
+                direction = newDir;
+            }
+
+            CloseBank();
+
+            if (emptyStack)
+            {
+                if (!IsWalking)
+                {
+                    SetAnimation(0xFF);
+                }
+
+                LastStepTime = Time.Ticks;
+            }
+
+            ref StepInfo step = ref Walker.StepInfos[Walker.StepsCount];
+            step.Sequence = Walker.WalkSequence;
+            step.Accepted = false;
+            step.Running = run;
+            step.OldDirection = (byte)(oldDirection & Direction.Mask);
+            step.Direction = (byte)direction;
+            step.Timer = Time.Ticks;
+            step.X = (ushort)x;
+            step.Y = (ushort)y;
+            step.Z = z;
+            step.NoRotation = step.OldDirection == (byte)direction && oldZ - z >= 11;
+
+            Walker.StepsCount++;
+
+            Steps.AddToBack
+            (
+                new Step
+                {
+                    X = x,
+                    Y = y,
+                    Z = z,
+                    Direction = (byte)direction,
+                    Run = run
+                }
+            );
+
+            NetClient.Socket.Send_WalkRequest(direction, Walker.WalkSequence, run, Walker.FastWalkStack.GetValue());
+            _serverDirection = direction;
+            _serverDirectionInitialized = true;
+
+            if (Walker.WalkSequence == 0xFF)
+            {
+                Walker.WalkSequence = 1;
+            }
+            else
+            {
+                Walker.WalkSequence++;
+            }
+
+            Walker.UnacceptedPacketsCount++;
+
+            AddToTile();
+
+            Walker.LastStepRequestTime = Time.Ticks + walkTime;
+            GetGroupForAnimation(this, 0, true);
+
+            return true;
+        }
+
+        private bool WalkDefault(Direction direction, bool run)
+        {
             if (Walker.WalkingFailed || Walker.LastStepRequestTime > Time.Ticks || Walker.StepsCount >= Constants.MAX_STEP_COUNT || Client.Game.UO.Version >= ClientVersion.CV_60142 && IsParalyzed)
             {
                 return false;
@@ -544,8 +720,6 @@ namespace ClassicUO.Game.GameObjects
                 _serverDirectionInitialized = true;
             }
 
-            // Use the server-synced direction for walk calculations, not the visual Direction,
-            // which may have been updated by coalescing without sending a packet.
             Direction oldDirection = _serverDirection;
 
             bool emptyStack = Steps.Count == 0;
@@ -556,7 +730,7 @@ namespace ClassicUO.Game.GameObjects
                 x = walkStep.X;
                 y = walkStep.Y;
                 z = walkStep.Z;
-                oldDirection = (Direction) walkStep.Direction;
+                oldDirection = (Direction)walkStep.Direction;
             }
 
             sbyte oldZ = z;
@@ -585,7 +759,7 @@ namespace ClassicUO.Game.GameObjects
                     y = newY;
                     z = newZ;
 
-                    walkTime = (ushort) MovementSpeed.TimeToCompleteMovement(run, IsMounted || SpeedMode == CharacterSpeedType.FastUnmount || SpeedMode == CharacterSpeedType.FastUnmountAndCantRun || IsFlying);
+                    walkTime = (ushort)MovementSpeed.TimeToCompleteMovement(run, IsMounted || SpeedMode == CharacterSpeedType.FastUnmount || SpeedMode == CharacterSpeedType.FastUnmountAndCantRun || IsFlying);
                 }
             }
             else
@@ -609,15 +783,12 @@ namespace ClassicUO.Game.GameObjects
                     y = newY;
                     z = newZ;
 
-                    walkTime = (ushort) MovementSpeed.TimeToCompleteMovement(run, IsMounted || SpeedMode == CharacterSpeedType.FastUnmount || SpeedMode == CharacterSpeedType.FastUnmountAndCantRun || IsFlying);
+                    walkTime = (ushort)MovementSpeed.TimeToCompleteMovement(run, IsMounted || SpeedMode == CharacterSpeedType.FastUnmount || SpeedMode == CharacterSpeedType.FastUnmountAndCantRun || IsFlying);
                 }
 
                 direction = newDir;
             }
 
-            // Adaptive coalescing: only suppress direction-only packets when the server
-            // is falling behind (3+ unconfirmed packets). This allows full-speed spinning
-            // when the connection is healthy and automatically backs off under congestion.
             if (walkTime == (ushort)MovementSpeed.TurnDelay && Walker.UnacceptedPacketsCount >= 3)
             {
                 Direction = direction;
@@ -642,13 +813,13 @@ namespace ClassicUO.Game.GameObjects
             step.Sequence = Walker.WalkSequence;
             step.Accepted = false;
             step.Running = run;
-            step.OldDirection = (byte) (oldDirection & Direction.Mask);
-            step.Direction = (byte) direction;
+            step.OldDirection = (byte)(oldDirection & Direction.Mask);
+            step.Direction = (byte)direction;
             step.Timer = Time.Ticks;
-            step.X = (ushort) x;
-            step.Y = (ushort) y;
+            step.X = (ushort)x;
+            step.Y = (ushort)y;
             step.Z = z;
-            step.NoRotation = step.OldDirection == (byte) direction && oldZ - z >= 11;
+            step.NoRotation = step.OldDirection == (byte)direction && oldZ - z >= 11;
 
             Walker.StepsCount++;
 
@@ -659,16 +830,14 @@ namespace ClassicUO.Game.GameObjects
                     X = x,
                     Y = y,
                     Z = z,
-                    Direction = (byte) direction,
+                    Direction = (byte)direction,
                     Run = run
                 }
             );
 
-
             NetClient.Socket.Send_WalkRequest(direction, Walker.WalkSequence, run, Walker.FastWalkStack.GetValue());
 
             _serverDirection = direction;
-
 
             if (Walker.WalkSequence == 0xFF)
             {
@@ -687,6 +856,36 @@ namespace ClassicUO.Game.GameObjects
             GetGroupForAnimation(this, 0, true);
 
             return true;
+        }
+
+        private bool IsCardinalDirection(Direction direction)
+        {
+            return direction == Direction.North
+                || direction == Direction.South
+                || direction == Direction.East
+                || direction == Direction.West;
+        }
+
+        private bool IsObstacle(Direction direction, int x, int y, sbyte z)
+        {
+            return !Pathfinder.CanWalkObstacules(ref direction, ref x, ref y, ref z);
+        }
+
+        private Direction TryToAvoid(Direction direction, int x, int y, sbyte z)
+        {
+            switch (direction)
+            {
+                case Direction.North:
+                case Direction.South:
+                    return IsObstacle(Direction.East, x, y, z) ? Direction.West : Direction.East;
+
+                case Direction.East:
+                case Direction.West:
+                    return IsObstacle(Direction.North, x, y, z) ? Direction.South : Direction.North;
+
+                default:
+                    return direction;
+            }
         }
     }
 }

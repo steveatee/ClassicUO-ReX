@@ -1,5 +1,6 @@
 ﻿// SPDX-License-Identifier: BSD-2-Clause
 
+using ClassicUO.Configuration;
 using ClassicUO.Game.Data;
 using ClassicUO.Renderer;
 using ClassicUO.Resources;
@@ -65,6 +66,12 @@ namespace ClassicUO.Game
 
         public void Generate(WeatherType type, byte count, byte temp)
         {
+            if (ProfileManager.CurrentProfile?.DisableWeatherEffects == true)
+            {
+                Reset();
+                return;
+            }
+
             bool extended = CurrentWeather.HasValue && CurrentWeather == type;
 
             if (!extended)
@@ -224,6 +231,16 @@ namespace ClassicUO.Game
 
         public void Draw(UltimaBatcher2D batcher, int x, int y, float layerDepth)
         {
+            if (ProfileManager.CurrentProfile?.DisableWeatherEffects == true)
+            {
+                if (CurrentWeather.HasValue || CurrentCount > 0)
+                {
+                    Reset();
+                }
+
+                return;
+            }
+
             bool removeEffects = false;
 
             if (_timer < Time.Ticks)

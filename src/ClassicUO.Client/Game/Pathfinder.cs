@@ -634,6 +634,11 @@ namespace ClassicUO.Game
             return passed;
         }
 
+        public bool CanWalkObstacules(ref Direction direction, ref int x, ref int y, ref sbyte z)
+        {
+            return CanWalk(ref direction, ref x, ref y, ref z);
+        }
+
         private int GetGoalDistCost(Point point, int cost)
         {
             return Math.Max(Math.Abs(_endPoint.X - point.X), Math.Abs(_endPoint.Y - point.Y));

@@ -133,6 +133,7 @@ namespace ClassicUO.Game.Managers
             }
 
             IsTargeting = false;
+            GameActions.LastSpellIndexCursor = 0;
         }
 
         public void Reset()
@@ -165,6 +166,11 @@ namespace ClassicUO.Game.Managers
             IsTargeting = cursorType < TargetType.Cancel;
             TargetingState = targeting;
             TargetingType = cursorType;
+
+            if (IsTargeting && GameActions.LastSpellIndexCursor <= 0 && GameActions.LastSpellIndex > 0)
+            {
+                GameActions.LastSpellIndexCursor = GameActions.LastSpellIndex;
+            }
 
             if (IsTargeting)
             {
@@ -210,6 +216,8 @@ namespace ClassicUO.Game.Managers
                 NetClient.Socket.Send_TargetCancel(TargetingState, _targetCursorId, (byte)TargetingType);
                 IsTargeting = false;
             }
+
+            GameActions.LastSpellIndexCursor = 0;
 
             Reset();
         }

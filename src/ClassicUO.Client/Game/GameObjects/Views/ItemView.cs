@@ -109,7 +109,7 @@ namespace ClassicUO.Game.GameObjects
             }
             else if (
                 ProfileManager.CurrentProfile.NoColorObjectsOutOfRange
-                && Distance > World.ClientViewRange
+                && Distance > World.OutOfRangeColorDistance
             )
             {
                 hue = Constants.OUT_RANGE_COLOR;
@@ -148,18 +148,9 @@ namespace ClassicUO.Game.GameObjects
                 hueVec.Z = 0.5f;
             }
 
-            if (ProfileManager.CurrentProfile.InvisibleHousesEnabled && IsMulti)
+            if (HouseHiding.ShouldHide(World, this))
             {
-                GameObject groundTile = World.Map.GetTile(X, Y);
-
-                if (
-                    groundTile != null
-                    && (Z - World.Player.Z) > ProfileManager.CurrentProfile.InvisibleHousesZ
-                    && (Z - groundTile.Z) > ProfileManager.CurrentProfile.DontRemoveHouseBelowZ
-                )
-                {
-                    return false;
-                }
+                return false;
             }
 
             DrawStaticAnimated(batcher, graphic, posX, posY, hueVec, false, depth);
@@ -376,7 +367,7 @@ namespace ClassicUO.Game.GameObjects
 
                 if (
                     ProfileManager.CurrentProfile.NoColorObjectsOutOfRange
-                    && owner.Distance > World.ClientViewRange
+                    && owner.Distance > World.OutOfRangeColorDistance
                 )
                 {
                     hueVec = ShaderHueTranslator.GetHueVector(
