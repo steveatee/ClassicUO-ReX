@@ -36,6 +36,29 @@ namespace ClassicUO.Game.Managers
                 }
             );
 
+            // -housecache        : show custom house design cache stats
+            // -housecache clear  : forget all cached designs for this server
+            Register
+            (
+                "housecache",
+                s =>
+                {
+                    if (s.Length > 1 && s[1].Equals("clear", StringComparison.OrdinalIgnoreCase))
+                    {
+                        HouseDesignCache.Clear(_world);
+                        GameActions.Print(_world, "House design cache cleared.");
+                        return;
+                    }
+
+                    GameActions.Print(
+                        _world,
+                        $"House design cache: {HouseDesignCache.Count} designs stored, this session {HouseDesignCache.Hits} rebuilt from cache, "
+                        + $"{HouseDesignCache.Misses} downloaded, {HouseDesignCache.BytesSaved / 1024} KB not re-downloaded."
+                        + (HouseDesignCache.Enabled ? "" : " (cache is turned off in Options)")
+                    );
+                }
+            );
+
             Register
             (
                 "datetime",

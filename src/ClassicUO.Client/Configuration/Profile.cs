@@ -189,6 +189,7 @@ namespace ClassicUO.Configuration
         public bool PvM_LootHighlightOnCorpse { get; set; } = false;
 
         public bool ShowDeathOnWorldmap { get; set; }
+        public bool CacheCustomHouseDesigns { get; set; } = true;
         public bool AlwaysShowOwnNameplate { get; set; }
         public bool WorldMapShowGuild { get; set; }
 

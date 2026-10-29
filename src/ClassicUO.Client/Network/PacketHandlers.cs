@@ -4609,7 +4609,16 @@ namespace ClassicUO.Network
                         || house.Revision != revision
                     )
                     {
-                        Handler._customHouseRequests.Add(serial);
+                        if (multi != null && HouseDesignCache.TryGet(world, serial, revision, out byte[] cachedDesign))
+                        {
+                            // Same design revision as last time: rebuild from the cache instead of downloading it.
+                            StackDataReader cached = new StackDataReader(cachedDesign);
+                            CustomHouse(world, ref cached);
+                        }
+                        else
+                        {
+                            Handler._customHouseRequests.Add(serial);
+                        }
                     }
                     else
                     {
@@ -5308,6 +5317,7 @@ namespace ClassicUO.Network
 
         private static void CustomHouse(World world, ref StackDataReader p)
         {
+            int payloadStart = p.Position;
             bool compressed = p.ReadUInt8() == 0x03;
             bool enableReponse = p.ReadBool();
             uint serial = p.ReadUInt32BE();
@@ -5386,6 +5396,9 @@ namespace ClassicUO.Network
 
                 p.Skip(clen);
             }
+
+            // Keep the design so the next time this house comes into range it can be rebuilt locally.
+            HouseDesignCache.Store(world, serial, revision, p.Buffer.Slice(payloadStart, (int)p.Length - payloadStart));
 
             if (world.CustomHouseManager != null)
             {

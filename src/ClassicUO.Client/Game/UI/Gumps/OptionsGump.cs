@@ -51,7 +51,7 @@ namespace ClassicUO.Game.UI.Gumps
         private HSliderBar _transparentHousesZ, _transparentHousesTransparency;
         private Checkbox _oldHealthLines, _multiUnderlines, _multiUnderlinesBig;
         private HSliderBar _multiUnderlinesTransparency;
-        private Checkbox _alwaysShowOwnNameplate, _showDeathOnWorldmap, _gridContainerEnabled, _renderWeather;
+        private Checkbox _alwaysShowOwnNameplate, _showDeathOnWorldmap, _gridContainerEnabled, _renderWeather, _cacheHouseDesigns;
         private HSliderBar _maxScreenEffectSprites, _maxDynamicLights;
         private HSliderBar _cellSize;
         private Checkbox _containerScaleItems, _containerDoubleClickToLoot, _relativeDragAnDropItems, _useLargeContianersGumps, _highlightContainersWhenMouseIsOver;
@@ -1846,6 +1846,7 @@ namespace ClassicUO.Game.UI.Gumps
             display.Add(_showDeathOnWorldmap = AddCheckBox(null, "Show death location on world map (5 min)", _currentProfile.ShowDeathOnWorldmap, startX, startY));
             display.Add(_gridContainerEnabled = AddCheckBox(null, "Use resizable grid containers", _currentProfile.GridContainerEnabled, startX, startY));
             display.Add(_renderWeather = AddCheckBox(null, "Draw weather (rain/snow)", _currentProfile.RenderWeather, startX, startY));
+            display.Add(_cacheHouseDesigns = AddCheckBox(null, "Cache custom house designs on disk (type -housecache for stats)", _currentProfile.CacheCustomHouseDesigns, startX, startY));
             display.Add(AddLabel(null, "Max effect sprites (0 = no limit)", startX, startY));
             display.AddRight(_maxScreenEffectSprites = AddHSlider(null, 0, 500, _currentProfile.MaxScreenEffectSprites, startX, startY, 150));
             display.Add(AddLabel(null, "Max dynamic lights (0 = no limit)", startX, startY));
@@ -4274,6 +4275,7 @@ namespace ClassicUO.Game.UI.Gumps
                     _showDeathOnWorldmap.IsChecked = false;
                     _gridContainerEnabled.IsChecked = false;
                     _renderWeather.IsChecked = true;
+                    _cacheHouseDesigns.IsChecked = true;
                     _maxScreenEffectSprites.Value = 0;
                     _maxDynamicLights.Value = 0;
 
@@ -4860,6 +4862,7 @@ namespace ClassicUO.Game.UI.Gumps
             _currentProfile.ShowDeathOnWorldmap = _showDeathOnWorldmap.IsChecked;
             _currentProfile.GridContainerEnabled = _gridContainerEnabled.IsChecked;
             _currentProfile.RenderWeather = _renderWeather.IsChecked;
+            _currentProfile.CacheCustomHouseDesigns = _cacheHouseDesigns.IsChecked;
             _currentProfile.MaxScreenEffectSprites = _maxScreenEffectSprites.Value;
             _currentProfile.MaxDynamicLights = _maxDynamicLights.Value;
 

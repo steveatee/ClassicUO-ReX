@@ -254,6 +254,8 @@ namespace ClassicUO.Game
 
         public void Update()
         {
+            HouseDesignCache.Update();
+
             if (Player != null)
             {
                 if (SerialHelper.IsValid(ObjectToRemove))
@@ -809,6 +811,7 @@ namespace ClassicUO.Game
             CorpseManager.Clear();
             OPL.Clear();
             WMapManager.Clear();
+            HouseDesignCache.Flush();
             HouseManager?.Clear();
 
             Season = Season.Summer;
