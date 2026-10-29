@@ -149,12 +149,14 @@ namespace ClassicUO.Game.UI.Gumps
         private const ushort DEFAULT_WEAPON_TICKS = 17;
         private const ushort BARE_HAND_TICKS = 10;
         private const short MAX_SWING_SPEED_INCREASE = 60;
+        private const string SWING_TIMER_TICK_FORMAT = "format=ticks";
         private const uint BANDAGE_BEGIN_CLILOC_MIN = 500956;
         private const uint BANDAGE_BEGIN_CLILOC_MAX = 500960;
         private const uint UOF_BANDAGE_BEGIN_CLILOC_MIN = 501979;
         private const uint UOF_BANDAGE_BEGIN_CLILOC_MAX = 501980;
 
         private static readonly Dictionary<ushort, ushort> _weaponSpeeds = new Dictionary<ushort, ushort>();
+        private static bool _weaponSpeedsUseLegacyTenths = true;
 
         private readonly AlphaBlendControl _background;
         private readonly TimerRow _swingRow;
@@ -694,7 +696,12 @@ namespace ClassicUO.Game.UI.Gumps
 
         private static ushort GetWeaponTicks(ushort graphic, ushort configuredSpeed)
         {
-            if ((graphic == 0x13B1 || graphic == 0x13B2) && (configuredSpeed == 20 || configuredSpeed == 25))
+            if (!_weaponSpeedsUseLegacyTenths)
+            {
+                return configuredSpeed;
+            }
+
+            if ((graphic == 0x13B1 || graphic == 0x13B2) && (configuredSpeed == 17 || configuredSpeed == 20 || configuredSpeed == 25))
             {
                 return 17;
             }
@@ -728,9 +735,19 @@ namespace ClassicUO.Game.UI.Gumps
                 CreateDefaultSwingTimerFile(swingPath);
             }
 
+            string swingTimerText = File.ReadAllText(swingPath);
+
+            if (IsLegacyDefaultSwingTimerFile(swingTimerText))
+            {
+                CreateDefaultSwingTimerFile(swingPath);
+                swingTimerText = File.ReadAllText(swingPath);
+            }
+
+            _weaponSpeedsUseLegacyTenths = !UsesTickFormat(swingTimerText);
+
             TextFileParser parser = new TextFileParser
             (
-                File.ReadAllText(swingPath),
+                swingTimerText,
                 new[] { ' ', '\t', ',', '=' },
                 new[] { '#', ';' },
                 new[] { '"', '"' }
@@ -750,6 +767,61 @@ namespace ClassicUO.Game.UI.Gumps
                     _weaponSpeeds[graphic] = speed;
                 }
             }
+        }
+
+        private static bool UsesTickFormat(string swingTimerText)
+        {
+            foreach (string line in swingTimerText.Split(new[] { '\r', '\n' }, StringSplitOptions.RemoveEmptyEntries))
+            {
+                string trimmed = line.Trim();
+
+                if ((trimmed.StartsWith("#", StringComparison.Ordinal) || trimmed.StartsWith(";", StringComparison.Ordinal)) &&
+                    trimmed.IndexOf(SWING_TIMER_TICK_FORMAT, StringComparison.OrdinalIgnoreCase) >= 0)
+                {
+                    return true;
+                }
+            }
+
+            return false;
+        }
+
+        private static bool IsLegacyDefaultSwingTimerFile(string swingTimerText)
+        {
+            if (UsesTickFormat(swingTimerText))
+            {
+                return false;
+            }
+
+            Dictionary<ushort, ushort> speeds = new Dictionary<ushort, ushort>();
+
+            TextFileParser parser = new TextFileParser
+            (
+                swingTimerText,
+                new[] { ' ', '\t', ',', '=' },
+                new[] { '#', ';' },
+                new[] { '"', '"' }
+            );
+
+            while (!parser.IsEOF())
+            {
+                List<string> tokens = parser.ReadTokens();
+
+                if (tokens == null || tokens.Count < 2)
+                {
+                    continue;
+                }
+
+                if (TryParseUShort(tokens[0], out ushort graphic) && TryParseUShort(tokens[1], out ushort speed))
+                {
+                    speeds[graphic] = speed;
+                }
+            }
+
+            return speeds.Count == 66 &&
+                   speeds.TryGetValue(0x1400, out ushort kryssSpeed) && kryssSpeed == 53 &&
+                   speeds.TryGetValue(0x13FE, out ushort katanaSpeed) && katanaSpeed == 58 &&
+                   speeds.TryGetValue(0x0E89, out ushort quarterStaffSpeed) && quarterStaffSpeed == 18 &&
+                   speeds.TryGetValue(0x13FC, out ushort heavyCrossbowSpeed) && heavyCrossbowSpeed == 10;
         }
 
         private static bool TryParseUShort(string value, out ushort result)
@@ -774,19 +846,50 @@ namespace ClassicUO.Game.UI.Gumps
                 0x0F4B, 0x0F4C, 0x0F45, 0x0F46, 0x13FA, 0x13FB, 0x1442, 0x1443,
                 0x13F8, 0x13F9, 0x0DF0, 0x0DF1, 0x0E89, 0x0E8A, 0x0F4F, 0x0F50,
                 0x0F62, 0x0F63, 0x143E, 0x143F, 0x0F4D, 0x0F4E, 0x1438, 0x1439,
-                0x13FC, 0x13FD
+                0x13FC, 0x13FD,
+                0x0481, 0x08FD, 0x08FE, 0x08FF, 0x0900, 0x0901, 0x0902, 0x0903,
+                0x0904, 0x0905, 0x0906, 0x0907, 0x0908, 0x090A, 0x090B, 0x090C,
+                0x0DF2, 0x0E81, 0x0E82, 0x0E85, 0x0E86, 0x0EC2, 0x0EC3, 0x0EC4,
+                0x0EC5, 0x0F43, 0x0F44, 0x0F51, 0x0F52, 0x13F6, 0x13F7, 0x26BA,
+                0x26BB, 0x26BC, 0x26BD, 0x26BE, 0x26BF, 0x26C0, 0x26C1, 0x26C2,
+                0x26C3, 0x26C4, 0x26C5, 0x26C6, 0x26C7, 0x26C8, 0x26C9, 0x26CA,
+                0x26CB, 0x26CC, 0x26CD, 0x26CE, 0x26CF, 0x27A2, 0x27A3, 0x27A4,
+                0x27A5, 0x27A6, 0x27A7, 0x27A8, 0x27A9, 0x27AB, 0x27AD, 0x27AE,
+                0x27AF, 0x27ED, 0x27EE, 0x27EF, 0x27F0, 0x27F1, 0x27F2, 0x27F3,
+                0x27F4, 0x27F6, 0x27F8, 0x27F9, 0x27FA, 0x2D1E, 0x2D1F, 0x2D20,
+                0x2D21, 0x2D22, 0x2D23, 0x2D24, 0x2D25, 0x2D26, 0x2D27, 0x2D28,
+                0x2D29, 0x2D2A, 0x2D2B, 0x2D2C, 0x2D2D, 0x2D2E, 0x2D2F, 0x2D30,
+                0x2D31, 0x2D32, 0x2D33, 0x2D34, 0x2D35, 0x4068, 0x406A, 0x406D,
+                0x406E, 0x406F, 0x4070, 0x4071, 0x4072, 0x4073, 0x4074, 0x4075,
+                0x4076, 0x48AE, 0x48AF, 0x48B0, 0x48B1, 0x48B2, 0x48B3, 0x48B4,
+                0x48B5, 0x48B6, 0x48B7, 0x48B8, 0x48B9, 0x48BA, 0x48BB, 0x48BC,
+                0x48BD, 0x48BE, 0x48BF, 0x48C0, 0x48C2, 0x48C3, 0x48C4, 0x48C5,
+                0x48C6, 0x48C7, 0x48C8, 0x48C9, 0x48CA, 0x48CB, 0x48CC, 0x48CD,
+                0x48CE, 0x48CF, 0x48D0, 0x48D1
             };
 
             ushort[] speeds =
             {
-                53, 53, 58, 58, 45, 45, 43, 43, 40, 40, 30, 30, 40, 40, 45, 45,
-                35, 35, 35, 35, 45, 45, 30, 30, 30, 30, 30, 30, 32, 32, 17, 17,
-                50, 50, 45, 45, 37, 37, 30, 30, 37, 37, 37, 37, 30, 30, 30, 30,
-                33, 33, 35, 35, 48, 48, 18, 18, 46, 46, 25, 25, 26, 26, 31, 31,
-                10, 10
+                8, 8, 10, 10, 10, 10, 12, 12, 10, 10, 13, 13, 12, 12, 10, 10,
+                14, 14, 14, 14, 13, 13, 15, 15, 11, 11, 14, 14, 16, 16, 17, 17,
+                8, 8, 10, 10, 12, 12, 14, 14, 13, 13, 13, 13, 15, 15, 14, 14,
+                13, 13, 11, 11, 9, 9, 18, 18, 11, 11, 16, 16, 15, 15, 15, 15,
+                20, 20,
+                15, 12, 8, 11, 15, 13, 8, 11, 9, 9, 14, 9, 14, 16, 14, 11,
+                11, 11, 11, 12, 12, 10, 10, 9, 9, 11, 11, 8, 8, 9, 9, 14,
+                12, 14, 12, 12, 9, 17, 10, 16, 11, 14, 12, 14, 12, 12, 9, 17,
+                10, 16, 11, 20, 20, 14, 8, 10, 13, 10, 14, 8, 11, 8, 8, 10,
+                8, 14, 8, 10, 13, 10, 14, 8, 11, 8, 8, 10, 8, 15, 12, 10,
+                8, 11, 9, 13, 9, 12, 10, 15, 11, 15, 12, 10, 8, 11, 9, 13,
+                9, 12, 10, 15, 11, 12, 8, 9, 11, 14, 9, 15, 8, 11, 14, 14,
+                9, 10, 10, 14, 14, 12, 12, 15, 15, 9, 9, 13, 13, 10, 10, 8,
+                8, 10, 10, 15, 14, 14, 14, 14, 12, 12, 12, 12, 17, 17, 8, 8,
+                8, 8, 11, 11
             };
 
             using StreamWriter writer = new StreamWriter(swingPath);
+
+            writer.WriteLine("# format=ticks");
 
             for (int i = 0; i < weapons.Length && i < speeds.Length; i++)
             {

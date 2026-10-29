@@ -195,6 +195,25 @@ namespace ClassicUO.Game.GameObjects
 
         protected virtual bool IsWalking => LastStepTime > Time.Ticks - Constants.WALKING_DELAY;
 
+        private bool IsMountSpeedAnimalFormBody
+        {
+            get
+            {
+                switch (GetGraphicForAnimation())
+                {
+                    case 0x0019: // wolf
+                    case 0x007A: // unicorn
+                    case 0x0084: // kirin
+                    case 0x00DB: // forest ostard
+                    case 0x00DC: // llama
+                    case 0x00F6: // bake kitsune
+                        return true;
+                }
+
+                return false;
+            }
+        }
+
         public byte AnimationFrameCount;
         public bool AnimationFromServer;
         public bool IsFemale;
@@ -720,7 +739,9 @@ namespace ClassicUO.Game.GameObjects
                         IsMounted
                         || SpeedMode == CharacterSpeedType.FastUnmount
                         || SpeedMode == CharacterSpeedType.FastUnmountAndCantRun
-                        || IsFlying;
+                        || IsFlying
+                        || ProfileManager.CurrentProfile.SmoothFastAnimalFormMovement
+                            && IsMountSpeedAnimalFormBody;
                     bool run = step.Run;
 
                     // Client auto movements sync.

@@ -222,6 +222,7 @@ namespace ClassicUO.Configuration
         public bool NameOverheadShowGump { get; set; } = true;
         public bool NameOverheadShowHpBar { get; set; } = true;
         public bool CustomPlayerNameplate { get; set; }
+        public bool SmoothFastAnimalFormMovement { get; set; }
         public bool InvisibleHousesEnabled { get; set; }
         public int InvisibleHousesZ { get; set; } = 1;
         public int DontRemoveHouseBelowZ { get; set; } = 6;

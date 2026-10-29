@@ -37,7 +37,7 @@ namespace ClassicUO.Game.UI.Gumps
 
         //experimental
         private Checkbox _autoOpenDoors, _autoOpenCorpse, _skipEmptyCorpse, _disableTabBtn, _disableCtrlQWBtn, _disableDefaultHotkeys, _disableArrowBtn, _disableAutoMove, _overrideContainerLocation, _smoothDoors, _showTargetRangeIndicator, _customBars, _customBarsBBG, _saveHealthbars;
-        private Checkbox _nameOverheadAlwaysOn, _nameOverheadShowHpBar, _customPlayerNameplate, _invisibleHousesEnabled;
+        private Checkbox _nameOverheadAlwaysOn, _nameOverheadShowHpBar, _customPlayerNameplate, _smoothFastAnimalFormMovement, _invisibleHousesEnabled;
         private HSliderBar _invisibleHousesZ, _dontRemoveHouseBelowZ;
         private HSliderBar _cellSize;
         private Checkbox _containerScaleItems, _containerDoubleClickToLoot, _relativeDragAnDropItems, _useLargeContianersGumps, _highlightContainersWhenMouseIsOver;
@@ -1619,6 +1619,18 @@ namespace ClassicUO.Game.UI.Gumps
                     null,
                     "Use custom player nameplates after properties load",
                     _currentProfile.CustomPlayerNameplate,
+                    startX,
+                    startY
+                )
+            );
+
+            section.Add
+            (
+                _smoothFastAnimalFormMovement = AddCheckBox
+                (
+                    null,
+                    "Smooth mount-speed animal form movement",
+                    _currentProfile.SmoothFastAnimalFormMovement,
                     startX,
                     startY
                 )
@@ -4054,6 +4066,7 @@ namespace ClassicUO.Game.UI.Gumps
                     _treeReplacementType.SelectedIndex = 0;
                     _blockerReplacementType.SelectedIndex = 0;
                     _customPlayerNameplate.IsChecked = false;
+                    _smoothFastAnimalFormMovement.IsChecked = false;
                     _invisibleHousesEnabled.IsChecked = false;
                     _invisibleHousesZ.Value = 1;
                     _dontRemoveHouseBelowZ.Value = 6;
@@ -4562,6 +4575,7 @@ namespace ClassicUO.Game.UI.Gumps
             _currentProfile.NameOverheadToggled = _nameOverheadAlwaysOn.IsChecked;
             _currentProfile.NameOverheadShowHpBar = _nameOverheadShowHpBar.IsChecked;
             _currentProfile.CustomPlayerNameplate = _customPlayerNameplate.IsChecked;
+            _currentProfile.SmoothFastAnimalFormMovement = _smoothFastAnimalFormMovement.IsChecked;
 
             bool invisibleHousesChanged =
                 _currentProfile.InvisibleHousesEnabled != _invisibleHousesEnabled.IsChecked
