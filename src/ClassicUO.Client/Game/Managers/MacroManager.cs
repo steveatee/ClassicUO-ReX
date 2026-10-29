@@ -1809,6 +1809,21 @@ namespace ClassicUO.Game.Managers
                         }
                         break;
                     }
+
+                // Dust-Light
+                case MacroType.ToggleInvisibleHouses:
+                    ProfileManager.CurrentProfile.InvisibleHousesEnabled = !ProfileManager.CurrentProfile.InvisibleHousesEnabled;
+
+                    foreach (Map.Chunk chunk in _world.Map.GetUsedChunks())
+                    {
+                        if (chunk?.Mesh != null)
+                        {
+                            chunk.Mesh.IsDirty = true;
+                        }
+                    }
+
+                    GameActions.Print(_world, ProfileManager.CurrentProfile.InvisibleHousesEnabled ? "Invisible houses: on" : "Invisible houses: off");
+                    break;
             }
 
 
@@ -2357,7 +2372,8 @@ namespace ClassicUO.Game.Managers
         CloseCorpses,
         UseObject,
         LookAtMouse,
-        UseCounterBarSlot
+        UseCounterBarSlot,
+        ToggleInvisibleHouses // Dust-Light; keep new entries at the end so saved macros keep their numbers
     }
 
     internal enum MacroSubType

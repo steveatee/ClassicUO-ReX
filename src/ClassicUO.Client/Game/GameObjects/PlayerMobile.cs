@@ -331,16 +331,28 @@ namespace ClassicUO.Game.GameObjects
                 return;
             }
 
-            uint protectionDelay = 0;
             bool ignoreProtectionDelay = spellIndex == 15 || spellIndex == 26;
+            bool slowed = !ignoreProtectionDelay && (IsBuffIconExists(BuffIconType.Protection) || IsBuffIconExists(BuffIconType.EssenceOfWind));
 
-            if (!ignoreProtectionDelay && (IsBuffIconExists(BuffIconType.Protection) || IsBuffIconExists(BuffIconType.EssenceOfWind)))
+            if (spellIndex >= 1 && spellIndex <= 64)
             {
-                protectionDelay = 2;
+                // Magery: match the ServUO/TrueUO server formula (Spell.GetCastDelay / MagerySpell.CastDelayBase):
+                // (4 + circle - FC) * 250ms, FC capped at 2, Protection reduces FC by 2 (to at most 0), minimum 250ms.
+                int fc = Math.Clamp((int)FasterCasting, 0, 2);
+
+                if (slowed)
+                {
+                    fc = Math.Min(0, fc - 2);
+                }
+
+                _castingDuration = (uint)Math.Max(250, (4 + circle - fc) * 250);
+            }
+            else
+            {
+                _castingDuration = 400 + (uint)(circle + (slowed ? 2 : 0)) * 250;
             }
 
             _isCasting = true;
-            _castingDuration = 400 + (uint)(circle + protectionDelay) * 250;
             _castingEndTime = Time.Ticks + _castingDuration;
         }
 
@@ -843,6 +855,13 @@ namespace ClassicUO.Game.GameObjects
 
             if ((oldDirection & Direction.Mask) == (direction & Direction.Mask))
             {
+                // Dust-Light: don't send forward steps while a spell is casting. The server rejects them
+                // ("You are frozen and can not move") and the client gets rubber-banded. Turning is still allowed.
+                if (ProfileManager.CurrentProfile.BlockWalkWhileCasting && IsCasting)
+                {
+                    return false;
+                }
+
                 Direction newDir = direction;
                 int newX = x;
                 int newY = y;

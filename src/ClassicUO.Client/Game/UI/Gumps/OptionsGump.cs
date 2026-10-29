@@ -39,6 +39,8 @@ namespace ClassicUO.Game.UI.Gumps
         private Checkbox _autoOpenDoors, _autoOpenCorpse, _skipEmptyCorpse, _disableTabBtn, _disableCtrlQWBtn, _disableDefaultHotkeys, _disableArrowBtn, _disableAutoMove, _overrideContainerLocation, _smoothDoors, _showTargetRangeIndicator, _customBars, _customBarsBBG, _saveHealthbars;
         private Checkbox _nameOverheadAlwaysOn, _nameOverheadShowHpBar, _customPlayerNameplate, _invisibleHousesEnabled;
         private HSliderBar _invisibleHousesZ, _dontRemoveHouseBelowZ;
+        private HSliderBar _movementTurnDelay, _movementTurnDelayFast;
+        private Checkbox _blockWalkWhileCasting, _startCastTimerFromSpellWords;
         private HSliderBar _cellSize;
         private Checkbox _containerScaleItems, _containerDoubleClickToLoot, _relativeDragAnDropItems, _useLargeContianersGumps, _highlightContainersWhenMouseIsOver;
 
@@ -1572,6 +1574,48 @@ namespace ClassicUO.Game.UI.Gumps
                 )
             );
 
+            movement.Add
+            (
+                _blockWalkWhileCasting = AddCheckBox
+                (
+                    null,
+                    "Don't step while casting (avoids server rubber-banding)",
+                    _currentProfile.BlockWalkWhileCasting,
+                    startX,
+                    startY
+                )
+            );
+
+            movement.Add(AddLabel(null, "Turn delay (ms)", startX, startY));
+            movement.AddRight
+            (
+                _movementTurnDelay = AddHSlider
+                (
+                    null,
+                    40,
+                    250,
+                    _currentProfile.MovementTurnDelay,
+                    startX,
+                    startY,
+                    200
+                )
+            );
+
+            movement.Add(AddLabel(null, "Fast turn delay (ms)", startX, startY));
+            movement.AddRight
+            (
+                _movementTurnDelayFast = AddHSlider
+                (
+                    null,
+                    20,
+                    200,
+                    _currentProfile.MovementTurnDelayFast,
+                    startX,
+                    startY,
+                    200
+                )
+            );
+
             SettingsSection combat = AddSettingsSection(box, "Combat");
             combat.Y = movement.Bounds.Bottom + 30;
 
@@ -1604,6 +1648,17 @@ namespace ClassicUO.Game.UI.Gumps
                     null,
                     "Track curses",
                     _currentProfile.TrackCurses,
+                    startX,
+                    startY
+                )
+            );
+            combat.Add
+            (
+                _startCastTimerFromSpellWords = AddCheckBox
+                (
+                    null,
+                    "Detect casts from your spell words (catches assistant macros)",
+                    _currentProfile.StartCastTimerFromSpellWords,
                     startX,
                     startY
                 )
@@ -4049,6 +4104,10 @@ namespace ClassicUO.Game.UI.Gumps
                     _useSeasonFile.IsChecked = true;
                     _showTrapTiles.IsChecked = false;
                     _autoAvoidObstacles.IsChecked = false;
+                    _blockWalkWhileCasting.IsChecked = true;
+                    _startCastTimerFromSpellWords.IsChecked = true;
+                    _movementTurnDelay.Value = Constants.TURN_DELAY;
+                    _movementTurnDelayFast.Value = Constants.TURN_DELAY_FAST;
                     _showSwingTimer.IsChecked = false;
                     _showConsumableCooldowns.IsChecked = false;
                     _treeReplacementType.SelectedIndex = 0;
@@ -4076,6 +4135,10 @@ namespace ClassicUO.Game.UI.Gumps
             _currentProfile.ReduceFPSWhenInactive = _reduceFPSWhenInactive.IsChecked;
             _currentProfile.EnablePathfind = _enablePathfind.IsChecked;
             _currentProfile.AutoAvoidObstacles = _autoAvoidObstacles.IsChecked;
+            _currentProfile.BlockWalkWhileCasting = _blockWalkWhileCasting.IsChecked;
+            _currentProfile.StartCastTimerFromSpellWords = _startCastTimerFromSpellWords.IsChecked;
+            _currentProfile.MovementTurnDelay = _movementTurnDelay.Value;
+            _currentProfile.MovementTurnDelayFast = _movementTurnDelayFast.Value;
             _currentProfile.UseShiftToPathfind = _useShiftPathfind.IsChecked;
             _currentProfile.AlwaysRun = _alwaysRun.IsChecked;
             _currentProfile.AlwaysRunUnlessHidden = _alwaysRunUnlessHidden.IsChecked;

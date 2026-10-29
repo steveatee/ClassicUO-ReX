@@ -156,6 +156,8 @@ namespace ClassicUO.Configuration
         public bool FastRotation { get; set; }
         public int MovementTurnDelay { get; set; } = Constants.TURN_DELAY;
         public int MovementTurnDelayFast { get; set; } = Constants.TURN_DELAY_FAST;
+        public bool BlockWalkWhileCasting { get; set; } = true;
+        public bool StartCastTimerFromSpellWords { get; set; } = true;
         public bool SmoothMovements { get; set; } = true;
         public bool HoldDownKeyTab { get; set; } = true;
         public bool HoldShiftForContext { get; set; } = false;

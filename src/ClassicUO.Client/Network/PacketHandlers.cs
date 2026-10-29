@@ -364,6 +364,10 @@ namespace ClassicUO.Network
                 (TargetType)p.ReadUInt8()
             );
 
+            // Dust-Light: a target cursor means the cast delay has finished, so end the casting state now
+            // rather than waiting for the estimated timer.
+            world.Player?.StopCasting();
+
             if (world.Party.PartyHealTimer < Time.Ticks && world.Party.PartyHealTarget != 0)
             {
                 world.TargetManager.Target(world.Party.PartyHealTarget);

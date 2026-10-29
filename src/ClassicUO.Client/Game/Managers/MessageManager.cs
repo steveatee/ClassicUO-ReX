@@ -60,6 +60,34 @@ namespace ClassicUO.Game.Managers
 
         public event EventHandler<MessageEventArgs> LocalizedMessageReceived;
 
+        private static SpellDefinition FindSpellFromPowerWords(string text)
+        {
+            if (string.IsNullOrEmpty(text))
+            {
+                return null;
+            }
+
+            if (SpellDefinition.WordToTargettype.TryGetValue(text, out SpellDefinition exact))
+            {
+                return exact;
+            }
+
+            // Some shards decorate the words (e.g. "[In Por Ylem]"); take the longest known phrase contained in the text.
+            SpellDefinition best = null;
+            int bestLength = 0;
+
+            foreach (KeyValuePair<string, SpellDefinition> pair in SpellDefinition.WordToTargettype)
+            {
+                if (pair.Key.Length > bestLength && pair.Key.Length >= 3 && text.Contains(pair.Key, StringComparison.OrdinalIgnoreCase))
+                {
+                    best = pair.Value;
+                    bestLength = pair.Key.Length;
+                }
+            }
+
+            return best;
+        }
+
         public void CancelServerPrompt()
         {
             SendServerPromptResponse(string.Empty);
@@ -154,6 +182,18 @@ namespace ClassicUO.Game.Managers
 
                 case MessageType.Spell:
                 {
+                    // Dust-Light: start the cast timer from our own overhead power words, so casts sent by
+                    // assistants (ClassicAssist/Razor), which bypass GameActions.CastSpell, are tracked too.
+                    if (parent != null && parent == _world.Player && currentProfile != null && currentProfile.StartCastTimerFromSpellWords)
+                    {
+                        SpellDefinition castSpell = FindSpellFromPowerWords(text);
+
+                        if (castSpell != null)
+                        {
+                            _world.Player.StartCasting(castSpell.ID);
+                        }
+                    }
+
                     //server hue color per default
                     if (!string.IsNullOrEmpty(text) && SpellDefinition.WordToTargettype.TryGetValue(text, out SpellDefinition spell))
                     {
