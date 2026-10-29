@@ -14,6 +14,7 @@ namespace ClassicUO.Game.Managers
     internal static class DustLightVisuals
     {
         public const ushort FIELD_PREVIEW_HUE = 0x0040;
+        public const ushort FIELD_SKIPPED_HUE = 0x0021; // field tile the server won't create
         public const ushort CASTING_SELF_HUE = 0x0023;
 
         private const ushort BRIGHT_WHITE_COLOR = 0x080A;
@@ -102,37 +103,12 @@ namespace ClassicUO.Game.Managers
         // ------- Field preview -------
 
         /// <summary>
-        /// True when a field spell (Wall of Stone, Fire, Energy, Poison, Paralyze Field) is on the cursor and
-        /// the tile at (x, y) would be covered by the field if cast on the tile under the mouse.
+        /// True when a field spell is on the cursor and the server will create a field tile at (x, y)
+        /// (see <see cref="FieldPlacement"/> for the per-server rules).
         /// </summary>
         public static bool IsInFieldPreview(World world, int x, int y)
         {
-            Profile profile = ProfileManager.CurrentProfile;
-
-            if (profile == null || !profile.PreviewFields || world?.Player == null || !world.TargetManager.IsTargeting)
-            {
-                return false;
-            }
-
-            int spellIndex = GameActions.LastSpellIndex;
-
-            if (spellIndex != 24 && spellIndex != 28 && spellIndex != 39 && spellIndex != 47 && spellIndex != 50)
-            {
-                return false;
-            }
-
-            if (SelectedObject.Object is not GameObject target)
-            {
-                return false;
-            }
-
-            int targetX = target.X;
-            int targetY = target.Y;
-            bool eastToWest = Math.Abs(targetX - world.Player.X) <= Math.Abs(targetY - world.Player.Y);
-
-            return eastToWest
-                ? y == targetY && x >= targetX - 2 && x <= targetX + 2
-                : x == targetX && y >= targetY - 2 && y <= targetY + 2;
+            return FieldPlacement.TryGetTileState(world, x, y, out bool placed) && placed;
         }
 
         // ------- Range ring -------
@@ -178,9 +154,9 @@ namespace ClassicUO.Game.Managers
         /// <summary>Combined ground overlay: field preview wins over the range ring.</summary>
         public static bool TryGetGroundOverlayHue(World world, GameObject obj, out ushort hue)
         {
-            if (IsInFieldPreview(world, obj.X, obj.Y))
+            if (FieldPlacement.TryGetTileState(world, obj.X, obj.Y, out bool placed))
             {
-                hue = FIELD_PREVIEW_HUE;
+                hue = placed ? FIELD_PREVIEW_HUE : FIELD_SKIPPED_HUE;
                 return true;
             }
 
