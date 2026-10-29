@@ -655,7 +655,7 @@ namespace ClassicUO.Game.Scenes
                         continue;
 
                     // Build chunk mesh if dirty
-                    if (chunk.Mesh.IsDirty)
+                    if (chunk.Mesh.NeedsBuild)
                     {
                         chunk.Mesh.Build(chunk, _world, Client.Game.GraphicsDevice);
                     }

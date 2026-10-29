@@ -66,6 +66,9 @@ namespace ClassicUO.Game.GameObjects
         private ushort? _displayedGraphic;
         private bool _isMulti;
 
+        // Graphic / hue this item was written into its chunk mesh with (batched ground items).
+        internal ushort MeshedGraphic, MeshedHue;
+
         public Item(World world) : base(world, 0) { }
 
         public bool IsCoin => Graphic == 0x0EEA || Graphic == 0x0EED || Graphic == 0x0EF0;

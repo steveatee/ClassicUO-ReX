@@ -107,6 +107,31 @@ namespace ClassicUO.Game.Map
 
         public bool IsDirty = true;
 
+        // Server items (event-area floors, walls...) arrive and leave in bursts while you move. Rebuilding the
+        // chunk for every one of them would cost more than it saves, so item changes are batched: rebuild once
+        // things settle for 250 ms, or at the latest after 1 s. Until then new items simply draw the normal
+        // (per-object) way, and removed items are never drawn because nothing marks their quad visible.
+        private const uint ITEM_SETTLE_MS = 250;
+        private const uint ITEM_MAX_WAIT_MS = 1000;
+        private bool _itemsChanged;
+        private uint _firstItemChange, _lastItemChange;
+
+        public bool NeedsBuild =>
+            IsDirty
+            || _itemsChanged
+                && (Time.Ticks - _lastItemChange >= ITEM_SETTLE_MS || Time.Ticks - _firstItemChange >= ITEM_MAX_WAIT_MS);
+
+        public void NoteItemChanged()
+        {
+            if (!_itemsChanged)
+            {
+                _itemsChanged = true;
+                _firstItemChange = Time.Ticks;
+            }
+
+            _lastItemChange = Time.Ticks;
+        }
+
         private bool _animatedWaterEffect;
         private TextureBucketTracker _landBuckets = new(16);
         private TextureBucketTracker _staticsBuckets = new(32);
@@ -114,8 +139,79 @@ namespace ClassicUO.Game.Map
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public void MarkDirtyIfNeeded(GameObject obj)
         {
+            if (obj is Item item)
+            {
+                // A batched item that moves/leaves must not reuse its old quad: draw it per-object until rebuilt.
+                if (item.InChunkMesh)
+                {
+                    item.InChunkMesh = false;
+                    item.MeshSpriteIndex = -1;
+                }
+
+                if (BatchGroundItemsEnabled)
+                    NoteItemChanged();
+
+                return;
+            }
+
             if (!IsDirty && obj is GameObjects.Land or Static or Multi)
                 IsDirty = true;
+        }
+
+        public static bool BatchGroundItemsEnabled => ProfileManager.CurrentProfile?.BatchGroundItems ?? false;
+
+        /// <summary>
+        /// Plain decoration items (event-area floors, walls, roofs...) that can be drawn from the chunk mesh like
+        /// map statics: on the ground, not movable, a single non-animated graphic, no containers/doors/corpses,
+        /// nothing that ReX re-draws specially (fields, traps, stealth art, gravestone replacement).
+        /// </summary>
+        public static bool IsBatchableItem(Item item, out ushort graphic)
+        {
+            graphic = 0;
+
+            if (
+                item.IsDestroyed
+                || !item.AllowedToDraw
+                || !item.OnGround
+                || item.IsMulti
+                || item.IsCorpse
+                || item.IsHidden
+                || (item.Flags & Flags.Movable) != 0
+            )
+            {
+                return false;
+            }
+
+            graphic = item.DisplayedGraphic;
+
+            if (graphic != item.Graphic || graphic >= Client.Game.UO.FileManager.TileData.StaticData.Length)
+            {
+                return false; // animated frame, coin stack...
+            }
+
+            ref StaticTiles data = ref Client.Game.UO.FileManager.TileData.StaticData[graphic];
+
+            if (data.IsDoor || data.IsContainer || data.IsWet && data.IsAnimated)
+            {
+                return false;
+            }
+
+            if (item.Amount > 1 && data.IsStackable)
+            {
+                return false; // drawn twice (stack offset)
+            }
+
+            if (
+                StaticFilters.IsField(graphic)
+                || StaticFilters.IsWallOfStone(graphic)
+                || DustLightVisuals.IsStealthArt(graphic)
+                || StaticArtReplacements.ReplaceFixedGroundItem(graphic, false) != graphic
+            )
+            {
+                return false;
+            }
+
+            return !IsStaticExcludedFromMesh(graphic, ref data);
         }
 
         public void Build(Chunk chunk, World world, GraphicsDevice graphicsDevice)
@@ -123,6 +219,8 @@ namespace ClassicUO.Game.Map
             Land.Reset();
             Statics.Reset();
             IsDirty = false;
+            _itemsChanged = false;
+            bool batchItems = BatchGroundItemsEnabled;
 
             var profile = ProfileManager.CurrentProfile;
             if (profile == null)
@@ -155,6 +253,10 @@ namespace ClassicUO.Game.Map
 
                             case Multi multi:
                                 CountMulti(multi);
+                                break;
+
+                            case Item item when batchItems && IsBatchableItem(item, out ushort itemGraphic):
+                                CountStaticLike(ref Client.Game.UO.FileManager.TileData.StaticData[itemGraphic], itemGraphic);
                                 break;
                         }
                     }
@@ -189,6 +291,16 @@ namespace ClassicUO.Game.Map
                             case Multi multi:
                                 TryAddMulti(multi);
                                 break;
+
+                            case Item item when batchItems && IsBatchableItem(item, out ushort itemGraphic):
+                                TryAddStaticLike(item, ref Client.Game.UO.FileManager.TileData.StaticData[itemGraphic], itemGraphic, item.Hue);
+
+                                if (item.InChunkMesh)
+                                {
+                                    item.MeshedGraphic = itemGraphic;
+                                    item.MeshedHue = item.Hue;
+                                }
+                                break;
                         }
                     }
                 }
@@ -217,6 +329,7 @@ namespace ClassicUO.Game.Map
             _landBuckets.Clear();
             _staticsBuckets.Clear();
             IsDirty = true;
+            _itemsChanged = false;
         }
 
         #region Pass 1: Texture counting

@@ -191,6 +191,7 @@ namespace ClassicUO.Configuration
 
         public bool ShowDeathOnWorldmap { get; set; }
         public bool CacheCustomHouseDesigns { get; set; } = true;
+        public bool BatchGroundItems { get; set; } = true; // draw plain decoration items from the chunk mesh (event areas)
         public bool AlwaysShowOwnNameplate { get; set; }
         public bool WorldMapShowGuild { get; set; }
 

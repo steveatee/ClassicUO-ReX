@@ -399,7 +399,7 @@ namespace ClassicUO.Game.Scenes
                 return false;
             }
 
-            if (obj is not Static && obj is not Multi)
+            if (obj is not Static && obj is not Multi && !(obj is Item hideItem && hideItem.InChunkMesh))
             {
                 return false;
             }
@@ -710,6 +710,10 @@ namespace ClassicUO.Game.Scenes
             {
                 partial = m.ItemData.IsPartialHue;
             }
+            else if (obj is Item it)
+            {
+                partial = it.ItemData.IsPartialHue;
+            }
 
             if (DustLightVisuals.TryGetGroundOverlayHue(_world, obj, out ushort overlayHue))
             {
@@ -833,7 +837,16 @@ namespace ClassicUO.Game.Scenes
                 int screenY = obj.RealScreenPosition.Y;
                 int maxObjectZ = obj.PriorityZ;
 
-                // Fast path: meshed objects (statics, multis, land) skip type-switch entirely
+                // Batched ground items whose graphic/hue changed since the mesh was built: draw them per-object
+                // and let the chunk rebuild pick up the change.
+                if (obj.InChunkMesh && obj is Item meshedItem && (meshedItem.Graphic != meshedItem.MeshedGraphic || meshedItem.Hue != meshedItem.MeshedHue || meshedItem.IsHidden))
+                {
+                    meshedItem.InChunkMesh = false;
+                    meshedItem.MeshSpriteIndex = -1;
+                    mesh.NoteItemChanged();
+                }
+
+                // Fast path: meshed objects (statics, multis, land, batched ground items) skip type-switch entirely
                 if (obj.InChunkMesh)
                 {
                     if (obj is Land meshLand)
@@ -886,10 +899,17 @@ namespace ClassicUO.Game.Scenes
                         continue;
                     }
 
-                    // Static or Multi — meshed objects are never foliage/trees/internal/animated
+                    // Static, Multi or batched Item — meshed objects are never foliage/trees/internal/animated
                     ref StaticTiles meshItemData = ref (obj is Static meshStatic
                         ? ref meshStatic.ItemData
-                        : ref Unsafe.As<Multi>(obj).ItemData);
+                        : ref (obj is Item meshItem
+                            ? ref meshItem.ItemData
+                            : ref Unsafe.As<Multi>(obj).ItemData));
+
+                    if (obj is Item handleItem && !handleItem.IsLocked)
+                    {
+                        UpdateObjectHandles(handleItem, useObjectHandles);
+                    }
 
                     // Simplified ProcessAlpha for meshed statics: skip IsFoliage branch (never true)
                     bool meshAllowSelection = true;
