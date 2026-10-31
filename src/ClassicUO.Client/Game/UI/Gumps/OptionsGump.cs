@@ -43,7 +43,7 @@ namespace ClassicUO.Game.UI.Gumps
         private Checkbox _blockWalkWhileCasting, _startCastTimerFromSpellWords, _avoidTraps;
         private Checkbox _friendEnemyHues, _friendHueParty, _friendHueAllies, _enemyHueHumanoids, _curseAura, _curseAuraLastTarget;
         private ClickableColorBox _friendHueBox, _enemyHueBox, _curseAuraHueBox;
-        private HSliderBar _curseAuraOpacity;
+        private HSliderBar _curseAuraOpacity, _curseAuraSize;
         // Dust-Light ports
         private Checkbox _tintSelfWhileCasting, _previewFields, _blockWoS, _blockWoSFelOnly, _blockWoSArt, _blockEnergyF, _blockEnergyFFelOnly, _blockEnergyFArt;
         private Checkbox _rangeRingOnCast, _rangeRingAlways, _colorStealth, _colorStealthSelf;
@@ -1679,13 +1679,15 @@ namespace ClassicUO.Game.UI.Gumps
                     startY
                 )
             );
-            combat.Add(_curseAura = AddCheckBox(null, "Curse aura under cursed players (Curse, Corpse Skin, Hit Curse)", _currentProfile.CurseAura, startX, startY));
+            combat.Add(_curseAura = AddCheckBox(null, "Curse ring under cursed players (Curse, Corpse Skin, Hit Curse)", _currentProfile.CurseAura, startX, startY));
             combat.PushIndent();
             combat.Add(_curseAuraLastTarget = AddCheckBox(null, "Last target only", _currentProfile.CurseAuraLastTargetOnly, startX, startY));
             combat.Add(_curseAuraHueBox = AddColorBox(null, startX, startY, _currentProfile.CurseAuraHue, ""));
             combat.AddRight(AddLabel(null, "Aura colour", 0, 0), 2);
             combat.Add(AddLabel(null, "Opacity", startX, startY));
             combat.AddRight(_curseAuraOpacity = AddHSlider(null, 10, 100, _currentProfile.CurseAuraOpacity, startX, startY, 150));
+            combat.Add(AddLabel(null, "Ring size", startX, startY));
+            combat.AddRight(_curseAuraSize = AddHSlider(null, 30, 110, _currentProfile.CurseAuraSize, startX, startY, 150));
             combat.PopIndent();
 
 
@@ -4283,6 +4285,7 @@ namespace ClassicUO.Game.UI.Gumps
                     _curseAuraLastTarget.IsChecked = false;
                     _curseAuraHueBox.Hue = 0x0070;
                     _curseAuraOpacity.Value = 75;
+                    _curseAuraSize.Value = 64;
                     _startCastTimerFromSpellWords.IsChecked = true;
                     _movementTurnDelay.Value = Constants.TURN_DELAY;
                     _movementTurnDelayFast.Value = Constants.TURN_DELAY_FAST;
@@ -4360,6 +4363,7 @@ namespace ClassicUO.Game.UI.Gumps
             _currentProfile.CurseAuraLastTargetOnly = _curseAuraLastTarget.IsChecked;
             _currentProfile.CurseAuraHue = _curseAuraHueBox.Hue;
             _currentProfile.CurseAuraOpacity = _curseAuraOpacity.Value;
+            _currentProfile.CurseAuraSize = _curseAuraSize.Value;
             _currentProfile.StartCastTimerFromSpellWords = _startCastTimerFromSpellWords.IsChecked;
             _currentProfile.MovementTurnDelay = _movementTurnDelay.Value;
             _currentProfile.MovementTurnDelayFast = _movementTurnDelayFast.Value;

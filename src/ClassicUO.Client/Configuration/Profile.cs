@@ -171,6 +171,7 @@ namespace ClassicUO.Configuration
         public bool CurseAura { get; set; }
         public ushort CurseAuraHue { get; set; } = 0x0070;
         public int CurseAuraOpacity { get; set; } = 75;
+        public int CurseAuraSize { get; set; } = 64; // ring radius in pixels (the normal aura is 40)
         public bool CurseAuraLastTargetOnly { get; set; }
         public bool StartCastTimerFromSpellWords { get; set; } = true;
         public bool TintSelfWhileCasting { get; set; }
