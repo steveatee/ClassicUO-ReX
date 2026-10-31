@@ -30,7 +30,7 @@ namespace ClassicUO.Game.Managers
             _radius = radius;
         }
 
-        public void Draw(UltimaBatcher2D batcher, int x, int y, ushort hue, float depth)
+        public void Draw(UltimaBatcher2D batcher, int x, int y, ushort hue, float depth, float alpha = 1f)
         {
             int yBump = -5;
 
@@ -48,7 +48,7 @@ namespace ClassicUO.Game.Managers
             x -= (_texture.Width >> 1);
             y -= (_texture.Height >> 1);
 
-            Vector3 hueVec = ShaderHueTranslator.GetHueVector(hue, false, 1);
+            Vector3 hueVec = ShaderHueTranslator.GetHueVector(hue, false, alpha);
 
             batcher.SetBlendState(_blend.Value);
             batcher.Draw(_texture, new Rectangle(x, y + yBump, _radius * 2, _radius - yBump), new Rectangle(0, 0, _radius * 2, _radius - yBump), hueVec, depth + 1f);
@@ -144,6 +144,19 @@ namespace ClassicUO.Game.Managers
         public void Draw(UltimaBatcher2D batcher, int x, int y, ushort hue, float depth)
         {
             _aura.Draw(batcher, x, y, hue, depth);
+        }
+
+        /// <summary>
+        /// Curse aura: same cached ring texture, slowly pulsing and fading as the estimated curse time runs out.
+        /// </summary>
+        public void DrawCurse(UltimaBatcher2D batcher, int x, int y, float remainingFraction, float depth)
+        {
+            Profile p = ProfileManager.CurrentProfile;
+            float pulse = 0.78f + 0.22f * MathF.Sin(Time.Ticks / 220f);
+            float fade = 0.45f + 0.55f * Math.Clamp(remainingFraction, 0f, 1f);
+            float alpha = Math.Clamp(p.CurseAuraOpacity / 100f, 0.1f, 1f) * pulse * fade;
+
+            _aura.Draw(batcher, x, y, p.CurseAuraHue, depth, alpha);
         }
     }
 }

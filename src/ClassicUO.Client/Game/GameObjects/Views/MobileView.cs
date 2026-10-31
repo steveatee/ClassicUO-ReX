@@ -50,7 +50,20 @@ namespace ClassicUO.Game.GameObjects
 
             bool hasShadow = !IsDead && !IsHidden && ProfileManager.CurrentProfile.ShadowsEnabled;
 
-            if (World.AuraManager.IsEnabled)
+            Profile auraProfile = ProfileManager.CurrentProfile;
+
+            // Curse aura: replaces the normal aura while any curse (Curse, Corpse Skin, Hit Curse) is tracked on them.
+            if (
+                auraProfile.CurseAura
+                && Serial != World.Player.Serial
+                && !IsDead
+                && (!auraProfile.CurseAuraLastTargetOnly || World.TargetManager.LastTargetInfo.Serial == Serial)
+                && CurseTracker.TryGetCurseFraction(Serial, out float curseRemaining)
+            )
+            {
+                World.AuraManager.DrawCurse(batcher, drawX, drawY, curseRemaining, depth);
+            }
+            else if (World.AuraManager.IsEnabled)
             {
                 World.AuraManager.Draw(
                     batcher,
@@ -126,6 +139,15 @@ namespace ClassicUO.Game.GameObjects
                 }
                 else
                 {
+                    // Friend / enemy colouring (drawn, so packets and resyncs can't undo it). Poison, paralyse,
+                    // invulnerable and last-target highlights below still take priority.
+                    ushort friendEnemyHue = FriendsManager.GetHue(World, this);
+
+                    if (friendEnemyHue != 0)
+                    {
+                        overridedHue = friendEnemyHue;
+                    }
+
                     if (ProfileManager.CurrentProfile.HighlightMobilesByPoisoned)
                     {
                         if (IsPoisoned)
@@ -165,7 +187,8 @@ namespace ClassicUO.Game.GameObjects
             {
                 if (isAttack || isUnderMouse)
                 {
-                    overridedHue = Notoriety.GetHue(NotorietyFlag);
+                    ushort targetHue = FriendsManager.GetHue(World, this);
+                    overridedHue = targetHue != 0 ? targetHue : Notoriety.GetHue(NotorietyFlag);
                 }
 
                 // Dust-Light: last-target highlight (with poison / paralyse variants) and field preview.

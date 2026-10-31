@@ -1810,6 +1810,42 @@ namespace ClassicUO.Game.Managers
                         break;
                     }
 
+                case MacroType.AddFriend:
+                    GameActions.Print(_world, "Target a player to add as a friend.");
+                    _world.TargetManager.SetTargeting(
+                        obj =>
+                        {
+                            if (obj is Mobile m && m != _world.Player)
+                            {
+                                FriendsManager.Add(m);
+                                GameActions.Print(_world, $"Friend added: {m.Name}");
+                            }
+                        },
+                        CursorType.Target,
+                        TargetType.Neutral
+                    );
+                    break;
+
+                case MacroType.RemoveFriend:
+                    GameActions.Print(_world, "Target a friend to remove.");
+                    _world.TargetManager.SetTargeting(
+                        obj =>
+                        {
+                            if (obj is Mobile m)
+                            {
+                                GameActions.Print(_world, FriendsManager.Remove(m.Serial) ? $"Friend removed: {m.Name}" : $"{m.Name} is not on your friends list.");
+                            }
+                        },
+                        CursorType.Target,
+                        TargetType.Neutral
+                    );
+                    break;
+
+                case MacroType.ToggleFriendEnemyHues:
+                    ProfileManager.CurrentProfile.FriendEnemyHues = !ProfileManager.CurrentProfile.FriendEnemyHues;
+                    GameActions.Print(_world, ProfileManager.CurrentProfile.FriendEnemyHues ? "Friend / enemy colours: on" : "Friend / enemy colours: off");
+                    break;
+
                 case MacroType.ToggleAvoidTraps:
                     ProfileManager.CurrentProfile.AvoidTraps = !ProfileManager.CurrentProfile.AvoidTraps;
                     GameActions.Print(_world, ProfileManager.CurrentProfile.AvoidTraps ? "Avoid traps: on" : "Avoid traps: off");
@@ -2379,7 +2415,10 @@ namespace ClassicUO.Game.Managers
         LookAtMouse,
         UseCounterBarSlot,
         ToggleInvisibleHouses, // Dust-Light; keep new entries at the end so saved macros keep their numbers
-        ToggleAvoidTraps
+        ToggleAvoidTraps,
+        AddFriend,
+        RemoveFriend,
+        ToggleFriendEnemyHues
     }
 
     internal enum MacroSubType

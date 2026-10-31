@@ -36,6 +36,21 @@ namespace ClassicUO.Game.Managers
                 }
             );
 
+            // -friends : list your friends (add/remove with the AddFriend / RemoveFriend macros)
+            Register
+            (
+                "friends",
+                s =>
+                {
+                    GameActions.Print(_world, $"Friends ({FriendsManager.Count}):");
+
+                    foreach (var kv in FriendsManager.All)
+                    {
+                        GameActions.Print(_world, $"  {kv.Value} (0x{kv.Key:X8})");
+                    }
+                }
+            );
+
             // -housecache        : show custom house design cache stats
             // -housecache clear  : forget all cached designs for this server
             Register

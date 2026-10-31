@@ -158,6 +158,20 @@ namespace ClassicUO.Configuration
         public int MovementTurnDelayFast { get; set; } = Constants.TURN_DELAY_FAST;
         public bool BlockWalkWhileCasting { get; set; } = true;
         public bool AvoidTraps { get; set; }
+
+        // Friend / enemy colouring (FriendsManager)
+        public bool FriendEnemyHues { get; set; }
+        public ushort FriendListHue { get; set; } = 0x0044;
+        public ushort EnemyListHue { get; set; } = 0x0021;
+        public bool FriendHueIncludeParty { get; set; } = true;
+        public bool FriendHueIncludeAllies { get; set; } = true;
+        public bool EnemyHueHumanoidsOnly { get; set; } = true;
+
+        // Curse aura
+        public bool CurseAura { get; set; }
+        public ushort CurseAuraHue { get; set; } = 0x0070;
+        public int CurseAuraOpacity { get; set; } = 75;
+        public bool CurseAuraLastTargetOnly { get; set; }
         public bool StartCastTimerFromSpellWords { get; set; } = true;
         public bool TintSelfWhileCasting { get; set; }
 

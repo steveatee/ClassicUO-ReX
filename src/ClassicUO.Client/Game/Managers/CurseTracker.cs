@@ -256,7 +256,44 @@ namespace ClassicUO.Game.Managers
 
         private static bool IsEnabled(World world)
         {
-            return world?.Player != null && ProfileManager.CurrentProfile.TrackCurses;
+            return world?.Player != null && (ProfileManager.CurrentProfile.TrackCurses || ProfileManager.CurrentProfile.CurseAura);
+        }
+
+        /// <summary>
+        /// Any tracked curse (Curse, Corpse Skin, Hit Curse) active on this mobile; returns the largest share of
+        /// estimated time remaining (1 = just applied, 0 = about to expire).
+        /// </summary>
+        public static bool TryGetCurseFraction(uint serial, out float remainingFraction)
+        {
+            remainingFraction = 0f;
+
+            if (!_states.TryGetValue(serial, out CurseState state))
+            {
+                return false;
+            }
+
+            bool any = false;
+            Accumulate(state.CorpseSkin, ref remainingFraction, ref any);
+            Accumulate(state.Curse, ref remainingFraction, ref any);
+            Accumulate(state.HitCurse, ref remainingFraction, ref any);
+
+            return any;
+        }
+
+        private static void Accumulate(TrackedCurseTimer timer, ref float fraction, ref bool any)
+        {
+            if (!timer.IsActive)
+            {
+                return;
+            }
+
+            any = true;
+            float f = (timer.EndAt - Time.Ticks) / (float)timer.Duration;
+
+            if (f > fraction)
+            {
+                fraction = f;
+            }
         }
 
         private static void ClearIfMobile(World world, uint serial)

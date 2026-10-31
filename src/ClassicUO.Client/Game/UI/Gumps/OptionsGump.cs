@@ -41,6 +41,9 @@ namespace ClassicUO.Game.UI.Gumps
         private HSliderBar _invisibleHousesZ, _dontRemoveHouseBelowZ;
         private HSliderBar _movementTurnDelay, _movementTurnDelayFast;
         private Checkbox _blockWalkWhileCasting, _startCastTimerFromSpellWords, _avoidTraps;
+        private Checkbox _friendEnemyHues, _friendHueParty, _friendHueAllies, _enemyHueHumanoids, _curseAura, _curseAuraLastTarget;
+        private ClickableColorBox _friendHueBox, _enemyHueBox, _curseAuraHueBox;
+        private HSliderBar _curseAuraOpacity;
         // Dust-Light ports
         private Checkbox _tintSelfWhileCasting, _previewFields, _blockWoS, _blockWoSFelOnly, _blockWoSArt, _blockEnergyF, _blockEnergyFFelOnly, _blockEnergyFArt;
         private Checkbox _rangeRingOnCast, _rangeRingAlways, _colorStealth, _colorStealthSelf;
@@ -1676,6 +1679,16 @@ namespace ClassicUO.Game.UI.Gumps
                     startY
                 )
             );
+            combat.Add(_curseAura = AddCheckBox(null, "Curse aura under cursed players (Curse, Corpse Skin, Hit Curse)", _currentProfile.CurseAura, startX, startY));
+            combat.PushIndent();
+            combat.Add(_curseAuraLastTarget = AddCheckBox(null, "Last target only", _currentProfile.CurseAuraLastTargetOnly, startX, startY));
+            combat.Add(_curseAuraHueBox = AddColorBox(null, startX, startY, _currentProfile.CurseAuraHue, ""));
+            combat.AddRight(AddLabel(null, "Aura colour", 0, 0), 2);
+            combat.Add(AddLabel(null, "Opacity", startX, startY));
+            combat.AddRight(_curseAuraOpacity = AddHSlider(null, 10, 100, _currentProfile.CurseAuraOpacity, startX, startY, 150));
+            combat.PopIndent();
+
+
             combat.Add
             (
                 _startCastTimerFromSpellWords = AddCheckBox
@@ -1688,8 +1701,21 @@ namespace ClassicUO.Game.UI.Gumps
                 )
             );
 
+            SettingsSection friends = AddSettingsSection(box, "Friends & Enemies");
+            friends.Y = combat.Bounds.Bottom + 30;
+            friends.Add(_friendEnemyHues = AddCheckBox(null, "Colour friends and enemies (macros: AddFriend, RemoveFriend; -friends lists them)", _currentProfile.FriendEnemyHues, startX, startY));
+            friends.PushIndent();
+            friends.Add(_friendHueBox = AddColorBox(null, startX, startY, _currentProfile.FriendListHue, ""));
+            friends.AddRight(AddLabel(null, "Friends", 0, 0), 2);
+            friends.Add(_enemyHueBox = AddColorBox(null, startX, startY, _currentProfile.EnemyListHue, ""));
+            friends.AddRight(AddLabel(null, "Everyone else", 0, 0), 2);
+            friends.Add(_friendHueParty = AddCheckBox(null, "Party members count as friends", _currentProfile.FriendHueIncludeParty, startX, startY));
+            friends.Add(_friendHueAllies = AddCheckBox(null, "Guild / alliance (green notoriety) count as friends", _currentProfile.FriendHueIncludeAllies, startX, startY));
+            friends.Add(_enemyHueHumanoids = AddCheckBox(null, "Only colour humanoids as enemies (leave monsters/animal forms alone)", _currentProfile.EnemyHueHumanoidsOnly, startX, startY));
+            friends.PopIndent();
+
             SettingsSection section = AddSettingsSection(box, "Player Overlay");
-            section.Y = combat.Bounds.Bottom + 30;
+            section.Y = friends.Bounds.Bottom + 30;
 
             section.Add
             (
@@ -4247,6 +4273,16 @@ namespace ClassicUO.Game.UI.Gumps
                     _autoAvoidObstacles.IsChecked = false;
                     _blockWalkWhileCasting.IsChecked = true;
                     _avoidTraps.IsChecked = false;
+                    _friendEnemyHues.IsChecked = false;
+                    _friendHueBox.Hue = 0x0044;
+                    _enemyHueBox.Hue = 0x0021;
+                    _friendHueParty.IsChecked = true;
+                    _friendHueAllies.IsChecked = true;
+                    _enemyHueHumanoids.IsChecked = true;
+                    _curseAura.IsChecked = false;
+                    _curseAuraLastTarget.IsChecked = false;
+                    _curseAuraHueBox.Hue = 0x0070;
+                    _curseAuraOpacity.Value = 75;
                     _startCastTimerFromSpellWords.IsChecked = true;
                     _movementTurnDelay.Value = Constants.TURN_DELAY;
                     _movementTurnDelayFast.Value = Constants.TURN_DELAY_FAST;
@@ -4314,6 +4350,16 @@ namespace ClassicUO.Game.UI.Gumps
             _currentProfile.AutoAvoidObstacles = _autoAvoidObstacles.IsChecked;
             _currentProfile.BlockWalkWhileCasting = _blockWalkWhileCasting.IsChecked;
             _currentProfile.AvoidTraps = _avoidTraps.IsChecked;
+            _currentProfile.FriendEnemyHues = _friendEnemyHues.IsChecked;
+            _currentProfile.FriendListHue = _friendHueBox.Hue;
+            _currentProfile.EnemyListHue = _enemyHueBox.Hue;
+            _currentProfile.FriendHueIncludeParty = _friendHueParty.IsChecked;
+            _currentProfile.FriendHueIncludeAllies = _friendHueAllies.IsChecked;
+            _currentProfile.EnemyHueHumanoidsOnly = _enemyHueHumanoids.IsChecked;
+            _currentProfile.CurseAura = _curseAura.IsChecked;
+            _currentProfile.CurseAuraLastTargetOnly = _curseAuraLastTarget.IsChecked;
+            _currentProfile.CurseAuraHue = _curseAuraHueBox.Hue;
+            _currentProfile.CurseAuraOpacity = _curseAuraOpacity.Value;
             _currentProfile.StartCastTimerFromSpellWords = _startCastTimerFromSpellWords.IsChecked;
             _currentProfile.MovementTurnDelay = _movementTurnDelay.Value;
             _currentProfile.MovementTurnDelayFast = _movementTurnDelayFast.Value;
