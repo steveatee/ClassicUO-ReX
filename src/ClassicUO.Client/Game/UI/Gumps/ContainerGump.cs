@@ -377,6 +377,38 @@ namespace ClassicUO.Game.UI.Gumps
                             (containerBounds.Height + (gump.IsChessboard ? 20 : 0)) * scale
                         );
 
+                        int snapX = 0,
+                            snapY = 0;
+                        bool snapped = false;
+
+                        if (gump == this && TopSlotsActive)
+                        {
+                            int cx = x,
+                                cy = y;
+
+                            if (ProfileManager.CurrentProfile.RelativeDragAndDropItems)
+                            {
+                                cx += Client.Game.UO.GameCursor.ItemHold.MouseOffset.X;
+                                cy += Client.Game.UO.GameCursor.ItemHold.MouseOffset.Y;
+                            }
+
+                            snapped = TrySnapToTopSlot(
+                                cx,
+                                cy,
+                                Client.Game.UO.GameCursor.ItemHold.DisplayedGraphic,
+                                Client.Game.UO.GameCursor.ItemHold.Serial,
+                                out snapX,
+                                out snapY
+                            );
+                        }
+
+                        if (snapped)
+                        {
+                            x = snapX;
+                            y = snapY;
+                        }
+                        else
+                        {
                         if (spriteInfo.Texture != null)
                         {
                             int textureW,
@@ -431,6 +463,7 @@ namespace ClassicUO.Game.UI.Gumps
 
                         x = (int)(x / scale);
                         y = (int)(y / scale);
+                        }
                     }
 
                     GameActions.DropItem(
@@ -612,6 +645,12 @@ namespace ClassicUO.Game.UI.Gumps
 
         public void CheckItemControlPosition(Item item)
         {
+            // Items parked in the top slots stay where they are.
+            if (IsInTopSlots(item))
+            {
+                return;
+            }
+
             Rectangle dataBounds = _data.Bounds;
 
             int boundX = dataBounds.X;
@@ -661,6 +700,42 @@ namespace ClassicUO.Game.UI.Gumps
         {
             base.AddToRenderLists(renderLists, x, y, ref layerDepthRef);
             float layerDepth = layerDepthRef;
+
+            if (
+                !IsMinimized
+                && Client.Game.UO.GameCursor.ItemHold.Enabled
+                && UIManager.MouseOverControl?.RootParent == this
+                && TryGetTopSlotsArea(out Rectangle slotArea)
+            )
+            {
+                float slotScale = GetScale();
+                Vector3 slotHue = ShaderHueTranslator.GetHueVector(0, false, 0.45f);
+
+                renderLists.AddGumpNoAtlas(
+                    batcher =>
+                    {
+                        for (int row = 0; row < TOP_SLOTS_ROWS; row++)
+                        {
+                            for (int col = 0; col < TOP_SLOTS_COLUMNS; col++)
+                            {
+                                Rectangle cell = GetTopSlotCell(slotArea, col, row);
+
+                                batcher.DrawRectangle(
+                                    SolidColorTextureCache.GetTexture(Color.Black),
+                                    x + (int)(cell.X * slotScale),
+                                    y + (int)(cell.Y * slotScale),
+                                    (int)(cell.Width * slotScale) - 1,
+                                    (int)(cell.Height * slotScale) - 1,
+                                    slotHue,
+                                    layerDepth
+                                );
+                            }
+                        }
+
+                        return true;
+                    }
+                );
+            }
 
             if (CUOEnviroment.Debug && !IsMinimized)
             {
@@ -743,6 +818,204 @@ namespace ClassicUO.Game.UI.Gumps
             }
 
             base.OnDragEnd(x, y);
+        }
+
+        // ---- Backpack top slots (ReX) ----
+        // The suede / polar bear / ghoul skin backpacks are taller than the classic one, but share its
+        // drop area (44,65)-(186,159), so the flap across the top can't hold anything. This adds a
+        // band of snap slots across the flap. Positions are fractions of the backpack art, so they
+        // follow the art whatever its size. The server keeps whatever x/y the client sends.
+        private const float TOP_SLOTS_LEFT = 0.08f;
+        private const float TOP_SLOTS_RIGHT = 0.88f;
+        private const float TOP_SLOTS_TOP = 0.02f;
+        private const float TOP_SLOTS_BOTTOM = 0.28f;
+        private const int TOP_SLOTS_COLUMNS = 8;
+        private const int TOP_SLOTS_ROWS = 3;
+
+        private bool TopSlotsActive =>
+            ProfileManager.CurrentProfile != null
+            && ProfileManager.CurrentProfile.BackpackTopSlots
+            && !IsChessboard
+            && !IsBackgammonBoard
+            && (Graphic == 0x775E || Graphic == 0x7760 || Graphic == 0x7762);
+
+        // The slot band in unscaled container coordinates (the same space as item.X / item.Y).
+        private bool TryGetTopSlotsArea(out Rectangle area)
+        {
+            area = Rectangle.Empty;
+
+            if (!TopSlotsActive)
+            {
+                return false;
+            }
+
+            ref readonly var info = ref Client.Game.UO.Gumps.GetGump(Graphic);
+
+            if (info.Texture == null)
+            {
+                return false;
+            }
+
+            int w = info.UV.Width;
+            int h = info.UV.Height;
+            int left = (int)(w * TOP_SLOTS_LEFT);
+            int right = (int)(w * TOP_SLOTS_RIGHT);
+            int top = (int)(h * TOP_SLOTS_TOP);
+            int bottom = (int)(h * TOP_SLOTS_BOTTOM);
+
+            area = new Rectangle(left, top, right - left, bottom - top);
+
+            return area.Width >= TOP_SLOTS_COLUMNS && area.Height >= TOP_SLOTS_ROWS;
+        }
+
+        private static Rectangle GetTopSlotCell(Rectangle area, int col, int row)
+        {
+            int x0 = area.X + area.Width * col / TOP_SLOTS_COLUMNS;
+            int x1 = area.X + area.Width * (col + 1) / TOP_SLOTS_COLUMNS;
+            int y0 = area.Y + area.Height * row / TOP_SLOTS_ROWS;
+            int y1 = area.Y + area.Height * (row + 1) / TOP_SLOTS_ROWS;
+
+            return new Rectangle(x0, y0, x1 - x0, y1 - y0);
+        }
+
+        // Size of an item's art in unscaled container coordinates.
+        private Point GetItemSizeInContainer(ushort graphic)
+        {
+            ref readonly var art = ref Client.Game.UO.Arts.GetArt(graphic);
+
+            if (art.Texture == null)
+            {
+                return Point.Zero;
+            }
+
+            int w = art.UV.Width;
+            int h = art.UV.Height;
+
+            // Without "scale items inside containers" the art is drawn at its real size while
+            // positions are scaled, so in container coordinates it is smaller by the scale.
+            if (!ProfileManager.CurrentProfile.ScaleItemsInsideContainers)
+            {
+                float scale = GetScale();
+                w = (int)(w / scale);
+                h = (int)(h / scale);
+            }
+
+            return new Point(w, h);
+        }
+
+        private bool TryGetTopSlotOf(Item item, Rectangle area, out int col, out int row)
+        {
+            Point size = GetItemSizeInContainer(item.DisplayedGraphic);
+            int cx = (short)item.X + (size.X >> 1);
+            int cy = (short)item.Y + (size.Y >> 1);
+
+            col = row = -1;
+
+            if (!area.Contains(cx, cy))
+            {
+                return false;
+            }
+
+            col = Math.Clamp((cx - area.X) * TOP_SLOTS_COLUMNS / area.Width, 0, TOP_SLOTS_COLUMNS - 1);
+            row = Math.Clamp((cy - area.Y) * TOP_SLOTS_ROWS / area.Height, 0, TOP_SLOTS_ROWS - 1);
+
+            return true;
+        }
+
+        private bool IsInTopSlots(Item item)
+        {
+            return TryGetTopSlotsArea(out Rectangle area) && TryGetTopSlotOf(item, area, out _, out _);
+        }
+
+        // mouseX / mouseY: where the held item's centre is, in scaled gump pixels.
+        // On success itemX / itemY is the unscaled top-left to send to the server.
+        private bool TrySnapToTopSlot(int mouseX, int mouseY, ushort heldGraphic, uint heldSerial, out int itemX, out int itemY)
+        {
+            itemX = itemY = 0;
+
+            if (!TryGetTopSlotsArea(out Rectangle area))
+            {
+                return false;
+            }
+
+            float scale = GetScale();
+            int px = (int)(mouseX / scale);
+            int py = (int)(mouseY / scale);
+
+            if (!area.Contains(px, py))
+            {
+                return false;
+            }
+
+            bool[,] used = new bool[TOP_SLOTS_COLUMNS, TOP_SLOTS_ROWS];
+
+            if (World.Items.Get(LocalSerial) is Item container)
+            {
+                for (LinkedObject i = container.Items; i != null; i = i.Next)
+                {
+                    Item child = (Item)i;
+
+                    if (child.Serial == heldSerial || child.Amount <= 0)
+                    {
+                        continue;
+                    }
+
+                    if (TryGetTopSlotOf(child, area, out int c, out int r))
+                    {
+                        used[c, r] = true;
+                    }
+                }
+            }
+
+            // The slot under the cursor if it's free, otherwise the nearest free one.
+            // If every slot is taken, the one under the cursor.
+            Rectangle best = Rectangle.Empty;
+            long bestDist = long.MaxValue;
+            Rectangle under = Rectangle.Empty;
+
+            for (int row = 0; row < TOP_SLOTS_ROWS; row++)
+            {
+                for (int col = 0; col < TOP_SLOTS_COLUMNS; col++)
+                {
+                    Rectangle cell = GetTopSlotCell(area, col, row);
+
+                    if (cell.Contains(px, py))
+                    {
+                        under = cell;
+                    }
+
+                    if (used[col, row])
+                    {
+                        continue;
+                    }
+
+                    long dx = cell.Center.X - px;
+                    long dy = cell.Center.Y - py;
+                    long dist = dx * dx + dy * dy;
+
+                    if (cell.Contains(px, py))
+                    {
+                        dist = -1;
+                    }
+
+                    if (dist < bestDist)
+                    {
+                        bestDist = dist;
+                        best = cell;
+                    }
+                }
+            }
+
+            if (best.IsEmpty)
+            {
+                best = under.IsEmpty ? GetTopSlotCell(area, 0, 0) : under;
+            }
+
+            Point size = GetItemSizeInContainer(heldGraphic);
+            itemX = Math.Max(0, best.Center.X - (size.X >> 1));
+            itemY = Math.Max(0, best.Center.Y - (size.Y >> 1));
+
+            return true;
         }
 
         private class GumpPicContainer : GumpPic
