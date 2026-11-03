@@ -825,12 +825,12 @@ namespace ClassicUO.Game.UI.Gumps
         // drop area (44,65)-(186,159), so the flap across the top can't hold anything. This adds a
         // band of snap slots across the flap. Positions are fractions of the backpack art, so they
         // follow the art whatever its size. The server keeps whatever x/y the client sends.
-        private const float TOP_SLOTS_LEFT = 0.08f;
-        private const float TOP_SLOTS_RIGHT = 0.88f;
-        private const float TOP_SLOTS_TOP = 0.02f;
-        private const float TOP_SLOTS_BOTTOM = 0.28f;
-        private const int TOP_SLOTS_COLUMNS = 8;
-        private const int TOP_SLOTS_ROWS = 3;
+        private const float TOP_SLOTS_LEFT = 0.125f;
+        private const float TOP_SLOTS_RIGHT = 0.825f;
+        private const float TOP_SLOTS_TOP = 0.065f;
+        private const float TOP_SLOTS_BOTTOM = 0.24f;
+        private const int TOP_SLOTS_COLUMNS = 7;
+        private const int TOP_SLOTS_ROWS = 2;
 
         private bool TopSlotsActive =>
             ProfileManager.CurrentProfile != null
