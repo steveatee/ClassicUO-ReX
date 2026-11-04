@@ -9,11 +9,13 @@ namespace ClassicUO.Game.Managers
     // "Hide non-player corpses" (ReX). On UO Dreams / TrueUO every corpse is 0x2006, and the only
     // thing that tells a player corpse apart is its name: corpses without a [CorpseName] attribute
     // (players, and humanoid NPCs like brigands) are "the remains of <name>"; monsters have their
-    // own corpse names ("a ghoul corpse", ...). Corpses whose name we don't know yet stay visible,
-    // so a player corpse never flickers out.
+    // own corpse names ("a ghoul corpse", ...). The decision waits for the corpse's properties (the
+    // item name can be wrong at first); until they arrive the corpse stays visible, so a player
+    // corpse never flickers out.
     internal static class CorpseFilter
     {
         private const string PLAYER_CORPSE_TEXT = "remains of";
+        private const int PLAYER_CORPSE_CLILOC = 1046414;
 
         // serial -> true if the corpse should be hidden. Only filled once the name is known.
         private static readonly Dictionary<uint, bool> _hidden = new Dictionary<uint, bool>();
@@ -31,18 +33,9 @@ namespace ClassicUO.Game.Managers
                 return hide;
             }
 
-            string name = null;
-
-            if (world.OPL.TryGetNameAndData(corpse.Serial, out string oplName, out _) && !string.IsNullOrEmpty(oplName))
-            {
-                name = oplName;
-            }
-            else if (!string.IsNullOrEmpty(corpse.Name))
-            {
-                name = corpse.Name;
-            }
-
-            if (name == null)
+            // Only decide once the properties have arrived: the item's own name can be wrong at
+            // first, the first property line is the real name.
+            if (!world.OPL.TryGetNameAndData(corpse.Serial, out string oplName, out _) || string.IsNullOrEmpty(oplName))
             {
                 // Ask once; the server normally sends the property revision for corpses anyway.
                 if (world.ClientFeatures.TooltipsEnabled && _requested.Add(corpse.Serial))
@@ -53,7 +46,14 @@ namespace ClassicUO.Game.Managers
                 return false;
             }
 
-            hide = name.IndexOf(PLAYER_CORPSE_TEXT, StringComparison.OrdinalIgnoreCase) < 0;
+            // Like the old ClassicAssist macro: keep it if either the properties or the item name
+            // say "remains of" (or the name line is cliloc 1046414, "the remains of ~1_NAME~").
+            bool playerLike =
+                world.OPL.GetNameCliloc(corpse.Serial) == PLAYER_CORPSE_CLILOC
+                || oplName.IndexOf(PLAYER_CORPSE_TEXT, StringComparison.OrdinalIgnoreCase) >= 0
+                || (corpse.Name != null && corpse.Name.IndexOf(PLAYER_CORPSE_TEXT, StringComparison.OrdinalIgnoreCase) >= 0);
+
+            hide = !playerLike;
 
             if (_hidden.Count > 4096)
             {
