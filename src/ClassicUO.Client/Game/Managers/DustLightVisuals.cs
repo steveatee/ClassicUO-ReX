@@ -185,6 +185,7 @@ namespace ClassicUO.Game.Managers
 
             return p != null
                 && p.TransparentHousesEnabled
+                && !InvisibleHousesState.PlayerInsideHouse
                 && (obj is Static || obj is Multi || obj is Item)
                 && IsHousePieceAbove(world, obj, p.TransparentHousesZ);
         }

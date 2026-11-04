@@ -394,7 +394,7 @@ namespace ClassicUO.Game.Scenes
 
         private bool ShouldHideInvisibleHouseObject(GameObject obj)
         {
-            if (!ProfileManager.CurrentProfile.InvisibleHousesEnabled)
+            if (!InvisibleHousesState.Active)
             {
                 return false;
             }
@@ -1140,7 +1140,7 @@ namespace ClassicUO.Game.Scenes
                             }
 
                             obj.AllowedToDraw =
-                                ProfileManager.CurrentProfile.InvisibleHousesEnabled
+                                InvisibleHousesState.Active
                                 || !HasSurfaceOverhead(mobile);
 
                             PushToRenderQueue(
@@ -1390,6 +1390,7 @@ namespace ClassicUO.Game.Scenes
             _last_scaled_offset.Y = winGameScaledOffsetY;
 
             UpdateMaxDrawZ();
+            InvisibleHousesState.Update(_world);
         }
 
         private struct TreeUnion

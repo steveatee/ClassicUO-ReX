@@ -109,7 +109,7 @@ namespace ClassicUO.Game.GameObjects
             posX += (int)Offset.X;
             posY += (int)(Offset.Y + Offset.Z);
 
-            if (currentProfile.InvisibleHousesEnabled && World.Player != null)
+            if (InvisibleHousesState.Active && World.Player != null)
             {
                 GameObject tile = World.Map.GetTile(X, Y);
 

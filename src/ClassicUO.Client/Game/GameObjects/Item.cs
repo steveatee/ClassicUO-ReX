@@ -311,6 +311,7 @@ namespace ClassicUO.Game.GameObjects
             );
 
             house.Bounds = MultiInfo.Value;
+            InvisibleHousesState.Invalidate();
 
             UIManager.GetGump<MiniMapGump>()?.RequestUpdateContents();
 

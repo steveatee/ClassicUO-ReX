@@ -3,6 +3,7 @@
 using System;
 using System.Runtime.CompilerServices;
 using ClassicUO.Configuration;
+using ClassicUO.Game.Data;
 using ClassicUO.IO;
 using ClassicUO.Assets;
 using ClassicUO.Renderer;
@@ -183,7 +184,91 @@ namespace ClassicUO.Game.GameObjects
             }
         }
 
-        protected static void DrawTrapMarker(
+        // Trap items can sit higher than the floor drawn under them, which made the marker float.
+        // Returns how many pixels to push the marker down so it lies on the top floor surface
+        // (land, or a surface/bridge tile) at or below the trap.
+        protected int GetTrapMarkerGroundOffsetY()
+        {
+            if (World?.Map == null)
+            {
+                return 0;
+            }
+
+            int best = int.MinValue;
+
+            for (GameObject o = World.Map.GetTile(X, Y, false); o != null; o = o.TNext)
+            {
+                if (ReferenceEquals(o, this) || o.IsDestroyed)
+                {
+                    continue;
+                }
+
+                int top;
+
+                switch (o)
+                {
+                    case Land land:
+                        top = land.IsStretched ? land.AverageZ : land.Z;
+                        break;
+
+                    case Static st:
+                        if (!TryGetSurfaceTop(st.Z, ref st.ItemData, out top) || StaticFilters.IsTrapMarker(st.Graphic, out _))
+                        {
+                            continue;
+                        }
+                        break;
+
+                    case Multi m:
+                        if (!TryGetSurfaceTop(m.Z, ref m.ItemData, out top))
+                        {
+                            continue;
+                        }
+                        break;
+
+                    case Item it when it.OnGround && !it.IsMulti && !it.IsCorpse:
+                        if (!TryGetSurfaceTop(it.Z, ref it.ItemData, out top) || StaticFilters.IsTrapMarker(it.DisplayedGraphic, out _))
+                        {
+                            continue;
+                        }
+                        break;
+
+                    default:
+                        continue;
+                }
+
+                if (top <= Z + 2 && top > best)
+                {
+                    best = top;
+                }
+            }
+
+            if (best == int.MinValue || best >= Z)
+            {
+                return 0;
+            }
+
+            return Math.Min(Z - best, 20) * 4;
+        }
+
+        private static bool TryGetSurfaceTop(sbyte z, ref StaticTiles data, out int top)
+        {
+            if (data.IsBridge)
+            {
+                top = z + data.Height / 2;
+                return true;
+            }
+
+            if (data.IsSurface)
+            {
+                top = z + data.Height;
+                return true;
+            }
+
+            top = 0;
+            return false;
+        }
+
+        protected void DrawTrapMarker(
             UltimaBatcher2D batcher,
             int x,
             int y,
@@ -191,6 +276,8 @@ namespace ClassicUO.Game.GameObjects
             float depth
         )
         {
+            y += GetTrapMarkerGroundOffsetY();
+
             const int size = 28;
             const float rotation = 0.7853982f;
 
@@ -208,9 +295,9 @@ namespace ClassicUO.Game.GameObjects
             );
         }
 
-        protected static bool CheckTrapMarkerMouseSelection(Point position)
+        protected bool CheckTrapMarkerMouseSelection(Point position)
         {
-            Rectangle bounds = new Rectangle(position.X + 8, position.Y + 8, 28, 28);
+            Rectangle bounds = new Rectangle(position.X + 8, position.Y + 8 + GetTrapMarkerGroundOffsetY(), 28, 28);
             return bounds.Contains(SelectedObject.TranslatedMousePositionByViewport);
         }
 

@@ -37,7 +37,7 @@ namespace ClassicUO.Game.UI.Gumps
 
         //experimental
         private Checkbox _autoOpenDoors, _autoOpenCorpse, _skipEmptyCorpse, _disableTabBtn, _disableCtrlQWBtn, _disableDefaultHotkeys, _disableArrowBtn, _disableAutoMove, _overrideContainerLocation, _smoothDoors, _showTargetRangeIndicator, _customBars, _customBarsBBG, _saveHealthbars;
-        private Checkbox _nameOverheadAlwaysOn, _nameOverheadShowHpBar, _customPlayerNameplate, _invisibleHousesEnabled;
+        private Checkbox _nameOverheadAlwaysOn, _nameOverheadShowHpBar, _customPlayerNameplate, _invisibleHousesEnabled, _invisibleHousesOffInside;
         private HSliderBar _invisibleHousesZ, _dontRemoveHouseBelowZ;
         private HSliderBar _movementTurnDelay, _movementTurnDelayFast;
         private Checkbox _blockWalkWhileCasting, _startCastTimerFromSpellWords, _avoidTraps;
@@ -1741,6 +1741,18 @@ namespace ClassicUO.Game.UI.Gumps
                     null,
                     "Hide house pieces above your position",
                     _currentProfile.InvisibleHousesEnabled,
+                    startX,
+                    startY
+                )
+            );
+
+            section2.Add
+            (
+                _invisibleHousesOffInside = AddCheckBox
+                (
+                    null,
+                    "Turn off while you're inside a house (also transparent houses)",
+                    _currentProfile.InvisibleHousesOffInsideHouse,
                     startX,
                     startY
                 )
@@ -4862,6 +4874,7 @@ namespace ClassicUO.Game.UI.Gumps
                 || _currentProfile.DontRemoveHouseBelowZ != _dontRemoveHouseBelowZ.Value;
 
             _currentProfile.InvisibleHousesEnabled = _invisibleHousesEnabled.IsChecked;
+            _currentProfile.InvisibleHousesOffInsideHouse = _invisibleHousesOffInside.IsChecked;
             _currentProfile.InvisibleHousesZ = _invisibleHousesZ.Value;
             _currentProfile.DontRemoveHouseBelowZ = _dontRemoveHouseBelowZ.Value;
 

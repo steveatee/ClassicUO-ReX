@@ -181,7 +181,7 @@ namespace ClassicUO.Game.GameObjects
                 hueVec.Z = Math.Min(hueVec.Z, DustLightVisuals.TransparentHouseAlpha);
             }
 
-            if (ProfileManager.CurrentProfile.InvisibleHousesEnabled && World.Player != null)
+            if (InvisibleHousesState.Active && World.Player != null)
             {
                 GameObject groundTile = World.Map.GetTile(X, Y);
 

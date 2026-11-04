@@ -206,6 +206,7 @@ namespace ClassicUO.Configuration
 
         public bool ShowDeathOnWorldmap { get; set; }
         public bool CacheCustomHouseDesigns { get; set; } = true;
+        public bool InvisibleHousesOffInsideHouse { get; set; } = true; // invisible houses pause while you stand inside a house
         public bool HideNonPlayerCorpses { get; set; } // hide corpses not named "the remains of ..."
         public bool BackpackTopSlots { get; set; } = true; // snap slots across the flap of the suede / polar bear / ghoul skin backpacks
         public bool BatchGroundItems { get; set; } = true; // draw plain decoration items from the chunk mesh (event areas)

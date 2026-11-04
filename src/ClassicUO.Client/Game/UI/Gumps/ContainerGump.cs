@@ -710,6 +710,10 @@ namespace ClassicUO.Game.UI.Gumps
             {
                 float slotScale = GetScale();
                 Vector3 slotHue = ShaderHueTranslator.GetHueVector(0, false, 0.45f);
+                Vector3 usedHue = ShaderHueTranslator.GetHueVector(0, false, 0.9f);
+                Vector3 usedFillHue = ShaderHueTranslator.GetHueVector(0, false, 0.2f);
+                bool[,] used = GetUsedTopSlots(slotArea, Client.Game.UO.GameCursor.ItemHold.Serial);
+                Color usedColor = new Color(255, 210, 60);
 
                 renderLists.AddGumpNoAtlas(
                     batcher =>
@@ -719,16 +723,27 @@ namespace ClassicUO.Game.UI.Gumps
                             for (int col = 0; col < TOP_SLOTS_COLUMNS; col++)
                             {
                                 Rectangle cell = GetTopSlotCell(slotArea, col, row);
+                                int cx = x + (int)(cell.X * slotScale);
+                                int cy = y + (int)(cell.Y * slotScale);
+                                int cw = (int)(cell.Width * slotScale) - 1;
+                                int ch = (int)(cell.Height * slotScale) - 1;
 
-                                batcher.DrawRectangle(
-                                    SolidColorTextureCache.GetTexture(Color.Black),
-                                    x + (int)(cell.X * slotScale),
-                                    y + (int)(cell.Y * slotScale),
-                                    (int)(cell.Width * slotScale) - 1,
-                                    (int)(cell.Height * slotScale) - 1,
-                                    slotHue,
-                                    layerDepth
-                                );
+                                if (used[col, row])
+                                {
+                                    // Taken: gold tint and a double gold outline.
+                                    batcher.Draw(
+                                        SolidColorTextureCache.GetTexture(usedColor),
+                                        new Rectangle(cx + 1, cy + 1, cw - 1, ch - 1),
+                                        usedFillHue,
+                                        layerDepth
+                                    );
+                                    batcher.DrawRectangle(SolidColorTextureCache.GetTexture(usedColor), cx, cy, cw, ch, usedHue, layerDepth);
+                                    batcher.DrawRectangle(SolidColorTextureCache.GetTexture(usedColor), cx + 1, cy + 1, cw - 2, ch - 2, usedHue, layerDepth);
+                                }
+                                else
+                                {
+                                    batcher.DrawRectangle(SolidColorTextureCache.GetTexture(Color.Black), cx, cy, cw, ch, slotHue, layerDepth);
+                                }
                             }
                         }
 
@@ -825,8 +840,8 @@ namespace ClassicUO.Game.UI.Gumps
         // drop area (44,65)-(186,159), so the flap across the top can't hold anything. This adds a
         // band of snap slots across the flap. Positions are fractions of the backpack art, so they
         // follow the art whatever its size. The server keeps whatever x/y the client sends.
-        private const float TOP_SLOTS_LEFT = 0.125f;
-        private const float TOP_SLOTS_RIGHT = 0.825f;
+        private const float TOP_SLOTS_LEFT = 0.21f;
+        private const float TOP_SLOTS_RIGHT = 0.79f;
         private const float TOP_SLOTS_TOP = 0.065f;
         private const float TOP_SLOTS_BOTTOM = 0.24f;
         private const int TOP_SLOTS_COLUMNS = 7;
@@ -927,6 +942,32 @@ namespace ClassicUO.Game.UI.Gumps
             return TryGetTopSlotsArea(out Rectangle area) && TryGetTopSlotOf(item, area, out _, out _);
         }
 
+        // Which slots hold an item (by the centre of its art), ignoring the item being dragged.
+        private bool[,] GetUsedTopSlots(Rectangle area, uint heldSerial)
+        {
+            bool[,] used = new bool[TOP_SLOTS_COLUMNS, TOP_SLOTS_ROWS];
+
+            if (World.Items.Get(LocalSerial) is Item container)
+            {
+                for (LinkedObject i = container.Items; i != null; i = i.Next)
+                {
+                    Item child = (Item)i;
+
+                    if (child.Serial == heldSerial || child.Amount <= 0)
+                    {
+                        continue;
+                    }
+
+                    if (TryGetTopSlotOf(child, area, out int c, out int r))
+                    {
+                        used[c, r] = true;
+                    }
+                }
+            }
+
+            return used;
+        }
+
         // mouseX / mouseY: where the held item's centre is, in scaled gump pixels.
         // On success itemX / itemY is the unscaled top-left to send to the server.
         private bool TrySnapToTopSlot(int mouseX, int mouseY, ushort heldGraphic, uint heldSerial, out int itemX, out int itemY)
@@ -947,25 +988,7 @@ namespace ClassicUO.Game.UI.Gumps
                 return false;
             }
 
-            bool[,] used = new bool[TOP_SLOTS_COLUMNS, TOP_SLOTS_ROWS];
-
-            if (World.Items.Get(LocalSerial) is Item container)
-            {
-                for (LinkedObject i = container.Items; i != null; i = i.Next)
-                {
-                    Item child = (Item)i;
-
-                    if (child.Serial == heldSerial || child.Amount <= 0)
-                    {
-                        continue;
-                    }
-
-                    if (TryGetTopSlotOf(child, area, out int c, out int r))
-                    {
-                        used[c, r] = true;
-                    }
-                }
-            }
+            bool[,] used = GetUsedTopSlots(area, heldSerial);
 
             // The slot under the cursor if it's free, otherwise the nearest free one.
             // If every slot is taken, the one under the cursor.

@@ -664,13 +664,19 @@ namespace ClassicUO.Game.UI.Gumps
 
         private uint GetSwingCooldown()
         {
-            ushort weaponTicks = DEFAULT_WEAPON_TICKS;
+            double weaponTicks = DEFAULT_WEAPON_TICKS;
 
             Item weapon = World.Player.FindItemByLayer(Layer.TwoHanded)
                 ?? World.Player.FindItemByLayer(Layer.OneHanded);
 
-            if (weapon != null && _weaponSpeeds.TryGetValue(weapon.Graphic, out ushort configuredSpeed))
+            if (weapon != null && TrueUoWeaponSpeeds.TryGet(weapon.Graphic, out float speedSeconds))
             {
+                // TrueUO's own speed for this weapon (e.g. double axe 3.25 s = 13 ticks).
+                weaponTicks = speedSeconds * 4;
+            }
+            else if (weapon != null && _weaponSpeeds.TryGetValue(weapon.Graphic, out ushort configuredSpeed))
+            {
+                // Not a TrueUO weapon: fall back to swingtimer.txt.
                 weaponTicks = GetWeaponTicks(weapon.Graphic, configuredSpeed);
             }
             else if (weapon == null)
