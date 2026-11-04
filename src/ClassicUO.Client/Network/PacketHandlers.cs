@@ -5138,6 +5138,7 @@ namespace ClassicUO.Network
             }
 
             world.OPL.Add(serial, revision, name, data, namecliloc, clilocs);
+            CorpseFilter.Forget(serial);
             ConsumableCooldownGump.NotifyObjectProperties(world, serial, namecliloc);
 
             UIManager.GetGump<SpellbookGump>(serial)?.RequestUpdateContents();

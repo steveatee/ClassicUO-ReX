@@ -1164,6 +1164,11 @@ namespace ClassicUO.Game.Scenes
                                 continue;
                             }
 
+                            if (item.IsCorpse && CorpseFilter.ShouldHide(_world, item))
+                            {
+                                continue;
+                            }
+
                             if (
                                 item.IsCorpse
                                 || (
