@@ -502,8 +502,23 @@ namespace ClassicUO.Game.GameObjects
             }
 
             string itemText = item.Name;
+            bool hasOpl = World.OPL.TryGetNameAndData(item.Serial, out string name, out string data);
 
-            if (World.OPL.TryGetNameAndData(item.Serial, out string name, out string data))
+            if (World.OPL.GetNameCliloc(item.Serial) != 1095377)
+            {
+                // Graphic 0x0EFA is also the ordinary spellbook. A book's name and properties can contain
+                // spell names, so opening it started the casting timer. Only the name line counts here,
+                // and anything called a book is never a spell stone.
+                string nameLine = hasOpl && !string.IsNullOrEmpty(name) ? name : item.Name;
+
+                if (string.IsNullOrWhiteSpace(nameLine) || nameLine.IndexOf("book", StringComparison.OrdinalIgnoreCase) >= 0)
+                {
+                    return false;
+                }
+
+                itemText = nameLine;
+            }
+            else if (hasOpl)
             {
                 itemText = $"{itemText} {name} {data}";
             }

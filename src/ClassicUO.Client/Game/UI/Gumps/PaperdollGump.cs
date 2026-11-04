@@ -281,6 +281,10 @@ namespace ClassicUO.Game.UI.Gumps
             _slots.Add(new EquipmentSlot(0, initialPos.X, initialPos.Y + 21 * 3, Layer.Arms, this));
             _slots.Add(new EquipmentSlot(0, initialPos.X, initialPos.Y + 21 * 4, Layer.Cloak, this));
             _slots.Add(new EquipmentSlot(0, initialPos.X, initialPos.Y + 21 * 5, Layer.Shoes, this));
+            // ReX: layers stock ClassicUO has no slot for (chest armour / torso, shirt, belt / apron / sash)
+            _slots.Add(new EquipmentSlot(0, initialPos.X, initialPos.Y + 21 * 6, Layer.Torso, this));
+            _slots.Add(new EquipmentSlot(0, initialPos.X, initialPos.Y + 21 * 7, Layer.Shirt, this));
+            _slots.Add(new EquipmentSlot(0, initialPos.X, initialPos.Y + 21 * 8, Layer.Waist, this));
 
             foreach (var slot in _slots)
                 Add(slot);
@@ -291,7 +295,9 @@ namespace ClassicUO.Game.UI.Gumps
 
             if (showPaperdollBooks)
             {
-                Add(_combatBook = new GumpPic(156, 200, 0x2B34, 0));
+                // Moved from (156, 200), where the right-hand slot column now runs: it goes after the
+                // profile and party manifest scrolls in the bottom-left row (25 / 39 / 53, 14 px apart).
+                Add(_combatBook = new GumpPic(25 + (showRacialAbilitiesBook ? 14 : 0) + 14 * 2 + 2, 200, 0x2B34, 0));
                 _combatBook.MouseDoubleClick += (sender, e) =>
                 {
                     GameActions.OpenAbilitiesBook(World);

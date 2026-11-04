@@ -6,7 +6,8 @@
 //   * every field skips a tile whose ground rises above the target height anywhere on the tile;
 //   * Poison / Fire: search from the target height down to 9 below; sloped ground is fine (field sits at the
 //     tile's average height);
-//   * Energy / Paralyze / Wall of Stone: search down to 5 below, and skip sloped ground.
+//   * Energy / Paralyze / Wall of Stone: search down to 5 below; sloped ground only if the field would sit
+//     at most 2 below the target (4 Nov: 2090,134).
 // "RunUO" and "ServUO / TrueUO" follow those servers' SpellHelper.AdjustField / Map.CanFit code.
 
 using System;
@@ -30,9 +31,15 @@ namespace ClassicUO.Game.Managers
 
         private const int SPELL_WALL_OF_STONE = 24;
         private const int SPELL_FIRE_FIELD = 28;
-        private const int SPELL_ENERGY_FIELD = 39;
-        private const int SPELL_POISON_FIELD = 47;
-        private const int SPELL_PARALYZE_FIELD = 50;
+        // Magery spell numbers (SpellsMagery.cs): Poison Field 39, Paralyze Field 47, Energy Field 50.
+        private const int SPELL_POISON_FIELD = 39;
+        private const int SPELL_PARALYZE_FIELD = 47;
+        private const int SPELL_ENERGY_FIELD = 50;
+
+        // Energy / Paralyze / Wall of Stone on sloped ground: placed when the field sits at most this far
+        // below the target (2090,134: slope 0..4 under a z4 target, field at 2 → placed; every logged
+        // skip had the field 3 or more below).
+        private const int STRICT_SLOPE_MAX_DROP = 2;
 
         private const int UNKNOWN = int.MinValue;
 
@@ -348,7 +355,7 @@ namespace ClassicUO.Game.Managers
 
                 if (fit == 1)
                 {
-                    return tolerant || !onLand || low == top;
+                    return tolerant || !onLand || low == top || pz - z <= STRICT_SLOPE_MAX_DROP;
                 }
             }
 
