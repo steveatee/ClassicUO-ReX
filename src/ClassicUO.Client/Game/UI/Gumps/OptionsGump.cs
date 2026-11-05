@@ -56,7 +56,7 @@ namespace ClassicUO.Game.UI.Gumps
         private HSliderBar _transparentHousesZ, _transparentHousesTransparency;
         private Checkbox _oldHealthLines, _multiUnderlines, _multiUnderlinesBig;
         private HSliderBar _multiUnderlinesTransparency;
-        private Checkbox _alwaysShowOwnNameplate, _showDeathOnWorldmap, _gridContainerEnabled, _renderWeather, _cacheHouseDesigns, _batchGroundItems, _backpackTopSlots, _hideNonPlayerCorpses;
+        private Checkbox _alwaysShowOwnNameplate, _showDeathOnWorldmap, _gridContainerEnabled, _renderWeather, _cacheHouseDesigns, _batchGroundItems, _backpackTopSlots, _hideNonPlayerCorpses, _paceItemProperties;
         private HSliderBar _maxScreenEffectSprites, _maxDynamicLights;
         private HSliderBar _cellSize;
         private Checkbox _containerScaleItems, _containerDoubleClickToLoot, _relativeDragAnDropItems, _useLargeContianersGumps, _highlightContainersWhenMouseIsOver;
@@ -1907,6 +1907,7 @@ namespace ClassicUO.Game.UI.Gumps
             display.Add(_alwaysShowOwnNameplate = AddCheckBox(null, "Always show your own nameplate", _currentProfile.AlwaysShowOwnNameplate, startX, startY));
             display.Add(_showDeathOnWorldmap = AddCheckBox(null, "Show death location on world map (5 min)", _currentProfile.ShowDeathOnWorldmap, startX, startY));
             display.Add(_gridContainerEnabled = AddCheckBox(null, "Use resizable grid containers", _currentProfile.GridContainerEnabled, startX, startY));
+            display.Add(_paceItemProperties = AddCheckBox(null, "Pace item property requests (UO Dreams network fix from Dust-Light)", _currentProfile.PaceItemPropertyRequests, startX, startY));
             display.Add(_hideNonPlayerCorpses = AddCheckBox(null, "Hide non-player corpses (keeps \"the remains of ...\")", _currentProfile.HideNonPlayerCorpses, startX, startY));
             display.Add(_backpackTopSlots = AddCheckBox(null, "Snap slots across the top of fur / suede / ghoul skin backpacks", _currentProfile.BackpackTopSlots, startX, startY));
             display.Add(_renderWeather = AddCheckBox(null, "Draw weather (rain/snow)", _currentProfile.RenderWeather, startX, startY));
@@ -4954,6 +4955,7 @@ namespace ClassicUO.Game.UI.Gumps
             _currentProfile.GridContainerEnabled = _gridContainerEnabled.IsChecked;
             _currentProfile.BackpackTopSlots = _backpackTopSlots.IsChecked;
             _currentProfile.HideNonPlayerCorpses = _hideNonPlayerCorpses.IsChecked;
+            _currentProfile.PaceItemPropertyRequests = _paceItemProperties.IsChecked;
             _currentProfile.RenderWeather = _renderWeather.IsChecked;
             _currentProfile.CacheCustomHouseDesigns = _cacheHouseDesigns.IsChecked;
 

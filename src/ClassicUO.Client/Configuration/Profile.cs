@@ -210,6 +210,7 @@ namespace ClassicUO.Configuration
         public int TimerDisplayStyle { get; set; } // 0 bars, 1 circles under the character, 2 both (TimerCirclesOverlay)
         public int TimerCircleSize { get; set; } = 30;
         public int TimerCircleOffsetY { get; set; } = 26;
+        public bool PaceItemPropertyRequests { get; set; } = true; // OplRequestPacing (Dust-Light UO Dreams network fix)
         public bool HideNonPlayerCorpses { get; set; } // hide corpses not named "the remains of ..."
         public bool BackpackTopSlots { get; set; } = true; // snap slots across the flap of the suede / polar bear / ghoul skin backpacks
         public bool BatchGroundItems { get; set; } = true; // draw plain decoration items from the chunk mesh (event areas)

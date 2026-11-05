@@ -19,7 +19,7 @@ namespace ClassicUO.Game.Managers
 
         // serial -> true if the corpse should be hidden. Only filled once the name is known.
         private static readonly Dictionary<uint, bool> _hidden = new Dictionary<uint, bool>();
-        private static readonly HashSet<uint> _requested = new HashSet<uint>();
+        private static readonly Dictionary<uint, uint> _requested = new Dictionary<uint, uint>(); // serial -> next retry
 
         public static bool ShouldHide(World world, Item corpse)
         {
@@ -38,8 +38,9 @@ namespace ClassicUO.Game.Managers
             if (!world.OPL.TryGetNameAndData(corpse.Serial, out string oplName, out _) || string.IsNullOrEmpty(oplName))
             {
                 // Ask once; the server normally sends the property revision for corpses anyway.
-                if (world.ClientFeatures.TooltipsEnabled && _requested.Add(corpse.Serial))
+                if (world.ClientFeatures.TooltipsEnabled && (!_requested.TryGetValue(corpse.Serial, out uint retry) || Time.Ticks >= retry))
                 {
+                    _requested[corpse.Serial] = Time.Ticks + 3000;
                     PacketHandlers.AddMegaClilocRequest(corpse.Serial);
                 }
 

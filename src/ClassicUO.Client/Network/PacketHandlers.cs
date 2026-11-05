@@ -312,7 +312,7 @@ namespace ClassicUO.Network
 
         public static void SendMegaClilocRequests(World world)
         {
-            if (world.ClientFeatures.TooltipsEnabled && Handler._clilocRequests.Count != 0)
+            if (world.ClientFeatures.TooltipsEnabled && Handler._clilocRequests.Count != 0 && OplRequestPacing.CanSendNow(Handler._clilocRequests))
             {
                 if (Client.Game.UO.Version >= Utility.ClientVersion.CV_5090)
                 {
@@ -345,15 +345,7 @@ namespace ClassicUO.Network
 
         public static void AddMegaClilocRequest(uint serial)
         {
-            foreach (uint s in Handler._clilocRequests)
-            {
-                if (s == serial)
-                {
-                    return;
-                }
-            }
-
-            Handler._clilocRequests.Add(serial);
+            OplRequestPacing.Queue(Client.Game.UO.World, serial, Handler._clilocRequests);
         }
 
         private static void TargetCursor(World world, ref StackDataReader p)
@@ -4987,10 +4979,19 @@ namespace ClassicUO.Network
                 entity = world.Items.Get(serial);
             }
 
+            // UO Dreams stone roofs: huge property lists nobody reads (OplRequestPacing)
+            if (entity is Item roofItem && OplRequestPacing.IsStoneRoof(world, roofItem))
+            {
+                OplRequestPacing.AddStub(world, serial, roofItem, revision);
+                return;
+            }
+
+            int packetBytes = (int)p.Length;
+            int maxLines = OplRequestPacing.Enabled ? OplRequestPacing.MAX_LINES : int.MaxValue;
             List<(int, string, int)> list = new List<(int, string, int)>();
             int totalLength = 0;
 
-            while (p.Position < p.Length)
+            while (p.Position < p.Length && list.Count < maxLines)
             {
                 int cliloc = (int)p.ReadUInt32BE();
 
@@ -5138,6 +5139,7 @@ namespace ClassicUO.Network
             }
 
             world.OPL.Add(serial, revision, name, data, namecliloc, clilocs);
+            OplRequestPacing.NotePacketSize(serial, packetBytes, list.Count);
             CorpseFilter.Forget(serial);
             ConsumableCooldownGump.NotifyObjectProperties(world, serial, namecliloc);
 
