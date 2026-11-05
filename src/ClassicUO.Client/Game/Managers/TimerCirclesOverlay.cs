@@ -83,15 +83,24 @@ namespace ClassicUO.Game.Managers
 
                 if (art.Texture != null && art.UV.Width > 0 && art.UV.Height > 0)
                 {
-                    float iconBox = size * 0.62f;
-                    float scale = Math.Min(iconBox / art.UV.Width, iconBox / art.UV.Height);
-                    int w = Math.Max(1, (int)(art.UV.Width * scale));
-                    int h = Math.Max(1, (int)(art.UV.Height * scale));
+                    // Item art has a lot of empty canvas; draw only the visible part.
+                    Rectangle src = art.UV;
+                    Rectangle real = Client.Game.UO.Arts.GetRealArtBounds(t.IconGraphic);
+
+                    if (real.Width > 0 && real.Height > 0)
+                    {
+                        src = new Rectangle(art.UV.X + real.X, art.UV.Y + real.Y, real.Width, real.Height);
+                    }
+
+                    float iconBox = size * 0.66f;
+                    float scale = Math.Min(Math.Min(iconBox / src.Width, iconBox / src.Height), 2f);
+                    int w = Math.Max(1, (int)(src.Width * scale));
+                    int h = Math.Max(1, (int)(src.Height * scale));
 
                     batcher.Draw(
                         art.Texture,
                         new Rectangle(x + (size - w) / 2, y + (size - h) / 2, w, h),
-                        art.UV,
+                        src,
                         ShaderHueTranslator.GetHueVector(t.IconHue, false, 1f),
                         depth
                     );

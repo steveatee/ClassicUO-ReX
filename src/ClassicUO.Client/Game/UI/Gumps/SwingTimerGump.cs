@@ -91,6 +91,13 @@ namespace ClassicUO.Game.UI.Gumps
 
             Texture2D texture = spriteInfo.Texture;
             Rectangle sourceRectangle = spriteInfo.UV;
+            Rectangle real = Client.Game.UO.Arts.GetRealArtBounds(_graphic);
+
+            if (real.Width > 0 && real.Height > 0)
+            {
+                // draw only the visible part of the art, not its empty canvas
+                sourceRectangle = new Rectangle(sourceRectangle.X + real.X, sourceRectangle.Y + real.Y, real.Width, real.Height);
+            }
             int width = sourceRectangle.Width;
             int height = sourceRectangle.Height;
 
@@ -99,7 +106,7 @@ namespace ClassicUO.Game.UI.Gumps
                 return false;
             }
 
-            float scale = Math.Min((float)ICON_SIZE / width, (float)ICON_SIZE / height);
+            float scale = Math.Min(Math.Min((float)ICON_SIZE / width, (float)ICON_SIZE / height), 2f);
             int drawWidth = Math.Max(1, (int)(width * scale));
             int drawHeight = Math.Max(1, (int)(height * scale));
             Rectangle destination = new Rectangle
@@ -138,6 +145,7 @@ namespace ClassicUO.Game.UI.Gumps
         private const int LABEL_WIDTH = 112;
         private const int FILL_WIDTH = 108;
         private const ushort BANDAGE_GRAPHIC = 0x0E21;
+        private const ushort SWORD_GRAPHIC = 0x0F5E; // broadsword
         private const ushort HEALING_POTION_GRAPHIC = 0x0F0C;
         private const ushort CONFLAGRATION_GRAPHIC = 0x0F06;
         private const ushort CONFLAGRATION_HUE = 0x0489;
@@ -190,7 +198,7 @@ namespace ClassicUO.Game.UI.Gumps
 
             if (profile?.ShowSwingTimer == true)
             {
-                _swingRow = AddTimerRow("Swing", HUE_YELLOW, Color.Red, 0x13B2);
+                _swingRow = AddTimerRow("Swing", HUE_YELLOW, Color.Red, SWORD_GRAPHIC);
                 _swingRow.SetReady();
             }
 
@@ -517,7 +525,18 @@ namespace ClassicUO.Game.UI.Gumps
                 return;
             }
 
+            int before = list.Count;
             gump._swingRow?.AddIfCounting(list);
+
+            // Swing shows the weapon in your hands (a sword when unarmed).
+            if (list.Count > before && gump.World?.Player != null)
+            {
+                Item weapon = gump.World.Player.FindItemByLayer(Layer.TwoHanded) ?? gump.World.Player.FindItemByLayer(Layer.OneHanded);
+                ActiveTimer swing = list[before];
+                swing.IconGraphic = weapon != null && weapon.ItemData.IsWeapon ? weapon.DisplayedGraphic : SWORD_GRAPHIC;
+                swing.IconHue = weapon != null && weapon.ItemData.IsWeapon ? weapon.Hue : (ushort)0;
+                list[before] = swing;
+            }
             gump._castingRow?.AddIfCounting(list);
             gump._appleRow?.AddIfCounting(list);
             gump._conflagRow?.AddIfCounting(list);
