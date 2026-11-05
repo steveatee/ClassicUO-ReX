@@ -1383,33 +1383,48 @@ namespace ClassicUO.Assets
 
             // TODO: check if UOFileIndex works
             file.Seek(index.Position, SeekOrigin.Begin);
-            var buf = new byte[index.Size];
-            file.Read(buf);
 
-            var reader = new StackDataReader(buf);
-            var palette = MemoryMarshal.Cast<byte, ushort>(reader.Buffer.Slice(reader.Position, 512));
-            reader.Skip(512);
+            // ReX: TazUO 26.10 (#1116) reads into a pooled buffer instead of allocating one per load.
+            // Pixels are copied into FrameInfo.Pixels, so the buffer can go back to the pool.
+            bool pooled = BwtDecompress.FastPath;
+            var buf = pooled ? ArrayPool<byte>.Shared.Rent((int)index.Size) : new byte[index.Size];
 
-            long dataStart = reader.Position;
-            uint frameCount = reader.ReadUInt32LE();
-            var frameOffset = new ReadOnlySpan<uint>((uint*)reader.PositionAddress, (int)frameCount);
-
-            if (_frames == null || frameCount > _frames.Length)
+            try
             {
-                _frames = new FrameInfo[frameCount];
+                file.Read(buf.AsSpan(0, (int)index.Size));
+
+                var reader = new StackDataReader(buf.AsSpan(0, (int)index.Size));
+                var palette = MemoryMarshal.Cast<byte, ushort>(reader.Buffer.Slice(reader.Position, 512));
+                reader.Skip(512);
+
+                long dataStart = reader.Position;
+                uint frameCount = reader.ReadUInt32LE();
+                var frameOffset = new ReadOnlySpan<uint>((uint*)reader.PositionAddress, (int)frameCount);
+
+                if (_frames == null || frameCount > _frames.Length)
+                {
+                    _frames = new FrameInfo[frameCount];
+                }
+
+                var frames = _frames.AsSpan(0, (int)frameCount);
+
+                for (int i = 0; i < frameCount; i++)
+                {
+                    reader.Seek(dataStart + frameOffset[i]);
+
+                    frames[i].Num = i;
+                    ReadSpriteData(ref reader, palette, ref frames[i], false);
+                }
+
+                return frames;
             }
-
-            var frames = _frames.AsSpan(0, (int)frameCount);
-
-            for (int i = 0; i < frameCount; i++)
+            finally
             {
-                reader.Seek(dataStart + frameOffset[i]);
-
-                frames[i].Num = i;
-                ReadSpriteData(ref reader, palette, ref frames[i], false);
+                if (pooled)
+                {
+                    ArrayPool<byte>.Shared.Return(buf);
+                }
             }
-
-            return frames;
         }
 
         private void ReadSpriteData(

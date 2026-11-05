@@ -11,6 +11,9 @@ namespace ClassicUO.Utility
 {
     public static class BwtDecompress
     {
+        // ReX: TazUO 26.10 fast path (#1116). Toggled from Options > Custom > TazUO ports.
+        public static bool FastPath = true;
+
         public static byte[] Decompress(byte[] buffer)
         {
             byte[] output = null;
@@ -22,8 +25,22 @@ namespace ClassicUO.Utility
 
                 var firstChar = reader.ReadByte();
 
-                Span<ushort> table = new ushort[256 * 256];
-                BuildTable(table, firstChar);
+                // ReX / TazUO 26.10: the sorted table built from firstChar is always the identity and only
+                // its first 256 entries are read (the index is a byte), so the fast path builds just those.
+                bool fast = FastPath;
+                Span<ushort> table = fast ? stackalloc ushort[256] : new ushort[256 * 256];
+
+                if (fast)
+                {
+                    for (int j = 0; j < 256; j++)
+                    {
+                        table[j] = (ushort)j;
+                    }
+                }
+                else
+                {
+                    BuildTable(table, firstChar);
+                }
 
                 var list = new byte[reader.BaseStream.Length - 4];
                 var i = 0;
@@ -33,10 +50,18 @@ namespace ClassicUO.Utility
                     var value = table[currentValue];
                     if (currentValue > 0)
                     {
-                        do
+                        if (fast && currentValue > 32)
                         {
-                            table[currentValue] = table[currentValue - 1];
-                        } while (--currentValue > 0);
+                            // overlap-safe memmove beats the scalar loop for large shifts
+                            table.Slice(0, currentValue).CopyTo(table.Slice(1));
+                        }
+                        else
+                        {
+                            do
+                            {
+                                table[currentValue] = table[currentValue - 1];
+                            } while (--currentValue > 0);
+                        }
                     }
 
                     table[0] = value;
@@ -183,6 +208,12 @@ namespace ClassicUO.Utility
 
         static void ShiftLeft(Span<char> input, int max)
         {
+            if (FastPath && max > 32)
+            {
+                input.Slice(1, max).CopyTo(input);
+                return;
+            }
+
             for (var i = 0; i < max; ++i)
                 input[i] = input[i + 1];
         }

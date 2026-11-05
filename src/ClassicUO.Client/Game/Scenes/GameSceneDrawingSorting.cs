@@ -31,6 +31,50 @@ namespace ClassicUO.Game.Scenes
             new TreeUnion(0x0D8C, 0x0D90)
         };
 
+        // TazUO 26.10 (#1120): statics are anchored at their base tile, grow upward by (art height - 44)
+        // and are centred horizontally on it, so culling on the base point alone makes tall or wide art
+        // pop in at the screen edges.
+        private const int SPRITE_BASE_OFFSET_PIXELS = 44;
+        private const int SPRITE_CENTER_OFFSET_PIXELS = 22;
+
+        private bool IsStaticSpriteOffscreen(int screenX, int screenY, ushort graphic)
+        {
+            if (screenY < _minPixel.Y)
+            {
+                return true;
+            }
+
+            bool inX = screenX >= _minPixel.X && screenX <= _maxPixel.X;
+            bool inY = screenY <= _maxPixel.Y;
+
+            if (inX && inY)
+            {
+                return false;
+            }
+
+            ref readonly SpriteInfo artInfo = ref Client.Game.UO.Arts.GetArt(graphic);
+
+            if (artInfo.Texture == null)
+            {
+                return true;
+            }
+
+            if (!inY && screenY + SPRITE_BASE_OFFSET_PIXELS - artInfo.UV.Height > _maxPixel.Y)
+            {
+                return true;
+            }
+
+            if (!inX)
+            {
+                int width = artInfo.UV.Width;
+                int left = screenX + SPRITE_CENTER_OFFSET_PIXELS - (width >> 1);
+
+                return left + width < _minPixel.X || left > _maxPixel.X;
+            }
+
+            return false;
+        }
+
         private sbyte _maxGroundZ;
         private int _maxZ;
         private Vector2 _minPixel,
@@ -606,7 +650,11 @@ namespace ClassicUO.Game.Scenes
                 return 2;
             }
 
-            if (screenY < _minPixel.Y || screenY > _maxPixel.Y)
+            if (
+                ProfileManager.CurrentProfile.TazEdgeCulling
+                    ? IsStaticSpriteOffscreen(obj.RealScreenPosition.X, screenY, obj.Graphic)
+                    : screenY < _minPixel.Y || screenY > _maxPixel.Y
+            )
             {
                 return 1;
             }
@@ -819,6 +867,7 @@ namespace ClassicUO.Game.Scenes
         {
             var profile = ProfileManager.CurrentProfile;
             var mesh = chunk.Mesh;
+            bool edgeCull = profile.TazEdgeCulling;
 
             for (; obj != null; obj = obj.TNext)
             {
@@ -831,7 +880,17 @@ namespace ClassicUO.Game.Scenes
 
                 if (screenX < _minPixel.X || screenX > _maxPixel.X)
                 {
-                    break;
+                    // TazUO 26.10 edge culling: statics / multis / batched items can be wider than their
+                    // tile, so they get a width-aware test below; everything else on the tile is skipped.
+                    if (!edgeCull)
+                    {
+                        break;
+                    }
+
+                    if (obj is not Static && obj is not Multi && !(obj is Item edgeItem && edgeItem.InChunkMesh))
+                    {
+                        continue;
+                    }
                 }
 
                 int screenY = obj.RealScreenPosition.Y;
@@ -891,7 +950,11 @@ namespace ClassicUO.Game.Scenes
                         continue;
                     }
 
-                    if (screenY < _minPixel.Y || screenY > _maxPixel.Y)
+                    if (
+                        edgeCull
+                            ? IsStaticSpriteOffscreen(screenX, screenY, obj.Graphic)
+                            : screenY < _minPixel.Y || screenY > _maxPixel.Y
+                    )
                         continue;
 
                     if (ShouldHideInvisibleHouseObject(obj))

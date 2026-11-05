@@ -254,6 +254,14 @@ namespace ClassicUO.Network
 
             Statistics.TotalBytesSent += (uint)message.Length;
             Statistics.TotalPacketsSent++;
+
+            // ReX, after TazUO 26.10 (#1115): write the packet now instead of at the start of the next
+            // frame, so a step, cast or target doesn't wait up to a whole frame (longer when the frame
+            // rate drops) before it leaves.
+            if (Configuration.ProfileManager.CurrentProfile?.TazInstantSend == true)
+            {
+                ProcessSend();
+            }
         }
 
         private static uint GetTargetSerial(ReadOnlySpan<byte> message)

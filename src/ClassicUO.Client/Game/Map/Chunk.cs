@@ -2,6 +2,7 @@
 
 using System.Collections.Generic;
 using System.Runtime.CompilerServices;
+using ClassicUO.Configuration;
 using ClassicUO.Game.GameObjects;
 using ClassicUO.Game.Managers;
 using ClassicUO.Assets;
@@ -115,10 +116,18 @@ namespace ClassicUO.Game.Map
                 im.StaticFile.Seek((long)im.StaticAddress, System.IO.SeekOrigin.Begin);
                 im.StaticFile.Read(MemoryMarshal.AsBytes(staticsSpan));
 
+                bool warmArt = ProfileManager.CurrentProfile?.TazArtWarmup == true;
+
                 foreach (ref var sb in staticsSpan)
                 {
                     if (sb.Color != 0 && sb.Color != 0xFFFF)
                     {
+                        if (warmArt)
+                        {
+                            // TazUO 26.10: queue only; decoded on the main thread in GameScene
+                            Client.Game.UO.Arts.EnqueueWarm((uint)(sb.Color + 0x4000));
+                        }
+
                         int pos = (sb.Y << 3) + sb.X;
 
                         if (pos >= 64)

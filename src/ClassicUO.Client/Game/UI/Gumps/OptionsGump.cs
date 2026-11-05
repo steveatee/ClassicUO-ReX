@@ -57,6 +57,7 @@ namespace ClassicUO.Game.UI.Gumps
         private Checkbox _oldHealthLines, _multiUnderlines, _multiUnderlinesBig;
         private HSliderBar _multiUnderlinesTransparency;
         private Checkbox _alwaysShowOwnNameplate, _showDeathOnWorldmap, _gridContainerEnabled, _renderWeather, _cacheHouseDesigns, _batchGroundItems, _backpackTopSlots, _hideNonPlayerCorpses, _paceItemProperties;
+        private Checkbox _tazCadence, _tazArtWarmup, _tazEdgeCulling, _tazInstantSend, _tazHouseLookup, _tazFastAnim;
         private HSliderBar _maxScreenEffectSprites, _maxDynamicLights;
         private HSliderBar _cellSize;
         private Checkbox _containerScaleItems, _containerDoubleClickToLoot, _relativeDragAnDropItems, _useLargeContianersGumps, _highlightContainersWhenMouseIsOver;
@@ -1917,6 +1918,17 @@ namespace ClassicUO.Game.UI.Gumps
             display.AddRight(_maxScreenEffectSprites = AddHSlider(null, 0, 500, _currentProfile.MaxScreenEffectSprites, startX, startY, 150));
             display.Add(AddLabel(null, "Max dynamic lights (0 = no limit)", startX, startY));
             display.AddRight(_maxDynamicLights = AddHSlider(null, 0, LightsLoader.MAX_LIGHTS_DATA_INDEX_COUNT, _currentProfile.MaxDynamicLights, startX, startY, 150));
+
+            // ---- TazUO 26.10 ports (each can be switched off on its own) ----
+            SettingsSection taz = AddSettingsSection(box, "TazUO 26.10 ports");
+            taz.Y = display.Bounds.Bottom + 30;
+
+            taz.Add(_tazCadence = AddCheckBox(null, "Other players / creatures move at the server's real step rate", _currentProfile.TazMobileCadence, startX, startY));
+            taz.Add(_tazArtWarmup = AddCheckBox(null, "Decode new scenery a little each frame (less stutter entering areas)", _currentProfile.TazArtWarmup, startX, startY));
+            taz.Add(_tazEdgeCulling = AddCheckBox(null, "No scenery pop-in at the screen edges (also preloads nearby map)", _currentProfile.TazEdgeCulling, startX, startY));
+            taz.Add(_tazInstantSend = AddCheckBox(null, "Send actions to the server immediately (not once per frame)", _currentProfile.TazInstantSend, startX, startY));
+            taz.Add(_tazHouseLookup = AddCheckBox(null, "Faster house customisation lookups", _currentProfile.TazHouseLookupCache, startX, startY));
+            taz.Add(_tazFastAnim = AddCheckBox(null, "Faster animation decoding (fewer spikes entering areas)", _currentProfile.TazFastAnimationDecode, startX, startY));
 
             Add(rightArea, PAGE);
         }
@@ -4956,6 +4968,17 @@ namespace ClassicUO.Game.UI.Gumps
             _currentProfile.BackpackTopSlots = _backpackTopSlots.IsChecked;
             _currentProfile.HideNonPlayerCorpses = _hideNonPlayerCorpses.IsChecked;
             _currentProfile.PaceItemPropertyRequests = _paceItemProperties.IsChecked;
+            _currentProfile.TazMobileCadence = _tazCadence.IsChecked;
+            _currentProfile.TazArtWarmup = _tazArtWarmup.IsChecked;
+            _currentProfile.TazEdgeCulling = _tazEdgeCulling.IsChecked;
+            _currentProfile.TazInstantSend = _tazInstantSend.IsChecked;
+            _currentProfile.TazHouseLookupCache = _tazHouseLookup.IsChecked;
+            _currentProfile.TazFastAnimationDecode = _tazFastAnim.IsChecked;
+
+            if (!_currentProfile.TazArtWarmup)
+            {
+                Client.Game.UO.Arts.ClearWarmQueue();
+            }
             _currentProfile.RenderWeather = _renderWeather.IsChecked;
             _currentProfile.CacheCustomHouseDesigns = _cacheHouseDesigns.IsChecked;
 

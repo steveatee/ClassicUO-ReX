@@ -558,6 +558,26 @@ namespace ClassicUO.Game.Scenes
             }
         }
 
+        // TazUO 26.10 (#1120): load the ring of chunks just outside the viewport, so statics are
+        // resident before they scroll in. The render loop still only walks the viewport chunks.
+        private const int PRELOAD_CHUNK_MARGIN = 2;
+
+        private static void PreloadChunkRing(Map.Map map, int minCX, int minCY, int maxCX, int maxCY)
+        {
+            for (int cx = Math.Max(0, minCX - PRELOAD_CHUNK_MARGIN); cx <= maxCX + PRELOAD_CHUNK_MARGIN; cx++)
+            {
+                for (int cy = Math.Max(0, minCY - PRELOAD_CHUNK_MARGIN); cy <= maxCY + PRELOAD_CHUNK_MARGIN; cy++)
+                {
+                    if (cx >= minCX && cx <= maxCX && cy >= minCY && cy <= maxCY)
+                    {
+                        continue;
+                    }
+
+                    map.GetChunk2(cx, cy, true);
+                }
+            }
+        }
+
         private void FillGameObjectList()
         {
             _renderLists.Clear();
@@ -568,6 +588,15 @@ namespace ClassicUO.Game.Scenes
             if (!_world.InGame)
             {
                 return;
+            }
+
+            // TazUO 26.10 ports: static switches for the asset projects, and the art warm-up slice.
+            Profile tazProfile = ProfileManager.CurrentProfile;
+            BwtDecompress.FastPath = tazProfile?.TazFastAnimationDecode ?? true;
+
+            if (tazProfile?.TazArtWarmup == true)
+            {
+                Client.Game.UO.Arts.WarmQueued();
             }
 
             _alphaChanged = _alphaTimer < Time.Ticks;
@@ -645,6 +674,11 @@ namespace ClassicUO.Game.Scenes
             bool use_handles = _useObjectHandles;
             (var minChunkX, var minChunkY) = (minX >> 3, minY >> 3);
             (var maxChunkX, var maxChunkY) = (maxX >> 3, maxY >> 3);
+
+            if (ProfileManager.CurrentProfile?.TazEdgeCulling == true)
+            {
+                PreloadChunkRing(map, minChunkX, minChunkY, maxChunkX, maxChunkY);
+            }
 
             for (var chunkX = minChunkX; chunkX <= maxChunkX; chunkX++)
             {

@@ -266,7 +266,16 @@ namespace ClassicUO.Game.GameObjects
         {
             Steps.Clear();
             Offset = Vector3.Zero;
+            _lastStepArrival = 0;
+            _turnSinceLastStep = false;
         }
+
+        // TazUO 26.10 (#1136): measured interval (ms) between this mobile's last two position-changing
+        // step packets; 0 = unknown. Used to animate other mobiles at the server's real step cadence.
+        public int StepInterval { get; private set; }
+        private uint _lastStepArrival;
+        private bool _turnSinceLastStep;
+        private const int STEP_DELAY_MIN = 50; // below this a step reads as a teleport
 
         public bool EnqueueStep(int x, int y, sbyte z, Direction direction, bool run)
         {
@@ -293,7 +302,33 @@ namespace ClassicUO.Game.GameObjects
             }
 
             Direction moveDir = DirectionHelper.CalculateDirection(endX, endY, x, y);
-            Step step = new Step();
+            Step step = new Step { Arrival = Time.Ticks };
+
+            if (Serial != World.Player)
+            {
+                if (moveDir == Direction.NONE)
+                {
+                    // A facing-turn neither defines the cadence nor restarts the clock.
+                    _turnSinceLastStep = true;
+                }
+                else
+                {
+                    if (_lastStepArrival != 0)
+                    {
+                        int elapsed = (int)(Time.Ticks - _lastStepArrival);
+
+                        // A pair spanning a turn includes the turn latency: keep the last estimate
+                        // unless the mobile actually paused.
+                        if (!_turnSinceLastStep || elapsed > MovementSpeed.STEP_DELAY_WALK)
+                        {
+                            StepInterval = elapsed;
+                        }
+                    }
+
+                    _lastStepArrival = Time.Ticks;
+                    _turnSinceLastStep = false;
+                }
+            }
 
             if (moveDir != Direction.NONE)
             {
@@ -693,6 +728,33 @@ namespace ClassicUO.Game.GameObjects
             LastAnimationChangeTime = Time.Ticks + currentDelay;
         }
 
+        // Wait (ms) of the first real move queued behind the in-flight step, or -1 when there is no
+        // movement backlog. Facing-turns share a tile and do not count. (TazUO 26.10)
+        private int QueuedMoveWait()
+        {
+            int moves = 0;
+            int prevX = X;
+            int prevY = Y;
+
+            for (int i = 0; i < Steps.Count; i++)
+            {
+                Step s = Steps[i];
+
+                if (s.X != prevX || s.Y != prevY)
+                {
+                    if (++moves > 1)
+                    {
+                        return (int)(Time.Ticks - s.Arrival);
+                    }
+
+                    prevX = s.X;
+                    prevY = s.Y;
+                }
+            }
+
+            return -1;
+        }
+
         public void ProcessSteps(out byte dir, bool evalutate = false)
         {
             dir = (byte)Direction;
@@ -722,6 +784,7 @@ namespace ClassicUO.Game.GameObjects
                         || SpeedMode == CharacterSpeedType.FastUnmountAndCantRun
                         || IsFlying;
                     bool run = step.Run;
+                    bool realMounted = mounted || Serial != World.Player && MovementSpeed.HasMountSpeedBody(Graphic);
 
                     // Client auto movements sync.
                     // When server sends more than 1 packet in an amount of time less than 100ms if mounted (or 200ms if walking mount)
@@ -752,6 +815,22 @@ namespace ClassicUO.Game.GameObjects
                     int maxDelay =
                         MovementSpeed.TimeToCompleteMovement(run, mounted)
                         - (int)Client.Game.FrameDelay[1];
+
+                    // TazUO 26.10 (#1136): drain other mobiles' steps at the server's measured cadence while
+                    // it's renderable (up to a walk for their real mounted state), shortened by how long the
+                    // next queued move has already waited so it starts on time. Beyond that, keep the
+                    // nominal step-then-stand look.
+                    if (
+                        Serial != World.Player
+                        && StepInterval > 0
+                        && ProfileManager.CurrentProfile?.TazMobileCadence == true
+                        && StepInterval <= MovementSpeed.TimeToCompleteMovement(false, realMounted)
+                    )
+                    {
+                        int backlogWait = Steps.Count > 1 ? QueuedMoveWait() : -1;
+                        int stepTime = Math.Max(StepInterval - Math.Max(backlogWait, 0), STEP_DELAY_MIN);
+                        maxDelay = Math.Max(stepTime - (int)Client.Game.FrameDelay[1], 1);
+                    }
 
                     bool removeStep = delay >= maxDelay;
                     bool directionChange = false;
@@ -1097,6 +1176,7 @@ namespace ClassicUO.Game.GameObjects
             public sbyte Z;
             public byte Direction;
             public bool Run;
+            public uint Arrival;
         }
     }
 }

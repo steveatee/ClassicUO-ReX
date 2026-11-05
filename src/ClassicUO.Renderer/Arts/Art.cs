@@ -6,6 +6,8 @@ using Microsoft.Xna.Framework.Graphics;
 using SDL3;
 using System;
 using System.Buffers;
+using System.Collections.Concurrent;
+using System.Diagnostics;
 
 namespace ClassicUO.Renderer.Arts
 {
@@ -17,6 +19,55 @@ namespace ClassicUO.Renderer.Arts
         private readonly Rectangle[] _realArtBounds;
         private readonly ArtLoader _artLoader;
         private readonly HuesLoader _huesLoader;
+
+        // ReX: TazUO 26.10 (#1128) warm-ahead decoding. Chunk loads queue the statics they contain;
+        // a small slice of main-thread time each frame decodes them before they're first drawn.
+        private const int WARM_QUEUE_LIMIT = 4096;
+        private const double WARM_BUDGET_MS = 2.0;
+        private readonly ConcurrentQueue<uint> _warmQueue = new ConcurrentQueue<uint>();
+        private readonly ConcurrentDictionary<uint, byte> _warmPending = new ConcurrentDictionary<uint, byte>();
+        private readonly Stopwatch _warmTimer = new Stopwatch();
+
+        /// <summary>Queue an art index (graphic + 0x4000 for statics) for warm-ahead decoding.</summary>
+        public void EnqueueWarm(uint idx)
+        {
+            if (idx >= _spriteInfos.Length || _spriteInfos[idx].Texture != null || _warmPending.Count >= WARM_QUEUE_LIMIT)
+            {
+                return;
+            }
+
+            if (_warmPending.TryAdd(idx, 0))
+            {
+                _warmQueue.Enqueue(idx);
+            }
+        }
+
+        /// <summary>Decode queued art on the main thread until the time budget is spent.</summary>
+        public void WarmQueued(double budgetMilliseconds = WARM_BUDGET_MS)
+        {
+            if (_warmQueue.IsEmpty)
+            {
+                return;
+            }
+
+            _warmTimer.Restart();
+
+            while (_warmTimer.Elapsed.TotalMilliseconds < budgetMilliseconds && _warmQueue.TryDequeue(out uint idx))
+            {
+                _warmPending.TryRemove(idx, out _);
+
+                if (idx < _spriteInfos.Length && _spriteInfos[idx].Texture == null)
+                {
+                    _ = Get(idx);
+                }
+            }
+        }
+
+        public void ClearWarmQueue()
+        {
+            while (_warmQueue.TryDequeue(out _)) { }
+            _warmPending.Clear();
+        }
 
         public Art(ArtLoader artLoader, HuesLoader huesLoader, GraphicsDevice device)
         {

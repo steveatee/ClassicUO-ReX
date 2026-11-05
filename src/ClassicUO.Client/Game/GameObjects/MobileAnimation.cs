@@ -3,6 +3,7 @@
 using System;
 using System.Collections.Generic;
 using System.Runtime.CompilerServices;
+using ClassicUO.Configuration;
 using ClassicUO.Game.Data;
 using ClassicUO.Assets;
 using ClassicUO.Utility;
@@ -1079,9 +1080,10 @@ namespace ClassicUO.Game.GameObjects
                             }
                             else
                             {
+                                // TazUO 26.10: a body with no run group walks instead of sliding on its stand frames.
                                 result = animations.AnimationExists(graphic, 1)
                                     ? (byte)1
-                                    : (byte)2;
+                                    : (ProfileManager.CurrentProfile?.TazMobileCadence == true ? (byte)0 : (byte)2);
                             }
                         }
                         else if (

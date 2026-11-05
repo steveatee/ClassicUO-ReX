@@ -210,6 +210,13 @@ namespace ClassicUO.Configuration
         public int TimerDisplayStyle { get; set; } // 0 bars, 1 circles under the character, 2 both (TimerCirclesOverlay)
         public int TimerCircleSize { get; set; } = 30;
         public int TimerCircleOffsetY { get; set; } = 26;
+        // TazUO 26.10 ports, each switchable (Options > Custom > TazUO 26.10 ports)
+        public bool TazMobileCadence { get; set; } = true;       // #1136 other mobiles move at the server's step cadence
+        public bool TazArtWarmup { get; set; } = true;           // #1128 decode new statics a little each frame
+        public bool TazEdgeCulling { get; set; } = true;         // #1120 no pop-in at screen edges + chunk preload ring
+        public bool TazInstantSend { get; set; } = true;         // #1115 send packets immediately
+        public bool TazHouseLookupCache { get; set; } = true;    // #1117 faster house customisation lookups
+        public bool TazFastAnimationDecode { get; set; } = true; // #1116 faster UOP animation decoding
         public bool PaceItemPropertyRequests { get; set; } = true; // OplRequestPacing (Dust-Light UO Dreams network fix)
         public bool HideNonPlayerCorpses { get; set; } // hide corpses not named "the remains of ..."
         public bool BackpackTopSlots { get; set; } = true; // snap slots across the flap of the suede / polar bear / ghoul skin backpacks
