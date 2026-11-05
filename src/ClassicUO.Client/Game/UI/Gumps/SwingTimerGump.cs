@@ -484,7 +484,7 @@ namespace ClassicUO.Game.UI.Gumps
             ReflowRow(_grapesCooldownRow, ref y);
 
             bool anyVisible = y > 0;
-            IsVisible = anyVisible;
+            IsVisible = anyVisible && TimerCirclesOverlay.ShowBars(ProfileManager.CurrentProfile);
             Height = anyVisible ? y : ROW_HEIGHT;
             _background.Height = Height;
         }
@@ -500,15 +500,64 @@ namespace ClassicUO.Game.UI.Gumps
             y += ROW_HEIGHT;
         }
 
+        // A running timer, for the circles under the character (TimerCirclesOverlay).
+        internal struct ActiveTimer
+        {
+            public ushort IconGraphic, IconHue;
+            public Color Color;
+            public uint Remaining, Cooldown;
+        }
+
+        internal static void CollectActiveTimers(List<ActiveTimer> list)
+        {
+            SwingTimerGump gump = UIManager.GetGump<SwingTimerGump>();
+
+            if (gump == null || gump.IsDisposed)
+            {
+                return;
+            }
+
+            gump._swingRow?.AddIfCounting(list);
+            gump._castingRow?.AddIfCounting(list);
+            gump._appleRow?.AddIfCounting(list);
+            gump._conflagRow?.AddIfCounting(list);
+            gump._healRow?.AddIfCounting(list);
+            gump._bandageRow?.AddIfCounting(list);
+            gump._grapesRow?.AddIfCounting(list);
+            gump._grapesCooldownRow?.AddIfCounting(list);
+        }
+
         private sealed class TimerRow
         {
             private readonly string _title;
+            private readonly ushort _iconGraphic, _iconHue;
+            private readonly Color _fillColor;
+            private bool _counting;
+            private uint _shownRemaining, _shownCooldown;
+
+            public void AddIfCounting(List<ActiveTimer> list)
+            {
+                if (_counting && _shownCooldown != 0)
+                {
+                    list.Add(new ActiveTimer
+                    {
+                        IconGraphic = _iconGraphic,
+                        IconHue = _iconHue,
+                        Color = _fillColor,
+                        Remaining = _shownRemaining,
+                        Cooldown = _shownCooldown
+                    });
+                }
+            }
             private uint _cooldownStart;
             private uint _cooldownLength;
 
             public TimerRow(Gump parent, string title, ushort titleHue, Color fillColor, ushort iconGraphic, ushort iconHue)
             {
                 _title = title;
+                _iconGraphic = iconGraphic;
+                _iconHue = iconHue;
+                _fillColor = fillColor;
 
                 if (iconGraphic != 0)
                 {
@@ -604,6 +653,7 @@ namespace ClassicUO.Game.UI.Gumps
 
             public void SetReady()
             {
+                _counting = false;
                 Show();
                 TimerLabel.Hue = HUE_GREEN;
                 TimerLabel.Text = "0";
@@ -612,6 +662,9 @@ namespace ClassicUO.Game.UI.Gumps
 
             public void SetRemaining(uint remaining, uint cooldown, bool showTenths)
             {
+                _counting = true;
+                _shownRemaining = remaining;
+                _shownCooldown = cooldown;
                 Show();
                 TimerLabel.Hue = HUE_RED;
                 TimerLabel.Text = showTenths
@@ -634,6 +687,8 @@ namespace ClassicUO.Game.UI.Gumps
 
             public void Hide()
             {
+                _counting = false;
+
                 if (Icon != null)
                 {
                     Icon.IsVisible = false;

@@ -1172,6 +1172,7 @@ namespace ClassicUO.Game.Scenes
         public override void DrawUI(UltimaBatcher2D batcher)
         {
             _healthLinesManager.Draw(batcher, 0f);
+            TimerCirclesOverlay.Draw(_world, batcher);
 
             if (!UIManager.IsMouseOverWorld)
             {
