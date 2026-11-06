@@ -2,12 +2,17 @@
 // Predicts which tiles of a field spell the server will actually create, so the field preview can show
 // placed tiles (and skipped ones) before you cast.
 //
-// "UO Dreams" rules were measured in game (29 Oct 2026, see the project doc "Field placement test spots"):
-//   * every field skips a tile whose ground rises above the target height anywhere on the tile;
-//   * Poison / Fire: search from the target height down to 9 below; sloped ground is fine (field sits at the
-//     tile's average height);
-//   * Energy / Paralyze / Wall of Stone: search down to 5 below; sloped ground only if the field would sit
-//     at most 2 below the target (4 Nov: 2090,134).
+// "UO Dreams" rules, fitted to every logged cast (29 Oct field_dump.csv + 6 Nov field_casts.csv, 0 misses
+// outside houses, checked against the real map files):
+//   * each tile's height is found like TrueUO's SpellHelper.AdjustField: try the target height, then 1 down,
+//     1 up, 2 down, 2 up ... (Map.CanFit with a surface), so a field can sit ABOVE the target too;
+//   * then the caster needs line of sight (RunUO Map.LineOfSight from eye = feet + 14) to the tile, which is
+//     what skips tiles behind bumps, on the far side of a slope or behind house walls;
+//       - Energy / Paralyze / Wall of Stone check LOS to where the field ends up; Poison / Fire to the tile
+//         at the target height;
+//   * Energy / Paralyze / Wall of Stone: at most 5 below the target, and on sloped ground at most 2 below;
+//   * Poison / Fire: at most 9 below.
+//   The centre tile is always placed (the spell's own LOS check already passed).
 // "RunUO" and "ServUO / TrueUO" follow those servers' SpellHelper.AdjustField / Map.CanFit code.
 
 using System;
@@ -330,7 +335,7 @@ namespace ClassicUO.Game.Managers
                         break;
 
                     default:
-                        placed = i == 0 || PlacedUODreams(world, x, y, pz, tolerant);
+                        placed = i == 0 || PlacedUODreams(world, x, y, pz, tolerant, px, py, GetCasterZ(world), isWall, spell == SPELL_PARALYZE_FIELD);
                         break;
                 }
 
@@ -338,37 +343,199 @@ namespace ClassicUO.Game.Managers
             }
         }
 
-        private static bool PlacedUODreams(World world, int x, int y, int pz, bool tolerant)
+        private static bool PlacedUODreams(World world, int x, int y, int pz, bool tolerant, int px, int py, int casterZ, bool isWall, bool isParalyze)
         {
-            if (!TryGetLandCorners(world, x, y, out int low, out int avg, out int top))
+            if (!TryGetLandCorners(world, x, y, out int low, out _, out int top))
             {
                 return true; // map not loaded: don't claim a skip we can't check
             }
 
-            if (top > pz)
+            int height = isWall ? 22 : isParalyze ? 16 : 12;
+            int z = UNKNOWN;
+            bool onLand = false;
+
+            // TrueUO SpellHelper.AdjustField: 0, -1, +1, -2, +2 ... up to 24.
+            for (int o = 0; o < 25 && z == UNKNOWN; o++)
             {
-                return false; // ground rises above the target somewhere on this tile
+                for (int sign = -1; sign <= 1; sign += 2)
+                {
+                    int tryZ = pz + sign * o;
+                    int fit = CanFit(world, x, y, tryZ, height, out bool tryOnLand);
+
+                    if (fit == UNKNOWN)
+                    {
+                        return true;
+                    }
+
+                    if (fit == 1)
+                    {
+                        z = tryZ;
+                        onLand = tryOnLand;
+                        break;
+                    }
+
+                    if (o == 0)
+                    {
+                        break; // +0 and -0 are the same
+                    }
+                }
             }
 
-            int maxDown = tolerant ? 9 : 5;
-
-            for (int o = 0; o <= maxDown; o++)
+            if (z == UNKNOWN)
             {
-                int z = pz - o;
-                int fit = CanFit(world, x, y, z, 12, out bool onLand);
+                return false;
+            }
 
-                if (fit == UNKNOWN)
-                {
-                    return true;
-                }
+            if (z < pz)
+            {
+                int drop = pz - z;
 
-                if (fit == 1)
+                if (tolerant ? drop > 9 : drop > 5 || onLand && low != top && drop > STRICT_SLOPE_MAX_DROP)
                 {
-                    return tolerant || !onLand || low == top || pz - z <= STRICT_SLOPE_MAX_DROP;
+                    return false;
                 }
             }
 
-            return false;
+            return HasLineOfSight(world, px, py, casterZ + 14, x, y, tolerant ? pz : z);
+        }
+
+        private static int GetCasterZ(World world)
+        {
+            if (world.Player.Steps.Count != 0)
+            {
+                return world.Player.Steps.Back().Z;
+            }
+
+            return world.Player.Z;
+        }
+
+        // ------- line of sight: a copy of RunUO / TrueUO Map.LineOfSight (land + statics / multis / items) -------
+
+        private static readonly System.Collections.Generic.List<(int X, int Y, int Z)> _losPath = new System.Collections.Generic.List<(int, int, int)>(64);
+
+        private static bool NumberBetween(double num, int bound1, int bound2, double allowance)
+        {
+            if (bound1 > bound2)
+            {
+                (bound1, bound2) = (bound2, bound1);
+            }
+
+            return num < bound2 + allowance && num > bound1 - allowance;
+        }
+
+        internal static bool HasLineOfSight(World world, int ox, int oy, int oz, int dx, int dy, int dz)
+        {
+            int endX = dx, endY = dy, endZ = dz;
+
+            if (ox > dx || ox == dx && oy > dy || ox == dx && oy == dy && oz > dz)
+            {
+                (ox, dx) = (dx, ox);
+                (oy, dy) = (dy, oy);
+                (oz, dz) = (dz, oz);
+            }
+
+            if (ox == dx && oy == dy && oz == dz)
+            {
+                return true;
+            }
+
+            int xd = dx - ox, yd = dy - oy, zd = dz - oz;
+            double zslp = Math.Sqrt(xd * xd + yd * yd);
+            double sq3d = zd != 0 ? Math.Sqrt(zslp * zslp + zd * zd) : zslp;
+            double rise = yd / sq3d, run = xd / sq3d;
+            zslp = zd / sq3d;
+
+            double fx = ox, fy = oy, fz = oz;
+            _losPath.Clear();
+
+            while (NumberBetween(fx, dx, ox, 0.5) && NumberBetween(fy, dy, oy, 0.5) && NumberBetween(fz, dz, oz, 0.5))
+            {
+                var p = ((int)Math.Round(fx), (int)Math.Round(fy), (int)Math.Round(fz));
+
+                if (_losPath.Count == 0 || _losPath[_losPath.Count - 1] != p)
+                {
+                    _losPath.Add(p);
+                }
+
+                fx += run;
+                fy += rise;
+                fz += zslp;
+
+                if (_losPath.Count > 256)
+                {
+                    break;
+                }
+            }
+
+            if (_losPath.Count == 0)
+            {
+                return true;
+            }
+
+            if (_losPath[_losPath.Count - 1] != (dx, dy, dz))
+            {
+                _losPath.Add((dx, dy, dz));
+            }
+
+            int endTop = endZ + 1;
+
+            for (int i = 0; i < _losPath.Count; i++)
+            {
+                var (x, y, z) = _losPath[i];
+                int pointTop = z + 1;
+                bool atEnd = x == endX && y == endY;
+
+                if (!TryGetLandCorners(world, x, y, out int landLow, out _, out int landTop))
+                {
+                    return true; // unknown map: don't claim a block
+                }
+
+                Land land = GetLand(world, x, y);
+
+                if (land != null && !IsIgnoredLand(land.Graphic) && landLow <= pointTop && landTop >= z && (!atEnd || landLow > endTop || landTop < endZ))
+                {
+                    return false;
+                }
+
+                for (GameObject o = world.Map.GetTile(x, y, false); o != null; o = o.TNext)
+                {
+                    ushort graphic;
+
+                    switch (o)
+                    {
+                        case Static st: graphic = st.OriginalGraphic; break;
+                        case Multi m: graphic = m.Graphic; break;
+                        case Item it when !it.IsMulti && !StaticFilters.IsField(it.Graphic) && !StaticFilters.IsWallOfStone(it.Graphic): graphic = it.Graphic; break;
+                        default: continue;
+                    }
+
+                    if (graphic >= Client.Game.UO.FileManager.TileData.StaticData.Length)
+                    {
+                        continue;
+                    }
+
+                    ref StaticTiles data = ref Client.Game.UO.FileManager.TileData.StaticData[graphic];
+
+                    if (!data.IsWindow && !data.IsNoShoot)
+                    {
+                        continue;
+                    }
+
+                    int height = data.IsBridge ? data.Height / 2 : data.Height;
+
+                    if (o.Z <= pointTop && o.Z + height >= z)
+                    {
+                        if (atEnd && o.Z <= endTop && o.Z + height >= endZ)
+                        {
+                            continue;
+                        }
+
+                        return false;
+                    }
+                }
+            }
+
+            return true;
         }
 
         private static bool PlacedRunUO(World world, int x, int y, int pz, bool isWall, bool tolerant)
