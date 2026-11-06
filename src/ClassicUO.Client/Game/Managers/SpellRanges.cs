@@ -204,6 +204,10 @@ Fire Field = 9 circle
 Poison Field = 9 circle
 Paralyze Field = 9 circle
 Energy Field = 9 circle
+
+# UO Dreams, measured in game
+Energy Vortex = 15
+Word of Death = 12
 ";
 
         // ------- Out-of-range block -------

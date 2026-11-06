@@ -43,7 +43,7 @@ namespace ClassicUO.Game.UI.Gumps
         private Checkbox _blockWalkWhileCasting, _startCastTimerFromSpellWords, _avoidTraps;
         private Combobox _timerDisplayStyle;
         private HSliderBar _statusIconSize, _statusIconOffsetY;
-        private Checkbox _showMortalIcon, _showCurseIcon;
+        private Checkbox _showMortalIcon, _showCurseIcon, _showDiscordIcon;
         private Checkbox _friendEnemyHues, _friendHueParty, _friendHueAllies, _enemyHueHumanoids, _curseAura, _curseAuraLastTarget;
         private ClickableColorBox _friendHueBox, _enemyHueBox, _curseAuraHueBox;
         private HSliderBar _curseAuraOpacity, _curseAuraSize;
@@ -1698,6 +1698,7 @@ namespace ClassicUO.Game.UI.Gumps
             combat.PopIndent();
             combat.Add(_showMortalIcon = AddCheckBox(null, "\"MS\" icon under mortally wounded players and creatures (yourself too)", _currentProfile.ShowMortalIcon, startX, startY));
             combat.Add(_showCurseIcon = AddCheckBox(null, "\"CURSE\" icon under cursed players (Curse, Corpse Skin, Hit Curse; yours from buffs)", _currentProfile.ShowCurseIcon, startX, startY));
+            combat.Add(_showDiscordIcon = AddCheckBox(null, "Lute icon under discorded creatures (while the server's discord sparkles keep coming)", _currentProfile.ShowDiscordIcon, startX, startY));
             combat.PushIndent();
             combat.Add(AddLabel(null, "Circle size (status icons and your timer circles)", startX, startY));
             combat.AddRight(_statusIconSize = AddHSlider(null, 16, 48, _currentProfile.StatusIconSize, startX, startY, 150));
@@ -5012,6 +5013,7 @@ namespace ClassicUO.Game.UI.Gumps
             _currentProfile.TimerDisplayStyle = _timerDisplayStyle.SelectedIndex;
             _currentProfile.ShowMortalIcon = _showMortalIcon.IsChecked;
             _currentProfile.ShowCurseIcon = _showCurseIcon.IsChecked;
+            _currentProfile.ShowDiscordIcon = _showDiscordIcon.IsChecked;
             _currentProfile.StatusIconSize = _statusIconSize.Value;
             _currentProfile.StatusIconOffsetY = _statusIconOffsetY.Value;
 

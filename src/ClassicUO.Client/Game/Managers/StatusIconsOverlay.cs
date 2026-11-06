@@ -27,13 +27,19 @@ namespace ClassicUO.Game.Managers
         private const uint RANGED_MORTAL_MS = 4_000;
         private const uint MY_MORTAL_MATCH_MS = 1_500;
         private const int CLILOC_DELIVER_MORTAL = 1060086; // You deliver a mortal wound!
-        private const ushort MORTAL_ICON = 0x0F52; // dagger
+        private const ushort MORTAL_ICON = 0x0F52; // dagger (fallback if the ability gump is missing)
+        private const uint MORTAL_ABILITY_GUMP = 0x5208; // the Mortal Strike ability icon (0x5200 + 9 - 1)
+        private const ushort DISCORD_ICON = 0x0EB3; // lute
+        private const ushort DISCORD_EFFECT = 0x376A; // TrueUO re-sends this sparkle on a discorded creature every 1.25 s
+        private const uint DISCORD_PULSE_MS = 1_250;
+        private const uint DISCORD_HOLD_MS = 2_800; // icon stays this long after the last sparkle
         private const ushort CURSE_ICON = 0x1AE2; // skull
 
         private enum Kind
         {
             Mortal,
-            Curse
+            Curse,
+            Discord
         }
 
         private static readonly Dictionary<uint, MortalSeen> _mortalSeenAt = new Dictionary<uint, MortalSeen>();
@@ -90,6 +96,62 @@ namespace ClassicUO.Game.Managers
             }
         }
 
+        /// <summary>
+        /// Graphic effects: discordance makes the server repeat a sparkle (0x376A) on the creature every 1.25 s
+        /// for as long as it lasts (TrueUO Discordance.ProcessDiscordance). Two sparkles in a row on the same
+        /// creature = discorded; the icon goes a few seconds after they stop.
+        /// </summary>
+        public static void NotifyGraphicEffect(World world, uint source, uint target, ushort graphic)
+        {
+            if (graphic != DISCORD_EFFECT || world?.Player == null || ProfileManager.CurrentProfile?.ShowDiscordIcon != true)
+            {
+                return;
+            }
+
+            uint serial = SerialHelper.IsMobile(source) ? source : SerialHelper.IsMobile(target) ? target : 0;
+
+            if (serial == 0 || serial == world.Player.Serial)
+            {
+                return;
+            }
+
+            uint now = Time.Ticks;
+
+            if (_discord.TryGetValue(serial, out DiscordSeen seen) && now - seen.Last < DISCORD_HOLD_MS)
+            {
+                // ignore duplicates within the same pulse
+                if (now - seen.Last >= DISCORD_PULSE_MS / 2)
+                {
+                    seen.Pulses++;
+                }
+
+                seen.Last = now;
+            }
+            else
+            {
+                seen = new DiscordSeen { First = now, Last = now, Pulses = 1 };
+            }
+
+            _discord[serial] = seen;
+        }
+
+        private static bool IsDiscorded(Mobile mobile, uint now)
+        {
+            if (!_discord.TryGetValue(mobile.Serial, out DiscordSeen seen))
+            {
+                return false;
+            }
+
+            if (now - seen.Last >= DISCORD_HOLD_MS)
+            {
+                _discord.Remove(mobile.Serial);
+
+                return false;
+            }
+
+            return seen.Pulses >= 2;
+        }
+
         private static bool IsWieldingRanged(PlayerMobile player)
         {
             Item weapon = player.FindItemByLayer(Layer.TwoHanded) ?? player.FindItemByLayer(Layer.OneHanded);
@@ -100,7 +162,15 @@ namespace ClassicUO.Game.Managers
         private static readonly List<uint> _stale = new List<uint>();
         private static readonly Vector3 _plainHue = new Vector3(0f, ShaderHueTranslator.SHADER_NONE, 1f);
 
-        private static Texture2D _mortalDisc, _curseDisc;
+        private static Texture2D _mortalDisc, _curseDisc, _discordDisc, _mortalRound;
+        private static bool _mortalRoundFailed;
+        private static readonly Dictionary<uint, DiscordSeen> _discord = new Dictionary<uint, DiscordSeen>();
+
+        private struct DiscordSeen
+        {
+            public uint First, Last;
+            public int Pulses;
+        }
         private static RenderedText _mortalLabel;
 
         public static void Draw(World world, UltimaBatcher2D batcher)
@@ -112,7 +182,7 @@ namespace ClassicUO.Game.Managers
                 return;
             }
 
-            bool icons = profile.ShowMortalIcon || profile.ShowCurseIcon;
+            bool icons = profile.ShowMortalIcon || profile.ShowCurseIcon || profile.ShowDiscordIcon;
 
             if (!icons)
             {
@@ -145,8 +215,9 @@ namespace ClassicUO.Game.Managers
                     curse = self ? GetSelfCurse(world.Player, now) : GetCurse(mobile);
                 }
 
+                bool discord = !self && profile.ShowDiscordIcon && IsDiscorded(mobile, now);
                 int timers = self ? TimerCirclesOverlay.CollectCircles(world) : 0;
-                int count = timers + (mortal >= 0f ? 1 : 0) + (curse >= 0f ? 1 : 0);
+                int count = timers + (mortal >= 0f ? 1 : 0) + (curse >= 0f ? 1 : 0) + (discord ? 1 : 0);
 
                 if (count == 0)
                 {
@@ -178,6 +249,12 @@ namespace ClassicUO.Game.Managers
                 if (curse >= 0f)
                 {
                     DrawIcon(batcher, Kind.Curse, curse, x, y, size);
+                    x += size + GAP;
+                }
+
+                if (discord)
+                {
+                    DrawIcon(batcher, Kind.Discord, 1f, x, y, size);
                 }
             }
 
@@ -295,31 +372,45 @@ namespace ClassicUO.Game.Managers
         {
             const float depth = 0f;
 
-            bool mortal = kind == Kind.Mortal;
-            Texture2D disc = mortal ? GetMortalDisc() : GetCurseDisc();
-            Color ring = mortal ? new Color(255, 214, 64) : new Color(205, 140, 255);
-            Color rim = mortal ? new Color(255, 120, 110) : new Color(190, 150, 235);
+            Color ring, rim;
+            ushort art;
+            Texture2D disc;
 
-            batcher.Draw(disc, new Rectangle(x, y, size, size), _plainHue, depth);
-
-            ushort graphic = mortal ? MORTAL_ICON : CURSE_ICON;
-            ref readonly var art = ref Client.Game.UO.Arts.GetArt(graphic);
-
-            if (art.Texture != null && art.UV.Width > 0 && art.UV.Height > 0)
+            switch (kind)
             {
-                Rectangle src = art.UV;
-                Rectangle real = Client.Game.UO.Arts.GetRealArtBounds(graphic);
+                case Kind.Mortal:
+                    ring = new Color(255, 214, 64);
+                    rim = new Color(255, 120, 110);
+                    art = MORTAL_ICON;
+                    disc = GetMortalDisc();
+                    break;
 
-                if (real.Width > 0 && real.Height > 0)
-                {
-                    src = new Rectangle(art.UV.X + real.X, art.UV.Y + real.Y, real.Width, real.Height);
-                }
+                case Kind.Curse:
+                    ring = new Color(205, 140, 255);
+                    rim = new Color(190, 150, 235);
+                    art = CURSE_ICON;
+                    disc = GetCurseDisc();
+                    break;
 
-                float scale = TimerCirclesOverlay.IconScale(src, size * 0.62f);
-                int w = Math.Max(1, (int)(src.Width * scale));
-                int h = Math.Max(1, (int)(src.Height * scale));
+                default:
+                    ring = new Color(120, 230, 255);
+                    rim = new Color(120, 200, 230);
+                    art = DISCORD_ICON;
+                    disc = GetDiscordDisc();
+                    break;
+            }
 
-                batcher.Draw(art.Texture, new Rectangle(x + (size - w) / 2, y + (size - h) / 2, w, h), src, _plainHue, depth);
+            Texture2D round = kind == Kind.Mortal ? GetMortalRound() : null;
+
+            if (round != null)
+            {
+                // the real ability icon, cropped to a circle
+                batcher.Draw(round, new Rectangle(x, y, size, size), _plainHue, depth);
+            }
+            else
+            {
+                batcher.Draw(disc, new Rectangle(x, y, size, size), _plainHue, depth);
+                DrawArt(batcher, art, x, y, size, depth);
             }
 
             float stroke = Math.Max(2f, size / 12f);
@@ -334,13 +425,104 @@ namespace ClassicUO.Game.Managers
                 TimerCirclesOverlay.DrawArc(batcher, SolidColorTextureCache.GetTexture(ring), centre, radius, remaining, stroke, depth);
             }
 
-            // Only the mortal icon has a label; the skull speaks for itself.
-            RenderedText label = mortal ? GetLabel(ref _mortalLabel, "MS") : null;
+            // Only the mortal icon has a label.
+            RenderedText label = kind == Kind.Mortal ? GetLabel(ref _mortalLabel, "MS") : null;
 
             if (label != null && label.Width > 0)
             {
                 label.Draw(batcher, x + (size - label.Width) / 2, y + size - 1, depth);
             }
+        }
+
+        private static void DrawArt(UltimaBatcher2D batcher, ushort graphic, int x, int y, int size, float depth)
+        {
+            ref readonly var info = ref Client.Game.UO.Arts.GetArt(graphic);
+
+            if (info.Texture == null || info.UV.Width <= 0 || info.UV.Height <= 0)
+            {
+                return;
+            }
+
+            Rectangle src = info.UV;
+            Rectangle real = Client.Game.UO.Arts.GetRealArtBounds(graphic);
+
+            if (real.Width > 0 && real.Height > 0)
+            {
+                src = new Rectangle(info.UV.X + real.X, info.UV.Y + real.Y, real.Width, real.Height);
+            }
+
+            float scale = TimerCirclesOverlay.IconScale(src, size * 0.62f);
+            int w = Math.Max(1, (int)(src.Width * scale));
+            int h = Math.Max(1, (int)(src.Height * scale));
+
+            batcher.Draw(info.Texture, new Rectangle(x + (size - w) / 2, y + (size - h) / 2, w, h), src, _plainHue, depth);
+        }
+
+        /// <summary>The Mortal Strike ability icon (gump 0x5208) with a soft round mask, built once.</summary>
+        private static Texture2D GetMortalRound()
+        {
+            if (_mortalRound != null && !_mortalRound.IsDisposed)
+            {
+                return _mortalRound;
+            }
+
+            if (_mortalRoundFailed)
+            {
+                return null;
+            }
+
+            try
+            {
+                var gump = Client.Game.UO.FileManager.Gumps.GetGump(MORTAL_ABILITY_GUMP);
+                int w = gump.Width, h = gump.Height;
+
+                if (gump.Pixels.IsEmpty || w <= 0 || h <= 0)
+                {
+                    _mortalRoundFailed = true;
+                    return null;
+                }
+
+                // Crop the centre square, then mask it to a circle (premultiplied alpha, 1.5 px soft edge).
+                // The icon's own frame sits at its edge; trim 2 px so it doesn't show as a square-ish rim.
+                int side = Math.Min(w, h) - 4;
+                int ox = (w - side) / 2, oy = (h - side) / 2;
+                Color[] data = new Color[side * side];
+                float r = side / 2f;
+
+                for (int py = 0; py < side; py++)
+                {
+                    for (int px = 0; px < side; px++)
+                    {
+                        uint packed = gump.Pixels[(py + oy) * w + px + ox];
+                        Color c = new Color { PackedValue = packed };
+
+                        float dx = px + 0.5f - r, dy = py + 0.5f - r;
+                        float edge = Math.Clamp(r - MathF.Sqrt(dx * dx + dy * dy), 0f, 1.5f) / 1.5f;
+
+                        data[py * side + px] = c.A == 0 ? Color.Transparent : new Color(c.R, c.G, c.B, (byte)255) * edge;
+                    }
+                }
+
+                _mortalRound = new Texture2D(Client.Game.GraphicsDevice, side, side, false, SurfaceFormat.Color);
+                _mortalRound.SetData(data);
+
+                return _mortalRound;
+            }
+            catch (Exception)
+            {
+                _mortalRoundFailed = true;
+                return null;
+            }
+        }
+
+        private static Texture2D GetDiscordDisc()
+        {
+            if (_discordDisc == null || _discordDisc.IsDisposed)
+            {
+                _discordDisc = TimerCirclesOverlay.CreateDisc(new Color(18, 70, 110), 0.88f);
+            }
+
+            return _discordDisc;
         }
 
         private static RenderedText GetLabel(ref RenderedText cache, string text)

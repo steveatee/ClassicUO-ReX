@@ -2535,6 +2535,7 @@ namespace ClassicUO.Network
 
             ConsumableCooldownGump.NotifyGraphicEffect(world, source, graphic, (ushort)hue);
             CurseTracker.NotifyGraphicEffect(world, source, target, graphic, (ushort)hue, srcX, srcY, targetX, targetY);
+            StatusIconsOverlay.NotifyGraphicEffect(world, source, target, graphic);
 
             world.SpawnEffect(
                 type,
