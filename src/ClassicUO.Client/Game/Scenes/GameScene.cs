@@ -1211,6 +1211,7 @@ namespace ClassicUO.Game.Scenes
         {
             _healthLinesManager.Draw(batcher, 0f);
             StatusIconsOverlay.Draw(_world, batcher); // also draws your timer circles (one row)
+            FieldCastLog.Update(_world);
 
             if (!UIManager.IsMouseOverWorld)
             {

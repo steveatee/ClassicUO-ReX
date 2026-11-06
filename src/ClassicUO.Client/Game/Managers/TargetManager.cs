@@ -254,6 +254,11 @@ namespace ClassicUO.Game.Managers
                 return;
             }
 
+            if (IsSpellTarget && _world.Get(serial) is Entity fieldTarget)
+            {
+                FieldCastLog.NotifyTargetSent(_world, fieldTarget.X, fieldTarget.Y, fieldTarget.Z, fieldTarget is Mobile ? "mobile" : "item");
+            }
+
             Entity entity = _world.InGame ? _world.Get(serial) : null;
 
             if (entity != null)
@@ -474,6 +479,11 @@ namespace ClassicUO.Game.Managers
                 }
 
                 LastTargetInfo.SetStatic(graphic, x, y, (sbyte) z);
+            }
+
+            if (IsSpellTarget)
+            {
+                FieldCastLog.NotifyTargetSent(_world, x, y, z, graphic == 0 ? "land" : $"static 0x{graphic:X4}");
             }
 
             TargetPacket(graphic, x, y, (sbyte) z);

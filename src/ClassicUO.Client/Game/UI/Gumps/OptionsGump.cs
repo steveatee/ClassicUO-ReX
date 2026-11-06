@@ -49,7 +49,7 @@ namespace ClassicUO.Game.UI.Gumps
         private HSliderBar _curseAuraOpacity, _curseAuraSize;
         // Dust-Light ports
         private Checkbox _tintSelfWhileCasting, _previewFields, _blockWoS, _blockWoSFelOnly, _blockWoSArt, _blockEnergyF, _blockEnergyFFelOnly, _blockEnergyFArt;
-        private Checkbox _blockOutOfRangeSpells, _rangeRingOnCast, _rangeRingAlways, _colorStealth, _colorStealthSelf;
+        private Checkbox _logFieldCasts, _blockOutOfRangeSpells, _rangeRingOnCast, _rangeRingAlways, _colorStealth, _colorStealthSelf;
         private HSliderBar _rangeRingOnCastRange, _rangeRingAlwaysRange;
         private ClickableColorBox _rangeRingOnCastHue, _rangeRingAlwaysHue, _stealthHue, _lastTargetHue, _lastTargetPoisonHue, _lastTargetParaHue;
         private Combobox _stealthNeon, _lastTargetType, _lastTargetPoisonType, _lastTargetParaType, _fieldPlacementRules, _fieldPreviewSkipped;
@@ -1846,6 +1846,7 @@ namespace ClassicUO.Game.UI.Gumps
             casting.AddRight(AddLabel(null, "Ring colour", 0, 0), 2);
             casting.PopIndent();
 
+            casting.Add(_logFieldCasts = AddCheckBox(null, "Check each field cast against the preview (journal line + Data/Client/field_casts.csv)", _currentProfile.LogFieldCasts, startX, startY));
             casting.Add(_blockOutOfRangeSpells = AddCheckBox(null, "Don't send spell targets that are out of range (ranges in Data/Client/spellranges.txt)", _currentProfile.BlockOutOfRangeSpellTargets, startX, startY));
 
             casting.Add(_rangeRingAlways = AddCheckBox(null, "Always show range ring", _currentProfile.LTHighlightRangeOnActivated, startX, startY));
@@ -4915,6 +4916,7 @@ namespace ClassicUO.Game.UI.Gumps
             _currentProfile.FieldPreviewSkippedStyle = _fieldPreviewSkipped.SelectedIndex;
             _currentProfile.LTHighlightRangeOnCast = _rangeRingOnCast.IsChecked;
             _currentProfile.BlockOutOfRangeSpellTargets = _blockOutOfRangeSpells.IsChecked;
+            _currentProfile.LogFieldCasts = _logFieldCasts.IsChecked;
             _currentProfile.LTHighlightRangeOnCastRange = _rangeRingOnCastRange.Value;
             _currentProfile.LTHighlightRangeOnCastHue = _rangeRingOnCastHue.Hue;
             _currentProfile.LTHighlightRangeOnActivated = _rangeRingAlways.IsChecked;

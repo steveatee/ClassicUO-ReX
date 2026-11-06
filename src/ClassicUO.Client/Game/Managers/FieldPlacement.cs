@@ -560,7 +560,35 @@ namespace ClassicUO.Game.Managers
             }
         }
 
-        private static void GetCasterPosition(World world, out int x, out int y)
+        // ------- for FieldCastLog -------
+
+        /// <summary>The preview's prediction for a target, ignoring range (each tile and whether it's placed).</summary>
+        internal static int Predict(World world, int tx, int ty, int pz, int px, int py, int spell, int rules, (int X, int Y, bool Placed)[] result)
+        {
+            Compute(world, tx, ty, pz, px, py, spell, rules);
+            int n = Math.Min(_tileCount, result.Length);
+
+            for (int i = 0; i < n; i++)
+            {
+                result[i] = (_tiles[i].X, _tiles[i].Y, _tiles[i].Placed);
+            }
+
+            _keyTarget = null; // the hover cache no longer matches _tiles
+
+            return n;
+        }
+
+        /// <summary>Height the preview used for the hovered target, if it was (x, y).</summary>
+        internal static bool TryGetHoverTargetZ(int x, int y, out int pz)
+        {
+            pz = _keyTz;
+
+            return _keyTarget != null && _keyTx == x && _keyTy == y;
+        }
+
+        internal static bool GetLandInfo(World world, int x, int y, out int low, out int avg, out int top) => TryGetLandCorners(world, x, y, out low, out avg, out top);
+
+                private static void GetCasterPosition(World world, out int x, out int y)
         {
             x = world.Player.X;
             y = world.Player.Y;
