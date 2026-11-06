@@ -2,19 +2,14 @@
 // Predicts which tiles of a field spell the server will actually create, so the field preview can show
 // placed tiles (and skipped ones) before you cast.
 //
-// "UO Dreams" rules, fitted to every logged cast (29 Oct field_dump.csv + 6 Nov field_casts.csv, 0 misses
-// outside houses, checked against the real map files):
-//   * each tile's height is found like TrueUO's SpellHelper.AdjustField: try the target height, then 1 down,
-//     1 up, 2 down, 2 up ... (Map.CanFit with a surface), so a field can sit ABOVE the target too;
-//   * then the caster needs line of sight (RunUO Map.LineOfSight from eye = feet + 14) to the tile, which is
-//     what skips tiles behind bumps, on the far side of a slope or behind house walls;
-//       - Energy / Paralyze / Wall of Stone check LOS to where the field ends up; Poison / Fire to the tile
-//         at the target height;
-//   * at most 2 above the target; a side tile only goes up onto land whose average height is its low corner
-//     (flat ground, or a slope rising from there) - the centre may go up onto any slope;
-//   * Energy / Paralyze / Wall of Stone: at most 5 below the target; Poison / Fire: at most 9 below;
-//   * the centre follows the same rules (6 Nov: a centre on a rise was skipped while the sides placed).
-//   Offline check: Sourcecode/field_rules_check (check_casts.py, old.py) against the real map files.
+// "UO Dreams" rules, fitted to every logged cast (29 Oct field_dump.csv + 6 Nov field_casts.csv: 0 misses
+// outside the house, checked against the real map files with Sourcecode/field_rules_check):
+//   * centre: TrueUO's SpellHelper.AdjustField from the target height (0, -1, +1, -2, +2 ...), at most 2 above;
+//   * side tiles: search DOWN from the centre's height, so they never sit above the centre;
+//   * any tile: at most 9 below the target, no field already on it (your previous cast's field blocks it),
+//     and line of sight (RunUO Map.LineOfSight from eye = feet + 14): Energy / Paralyze / Wall of Stone to
+//     where the field ends up, Poison / Fire to the tile at the target height. LOS explains the skips behind
+//     bumps, past slope edges and through house walls; the centre is checked too.
 // "RunUO" and "ServUO / TrueUO" follow those servers' SpellHelper.AdjustField / Map.CanFit code.
 
 using System;
@@ -50,6 +45,9 @@ namespace ClassicUO.Game.Managers
 
         // A field tile can sit at most this far above the target height (6 Nov: +2 placed, +3 not).
         private const int MAX_RISE = 2;
+
+        // A field tile can sit at most this far below the target height (Poison 9 below placed, 10 not).
+        private const int MAX_DROP = 9;
 
         private const int UNKNOWN = int.MinValue;
 
@@ -322,6 +320,11 @@ namespace ClassicUO.Game.Managers
 
             _tileCount = 0;
 
+            // UO Dreams: the centre's height first; side tiles search down from it.
+            int casterZ = GetCasterZ(world);
+            int fieldHeight = isWall ? 22 : spell == SPELL_PARALYZE_FIELD ? 16 : 12;
+            int centreZ = rules == RULES_UO_DREAMS ? FindCentreZ(world, tx, ty, pz, fieldHeight) : UNKNOWN;
+
             for (int i = -half; i <= half; i++)
             {
                 int x = eastToWest ? tx + i : tx;
@@ -340,7 +343,7 @@ namespace ClassicUO.Game.Managers
                         break;
 
                     default:
-                        placed = PlacedUODreams(world, x, y, pz, tolerant, px, py, GetCasterZ(world), isWall, spell == SPELL_PARALYZE_FIELD, i == 0);
+                        placed = PlacedUODreams(world, x, y, pz, tolerant, px, py, casterZ, fieldHeight, i == 0, centreZ);
                         break;
                 }
 
@@ -348,24 +351,72 @@ namespace ClassicUO.Game.Managers
             }
         }
 
-        private static bool PlacedUODreams(World world, int x, int y, int pz, bool tolerant, int px, int py, int casterZ, bool isWall, bool isParalyze, bool centre)
+        private const int MAP_UNKNOWN = int.MaxValue;
+
+        /// <summary>
+        /// The centre tile's height: TrueUO SpellHelper.AdjustField from the target height (0, -1, +1, -2, +2 ...),
+        /// at most MAX_RISE above the target. UNKNOWN = nowhere fits; MAP_UNKNOWN = map not loaded.
+        /// </summary>
+        private static int FindCentreZ(World world, int x, int y, int pz, int height)
         {
-            if (!TryGetLandCorners(world, x, y, out int low, out int avg, out int top))
+            for (int o = 0; o < 25; o++)
+            {
+                int fit = CanFit(world, x, y, pz - o, height, out _);
+
+                if (fit == UNKNOWN)
+                {
+                    return MAP_UNKNOWN;
+                }
+
+                if (fit == 1)
+                {
+                    return pz - o;
+                }
+
+                if (o == 0)
+                {
+                    continue;
+                }
+
+                fit = CanFit(world, x, y, pz + o, height, out _);
+
+                if (fit == UNKNOWN)
+                {
+                    return MAP_UNKNOWN;
+                }
+
+                if (fit == 1)
+                {
+                    return o <= MAX_RISE ? pz + o : UNKNOWN; // the server takes this height, then refuses it
+                }
+            }
+
+            return UNKNOWN;
+        }
+
+        private static bool PlacedUODreams(World world, int x, int y, int pz, bool tolerant, int px, int py, int casterZ, int height, bool centre, int centreZ)
+        {
+            if (centreZ == MAP_UNKNOWN || !TryGetLandCorners(world, x, y, out _, out _, out _))
             {
                 return true; // map not loaded: don't claim a skip we can't check
             }
 
-            int height = isWall ? 22 : isParalyze ? 16 : 12;
-            int z = UNKNOWN;
-            bool onLand = false;
+            int z;
 
-            // TrueUO SpellHelper.AdjustField: 0, -1, +1, -2, +2 ... up to 24.
-            for (int o = 0; o < 25 && z == UNKNOWN; o++)
+            if (centre)
             {
-                for (int sign = -1; sign <= 1; sign += 2)
+                z = centreZ;
+            }
+            else
+            {
+                // Side tiles: search DOWN from the centre's height (from the target height if the centre didn't fit),
+                // so a side tile never ends up above the centre.
+                int start = centreZ != UNKNOWN ? centreZ : pz;
+                z = UNKNOWN;
+
+                for (int o = 0; o < 25; o++)
                 {
-                    int tryZ = pz + sign * o;
-                    int fit = CanFit(world, x, y, tryZ, height, out bool tryOnLand);
+                    int fit = CanFit(world, x, y, start - o, height, out _);
 
                     if (fit == UNKNOWN)
                     {
@@ -374,38 +425,37 @@ namespace ClassicUO.Game.Managers
 
                     if (fit == 1)
                     {
-                        z = tryZ;
-                        onLand = tryOnLand;
+                        z = start - o;
                         break;
-                    }
-
-                    if (o == 0)
-                    {
-                        break; // +0 and -0 are the same
                     }
                 }
             }
 
-            if (z == UNKNOWN)
+            if (z == UNKNOWN || pz - z > MAX_DROP)
             {
                 return false;
             }
 
-            if (z > pz)
-            {
-                // At most 2 above the target; a side tile only onto land whose average is its low corner
-                // (flat, or a slope that only rises from there). The centre may sit on any slope.
-                if (z - pz > MAX_RISE || !centre && onLand && avg != low)
-                {
-                    return false;
-                }
-            }
-            else if (z < pz && pz - z > (tolerant ? 9 : 5))
+            // A field already on the tile (e.g. from your last cast) stops a new one.
+            if (HasFieldItem(world, x, y))
             {
                 return false;
             }
 
             return HasLineOfSight(world, px, py, casterZ + 14, x, y, tolerant ? pz : z);
+        }
+
+        private static bool HasFieldItem(World world, int x, int y)
+        {
+            for (GameObject o = world.Map.GetTile(x, y, false); o != null; o = o.TNext)
+            {
+                if (o is Item it && it.OnGround && !it.IsDestroyed && (StaticFilters.IsField(it.Graphic) || StaticFilters.IsWallOfStone(it.Graphic) || FieldCastLog.IsFieldGraphic(it.Graphic)))
+                {
+                    return true;
+                }
+            }
+
+            return false;
         }
 
         private static int GetCasterZ(World world)
