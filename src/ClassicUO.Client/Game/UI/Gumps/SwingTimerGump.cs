@@ -528,15 +528,16 @@ namespace ClassicUO.Game.UI.Gumps
             int before = list.Count;
             gump._swingRow?.AddIfCounting(list);
 
-            // Swing shows the weapon in your hands (a sword when unarmed).
-            if (list.Count > before && gump.World?.Player != null)
+            // Swing always shows a plain broadsword: the weapon in hand was often too dark (hued / black art)
+            // to see on the dark disc.
+            if (list.Count > before)
             {
-                Item weapon = gump.World.Player.FindItemByLayer(Layer.TwoHanded) ?? gump.World.Player.FindItemByLayer(Layer.OneHanded);
                 ActiveTimer swing = list[before];
-                swing.IconGraphic = weapon != null && weapon.ItemData.IsWeapon ? weapon.DisplayedGraphic : SWORD_GRAPHIC;
-                swing.IconHue = weapon != null && weapon.ItemData.IsWeapon ? weapon.Hue : (ushort)0;
+                swing.IconGraphic = SWORD_GRAPHIC;
+                swing.IconHue = 0;
                 list[before] = swing;
             }
+
             gump._castingRow?.AddIfCounting(list);
             gump._appleRow?.AddIfCounting(list);
             gump._conflagRow?.AddIfCounting(list);
