@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: BSD-2-Clause
-// ReX: small round status icons under a mobile's feet, with a short label underneath ("MS", "CURSE").
+// ReX: small round status icons under a mobile's feet ("MS" label under the mortal one).
 //  - Mortal Strike: the server turns a mobile's health bar yellow for exactly as long as the wound lasts
 //    (TrueUO MortalStrike.BeginWound / EndWound set YellowHealthbar), so the icon shows while the flag is on.
 //    Invulnerable NPCs also have yellow bars and are skipped. The ring drains over the expected duration
@@ -38,7 +38,7 @@ namespace ClassicUO.Game.Managers
         private static readonly Vector3 _plainHue = new Vector3(0f, ShaderHueTranslator.SHADER_NONE, 1f);
 
         private static Texture2D _mortalDisc, _curseDisc;
-        private static RenderedText _mortalLabel, _curseLabel;
+        private static RenderedText _mortalLabel;
 
         public static void Draw(World world, UltimaBatcher2D batcher)
         {
@@ -254,7 +254,8 @@ namespace ClassicUO.Game.Managers
                 TimerCirclesOverlay.DrawArc(batcher, SolidColorTextureCache.GetTexture(ring), centre, radius, remaining, stroke, depth);
             }
 
-            RenderedText label = mortal ? GetLabel(ref _mortalLabel, "MS") : GetLabel(ref _curseLabel, "CURSE");
+            // Only the mortal icon has a label; the skull speaks for itself.
+            RenderedText label = mortal ? GetLabel(ref _mortalLabel, "MS") : null;
 
             if (label != null && label.Width > 0)
             {

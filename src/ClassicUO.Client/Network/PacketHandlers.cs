@@ -350,6 +350,9 @@ namespace ClassicUO.Network
 
         private static void TargetCursor(World world, ref StackDataReader p)
         {
+            // ReX: a cursor that arrives while (or just after) we think you're casting is the spell's cursor.
+            bool fromCast = world.Player != null && (world.Player.IsCasting || Time.Ticks - world.Player.LastCastingEnd < 1500);
+
             world.TargetManager.SetTargeting(
                 (CursorTarget)p.ReadUInt8(),
                 p.ReadUInt32BE(),
@@ -359,6 +362,7 @@ namespace ClassicUO.Network
             // Dust-Light: a target cursor means the cast delay has finished, so end the casting state now
             // rather than waiting for the estimated timer.
             world.Player?.StopCasting();
+            world.TargetManager.IsSpellTarget = fromCast && world.TargetManager.IsTargeting;
 
             if (world.Party.PartyHealTimer < Time.Ticks && world.Party.PartyHealTarget != 0)
             {

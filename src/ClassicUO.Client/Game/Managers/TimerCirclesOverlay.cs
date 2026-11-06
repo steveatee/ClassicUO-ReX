@@ -113,12 +113,12 @@ namespace ClassicUO.Game.Managers
                 }
             }
 
-            // ring: faint full track, then the elapsed part in the timer's colour
+            // ring: the part still to run in red, then the elapsed part in the timer's colour
             float stroke = Math.Max(2f, size / 11f);
             float radius = size / 2f - stroke / 2f - 0.5f;
             Vector2 centre = new Vector2(x + size / 2f, y + size / 2f);
 
-            DrawArc(batcher, SolidColorTextureCache.GetTexture(new Color(20, 20, 20) * 0.75f), centre, radius, 1f, stroke, depth);
+            DrawArc(batcher, SolidColorTextureCache.GetTexture(new Color(200, 30, 30) * 0.9f), centre, radius, 1f, stroke, depth);
 
             float elapsed = t.Cooldown == 0 ? 1f : 1f - Math.Clamp((float)t.Remaining / t.Cooldown, 0f, 1f);
 

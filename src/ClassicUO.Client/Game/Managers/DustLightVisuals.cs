@@ -8,6 +8,9 @@ using ClassicUO.Assets;
 using ClassicUO.Configuration;
 using ClassicUO.Game.Data;
 using ClassicUO.Game.GameObjects;
+using ClassicUO.Renderer;
+using Microsoft.Xna.Framework;
+using Microsoft.Xna.Framework.Graphics;
 
 namespace ClassicUO.Game.Managers
 {
@@ -111,37 +114,31 @@ namespace ClassicUO.Game.Managers
 
         // ------- Range ring -------
 
-        /// <summary>Hue for land tiles exactly N tiles from the player (while casting, or always on).</summary>
-        public static bool TryGetRangeRingHue(World world, int x, int y, out ushort hue)
+        /// <summary>
+        /// The range ring to show now, if any: while casting / holding a spell's target cursor (the on-cast ring),
+        /// otherwise the always-on ring.
+        /// </summary>
+        public static bool TryGetActiveRangeRing(World world, out int range, out ushort hue)
         {
+            range = 0;
             hue = 0;
             Profile p = ProfileManager.CurrentProfile;
 
-            if (p == null || world?.Player == null || !p.LTHighlightRangeOnCast && !p.LTHighlightRangeOnActivated)
+            if (p == null || world?.Player == null)
             {
                 return false;
             }
 
-            int px = world.Player.X;
-            int py = world.Player.Y;
-
-            if (world.Player.Steps.Count != 0)
+            if (p.LTHighlightRangeOnCast && (world.Player.IsCasting || world.TargetManager.IsTargeting && world.TargetManager.IsSpellTarget))
             {
-                ref Mobile.Step st = ref world.Player.Steps.Back();
-                px = st.X;
-                py = st.Y;
-            }
-
-            int d = Math.Max(Math.Abs(x - px), Math.Abs(y - py));
-
-            if (p.LTHighlightRangeOnCast && world.Player.IsCasting && d == p.LTHighlightRangeOnCastRange)
-            {
+                range = p.LTHighlightRangeOnCastRange;
                 hue = p.LTHighlightRangeOnCastHue;
                 return true;
             }
 
-            if (p.LTHighlightRangeOnActivated && d == p.LTHighlightRangeOnActivatedRange)
+            if (p.LTHighlightRangeOnActivated)
             {
+                range = p.LTHighlightRangeOnActivatedRange;
                 hue = p.LTHighlightRangeOnActivatedHue;
                 return true;
             }
@@ -149,15 +146,124 @@ namespace ClassicUO.Game.Managers
             return false;
         }
 
-        /// <summary>Ground hue overlays (currently the range ring).</summary>
-        public static bool TryGetGroundOverlayHue(World world, GameObject obj, out ushort hue)
+        private static ushort _ringColourHue = 0xFFFF;
+        private static Color _ringColour;
+
+        /// <summary>
+        /// Draws the range ring as a line along the OUTER edge of the last tile in range: everything inside the line
+        /// (including the tiles it runs along) is within N tiles, the same square-distance check the server uses
+        /// (Mobile.InRange). Called in the ground overlay pass so statics and mobiles still draw over it.
+        /// </summary>
+        public static void DrawRangeRing(World world, UltimaBatcher2D batcher)
         {
-            // The field preview is drawn as an overlay (FieldPlacement.DrawOverlay), not as a tile hue.
-            if (obj is Land)
+            if (!TryGetActiveRangeRing(world, out int range, out ushort hue) || range <= 0 || world.Map == null)
             {
-                return TryGetRangeRingHue(world, obj.X, obj.Y, out hue);
+                return;
             }
 
+            PlayerMobile player = world.Player;
+            int px = player.X;
+            int py = player.Y;
+
+            if (player.Steps.Count != 0)
+            {
+                ref Mobile.Step st = ref player.Steps.Back();
+                px = st.X;
+                py = st.Y;
+            }
+
+            // Recover this frame's screen offset from the player (GameObject.UpdateRealScreenPosition), so tiles
+            // that aren't on screen this frame still get correct positions.
+            int offX = (player.X - player.Y) * 22 - 22 - player.RealScreenPosition.X;
+            int offY = (player.X + player.Y) * 22 - (player.Z << 2) - 22 - player.RealScreenPosition.Y;
+
+            if (hue != _ringColourHue)
+            {
+                _ringColourHue = hue;
+                uint c = Client.Game.UO.FileManager.Hues.GetPolygoneColor(24, hue);
+                _ringColour = new Color((byte)(c & 0xFF), (byte)((c >> 8) & 0xFF), (byte)((c >> 16) & 0xFF));
+            }
+
+            Texture2D line = SolidColorTextureCache.GetTexture(_ringColour * 0.95f);
+            Texture2D shadow = SolidColorTextureCache.GetTexture(Color.Black * 0.45f);
+
+            for (int dx = -range; dx <= range; dx++)
+            {
+                for (int dy = -range; dy <= range; dy++)
+                {
+                    if (Math.Abs(dx) != range && Math.Abs(dy) != range)
+                    {
+                        continue;
+                    }
+
+                    int x = px + dx;
+                    int y = py + dy;
+                    Land land = GetLand(world, x, y);
+
+                    if (land == null || land.IsDestroyed)
+                    {
+                        continue;
+                    }
+
+                    GetCorners(land, x, y, offX, offY, out Vector2 top, out Vector2 right, out Vector2 bottom, out Vector2 left);
+                    float depth = land.CalculateDepthZ() + 0.8f;
+
+                    // Corners: top = (x, y), right = (x+1, y), bottom = (x+1, y+1), left = (x, y+1).
+                    if (dy == -range) DrawEdge(batcher, line, shadow, top, right, depth);   // north side
+                    if (dy == range) DrawEdge(batcher, line, shadow, left, bottom, depth);  // south side
+                    if (dx == -range) DrawEdge(batcher, line, shadow, top, left, depth);    // west side
+                    if (dx == range) DrawEdge(batcher, line, shadow, right, bottom, depth); // east side
+                }
+            }
+        }
+
+        private static readonly Vector3 _ringHueVector = new Vector3(0f, ShaderHueTranslator.SHADER_NONE, 1f);
+
+        private static void DrawEdge(UltimaBatcher2D batcher, Texture2D line, Texture2D shadow, Vector2 a, Vector2 b, float depth)
+        {
+            batcher.DrawLine(shadow, a + new Vector2(0, 1), b + new Vector2(0, 1), _ringHueVector, 3f, depth);
+            batcher.DrawLine(line, a, b, _ringHueVector, 2f, depth);
+        }
+
+        private static void GetCorners(Land land, int x, int y, int offX, int offY, out Vector2 top, out Vector2 right, out Vector2 bottom, out Vector2 left)
+        {
+            int posX = (x - y) * 22 - offX - 22;
+            int posY = (x + y) * 22 - (land.Z << 2) - offY - 22;
+
+            if (land.IsStretched)
+            {
+                posY += land.Z << 2;
+                top = new Vector2(posX + 22, posY - land.YOffsets.Top);
+                right = new Vector2(posX + 44, posY + (22 - land.YOffsets.Right));
+                left = new Vector2(posX, posY + (22 - land.YOffsets.Left));
+                bottom = new Vector2(posX + 22, posY + (44 - land.YOffsets.Bottom));
+            }
+            else
+            {
+                top = new Vector2(posX + 22, posY);
+                right = new Vector2(posX + 44, posY + 22);
+                left = new Vector2(posX, posY + 22);
+                bottom = new Vector2(posX + 22, posY + 44);
+            }
+        }
+
+        private static Land GetLand(World world, int x, int y)
+        {
+            for (GameObject o = world.Map.GetTile(x, y, false); o != null; o = o.TNext)
+            {
+                if (o is Land l)
+                {
+                    return l;
+                }
+            }
+
+            return null;
+        }
+
+        /// <summary>Ground hue overlays. The range ring is now a line (DrawRangeRing) and the field preview an
+        /// overlay (FieldPlacement.DrawOverlay), so nothing is hued here any more.</summary>
+        public static bool TryGetGroundOverlayHue(World world, GameObject obj, out ushort hue)
+        {
             hue = 0;
             return false;
         }

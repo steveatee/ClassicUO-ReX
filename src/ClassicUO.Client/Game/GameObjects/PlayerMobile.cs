@@ -396,8 +396,16 @@ namespace ClassicUO.Game.GameObjects
             return targetSerial != Serial || HitsMax == 0 || Hits < HitsMax;
         }
 
+        /// <summary>Time.Ticks when the last cast ended (timer ran out or the target cursor arrived).</summary>
+        public uint LastCastingEnd { get; private set; }
+
         internal void StopCasting()
         {
+            if (_isCasting)
+            {
+                LastCastingEnd = Time.Ticks;
+            }
+
             _isCasting = false;
             _castingDuration = 0;
             _castingEndTime = 0;

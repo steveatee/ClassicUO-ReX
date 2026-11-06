@@ -1070,7 +1070,11 @@ namespace ClassicUO.Game.Scenes
                 _offset.X,
                 _offset.Y,
                 ProfileManager.CurrentProfile.MaxScreenEffectSprites,
-                _drawGroundOverlays ??= b => FieldPlacement.DrawOverlay(_world, b)
+                _drawGroundOverlays ??= b =>
+                {
+                    DustLightVisuals.DrawRangeRing(_world, b);
+                    FieldPlacement.DrawOverlay(_world, b);
+                }
             );
 
 

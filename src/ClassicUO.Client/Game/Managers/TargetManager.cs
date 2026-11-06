@@ -121,6 +121,9 @@ namespace ClassicUO.Game.Managers
 
         public bool IsTargeting { get; private set; }
 
+        /// <summary>ReX: the current server target cursor arrived at the end of one of your casts.</summary>
+        public bool IsSpellTarget { get; set; }
+
         public TargetType TargetingType { get; private set; }
 
         private void ClearTargetingWithoutTargetCancelPacket()
@@ -162,6 +165,7 @@ namespace ClassicUO.Game.Managers
             }
 
             bool lastTargetting = IsTargeting;
+            IsSpellTarget = false; // TargetCursor sets it again for spell cursors
             IsTargeting = cursorType < TargetType.Cancel;
             TargetingState = targeting;
             TargetingType = cursorType;

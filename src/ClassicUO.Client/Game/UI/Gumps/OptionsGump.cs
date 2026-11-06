@@ -1842,7 +1842,7 @@ namespace ClassicUO.Game.UI.Gumps
             casting.AddRight(_fieldPreviewSkipped = AddCombobox(null, new[] { "Grey outline", "Don't show" }, Math.Clamp(_currentProfile.FieldPreviewSkippedStyle, 0, 1), startX, startY, 160));
             casting.PopIndent();
 
-            casting.Add(_rangeRingOnCast = AddCheckBox(null, "Show range ring while casting", _currentProfile.LTHighlightRangeOnCast, startX, startY));
+            casting.Add(_rangeRingOnCast = AddCheckBox(null, "Show range ring while casting and while the spell's target cursor is up", _currentProfile.LTHighlightRangeOnCast, startX, startY));
             casting.PushIndent();
             casting.Add(AddLabel(null, "Range", startX, startY));
             casting.AddRight(_rangeRingOnCastRange = AddHSlider(null, 1, 20, _currentProfile.LTHighlightRangeOnCastRange, startX, startY, 150));
