@@ -2,8 +2,10 @@
 // ReX: small round status icons under a mobile's feet ("MS" label under the mortal one).
 //  - Mortal Strike: the server turns a mobile's health bar yellow for exactly as long as the wound lasts
 //    (TrueUO MortalStrike.BeginWound / EndWound set YellowHealthbar), so the icon shows while the flag is on.
-//    Invulnerable NPCs also have yellow bars and are skipped. The ring drains over the expected duration
-//    (6 s players, 12 s creatures, counted from when the flag appeared); for yourself the buff timer is used.
+//    Invulnerable NPCs also have yellow bars and are skipped. Ring: for your own mortals ("You deliver a mortal
+//    wound!") it drains over UO Dreams' duration (8 s melee, 4 s ranged / thrown); for yourself the buff timer;
+//    for anyone else's mortal the length isn't known, so the ring stays full until the bar clears.
+//  Your own row also holds the swing / consumable timer circles (TimerCirclesOverlay), all one size, in one line.
 //  - Curse: anything CurseTracker has on the mobile (Curse, Corpse Skin, Hit Curse), ring = its estimated
 //    time left. For yourself: the Curse / Mass Curse / Corpse Skin buffs.
 
@@ -21,8 +23,10 @@ namespace ClassicUO.Game.Managers
     internal static class StatusIconsOverlay
     {
         private const int GAP = 3;
-        private const uint PLAYER_MORTAL_MS = 6_000;
-        private const uint NPC_MORTAL_MS = 12_000;
+        private const uint MELEE_MORTAL_MS = 8_000; // UO Dreams (TrueUO: 6 s players / 12 s creatures)
+        private const uint RANGED_MORTAL_MS = 4_000;
+        private const uint MY_MORTAL_MATCH_MS = 1_500;
+        private const int CLILOC_DELIVER_MORTAL = 1060086; // You deliver a mortal wound!
         private const ushort MORTAL_ICON = 0x0F52; // dagger
         private const ushort CURSE_ICON = 0x1AE2; // skull
 
@@ -32,7 +36,66 @@ namespace ClassicUO.Game.Managers
             Curse
         }
 
-        private static readonly Dictionary<uint, uint> _mortalSeenAt = new Dictionary<uint, uint>();
+        private static readonly Dictionary<uint, MortalSeen> _mortalSeenAt = new Dictionary<uint, MortalSeen>();
+        private static uint _myMortalAt;
+        private static uint _myMortalDuration;
+
+        private struct MortalSeen
+        {
+            public uint At;
+            public uint Duration; // 0 = unknown
+        }
+
+        private static readonly HashSet<ushort> _rangedWeapons = new HashSet<ushort>
+        {
+            0x13B1, 0x13B2, // bow
+            0x0F4F, 0x0F50, // crossbow
+            0x13FC, 0x13FD, // heavy crossbow
+            0x26C2, 0x26CC, // composite bow
+            0x26C3, 0x26CD, // repeating crossbow
+            0x27A5, 0x27F0, // yumi
+            0x2D1E, 0x2D2A, // elven composite longbow
+            0x2D1F, 0x2D2B, // magical shortbow
+            0x08FF, 0x0901, 0x090A, // boomerang, cyclone, soul glaive (thrown)
+        };
+
+        /// <summary>Called for every cliloc message: notes when you deliver a mortal wound, and with what.</summary>
+        public static void NotifyCliloc(World world, uint cliloc)
+        {
+            if (cliloc != CLILOC_DELIVER_MORTAL || world?.Player == null)
+            {
+                return;
+            }
+
+            _myMortalAt = Time.Ticks;
+            _myMortalDuration = IsWieldingRanged(world.Player) ? RANGED_MORTAL_MS : MELEE_MORTAL_MS;
+
+            // The yellow bar can show up in the same frame; give a just-seen unknown mortal this duration.
+            uint bestSerial = 0;
+            uint bestAt = 0;
+
+            foreach (KeyValuePair<uint, MortalSeen> kv in _mortalSeenAt)
+            {
+                if (kv.Value.Duration == 0 && _myMortalAt - kv.Value.At < MY_MORTAL_MATCH_MS && kv.Value.At >= bestAt)
+                {
+                    bestSerial = kv.Key;
+                    bestAt = kv.Value.At;
+                }
+            }
+
+            if (bestSerial != 0)
+            {
+                _mortalSeenAt[bestSerial] = new MortalSeen { At = bestAt, Duration = _myMortalDuration };
+                _myMortalAt = 0;
+            }
+        }
+
+        private static bool IsWieldingRanged(PlayerMobile player)
+        {
+            Item weapon = player.FindItemByLayer(Layer.TwoHanded) ?? player.FindItemByLayer(Layer.OneHanded);
+
+            return weapon != null && _rangedWeapons.Contains(weapon.Graphic);
+        }
         private static readonly Dictionary<BuffIconType, uint> _buffSeenAt = new Dictionary<BuffIconType, uint>();
         private static readonly List<uint> _stale = new List<uint>();
         private static readonly Vector3 _plainHue = new Vector3(0f, ShaderHueTranslator.SHADER_NONE, 1f);
@@ -44,12 +107,17 @@ namespace ClassicUO.Game.Managers
         {
             Profile profile = ProfileManager.CurrentProfile;
 
-            if (profile == null || world?.Player == null || world.Player.IsDestroyed || (!profile.ShowMortalIcon && !profile.ShowCurseIcon))
+            if (profile == null || world?.Player == null || world.Player.IsDestroyed)
+            {
+                return;
+            }
+
+            bool icons = profile.ShowMortalIcon || profile.ShowCurseIcon;
+
+            if (!icons)
             {
                 _mortalSeenAt.Clear();
                 _buffSeenAt.Clear();
-
-                return;
             }
 
             int size = Math.Clamp(profile.StatusIconSize, 16, 48);
@@ -77,12 +145,14 @@ namespace ClassicUO.Game.Managers
                     curse = self ? GetSelfCurse(world.Player, now) : GetCurse(mobile);
                 }
 
-                if (mortal < 0f && curse < 0f)
+                int timers = self ? TimerCirclesOverlay.CollectCircles(world) : 0;
+                int count = timers + (mortal >= 0f ? 1 : 0) + (curse >= 0f ? 1 : 0);
+
+                if (count == 0)
                 {
                     continue;
                 }
 
-                int count = (mortal >= 0f ? 1 : 0) + (curse >= 0f ? 1 : 0);
                 int rowWidth = count * size + (count - 1) * GAP;
 
                 Point p = mobile.RealScreenPosition;
@@ -93,10 +163,10 @@ namespace ClassicUO.Game.Managers
                 int x = p.X - rowWidth / 2;
                 int y = p.Y + drop;
 
-                // Your own row goes below the timer circles if they're showing.
-                if (self && TimerCirclesOverlay.LastRowBottom >= 0)
+                for (int i = 0; i < timers; i++)
                 {
-                    y = Math.Max(y, TimerCirclesOverlay.LastRowBottom + GAP + 2);
+                    TimerCirclesOverlay.DrawCollected(batcher, i, x, y, size);
+                    x += size + GAP;
                 }
 
                 if (mortal >= 0f)
@@ -122,15 +192,26 @@ namespace ClassicUO.Game.Managers
                 return -1f;
             }
 
-            if (!_mortalSeenAt.TryGetValue(mobile.Serial, out uint seen))
+            if (!_mortalSeenAt.TryGetValue(mobile.Serial, out MortalSeen seen))
             {
-                seen = now;
+                seen = new MortalSeen { At = now };
+
+                // Yours if you just delivered one ("You deliver a mortal wound!" arrives first).
+                if (_myMortalAt != 0 && now - _myMortalAt < MY_MORTAL_MATCH_MS)
+                {
+                    seen.Duration = _myMortalDuration;
+                    _myMortalAt = 0;
+                }
+
                 _mortalSeenAt[mobile.Serial] = seen;
             }
 
-            uint duration = mobile.IsHuman || mobile.IsGargoyle ? PLAYER_MORTAL_MS : NPC_MORTAL_MS;
+            if (seen.Duration == 0)
+            {
+                return 1f; // someone else's: length unknown, full ring until the bar clears
+            }
 
-            return Math.Clamp(1f - (now - seen) / (float)duration, 0f, 1f);
+            return Math.Clamp(1f - (now - seen.At) / (float)seen.Duration, 0f, 1f);
         }
 
         private static float GetSelfMortal(PlayerMobile player, uint now)
@@ -196,7 +277,7 @@ namespace ClassicUO.Game.Managers
 
             _stale.Clear();
 
-            foreach (KeyValuePair<uint, uint> kv in _mortalSeenAt)
+            foreach (KeyValuePair<uint, MortalSeen> kv in _mortalSeenAt)
             {
                 if (world.Get(kv.Key) is not Mobile m || m.IsDestroyed || !m.IsYellowHits)
                 {
@@ -234,8 +315,7 @@ namespace ClassicUO.Game.Managers
                     src = new Rectangle(art.UV.X + real.X, art.UV.Y + real.Y, real.Width, real.Height);
                 }
 
-                float box = size * 0.62f;
-                float scale = Math.Min(Math.Min(box / src.Width, box / src.Height), 2f);
+                float scale = TimerCirclesOverlay.IconScale(src, size * 0.62f);
                 int w = Math.Max(1, (int)(src.Width * scale));
                 int h = Math.Max(1, (int)(src.Height * scale));
 

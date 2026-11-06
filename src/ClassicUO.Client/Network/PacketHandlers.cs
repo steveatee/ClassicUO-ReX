@@ -4842,6 +4842,7 @@ namespace ClassicUO.Network
             SwingTimerGump.NotifyCliloc(world, cliloc);
             world.Player.NotifyCastingCliloc(cliloc);
             CurseTracker.NotifyCliloc(world, serial, text);
+            StatusIconsOverlay.NotifyCliloc(world, cliloc);
 
             if (!string.IsNullOrWhiteSpace(affix))
             {

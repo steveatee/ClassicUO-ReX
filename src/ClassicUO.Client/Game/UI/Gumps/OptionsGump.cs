@@ -42,14 +42,14 @@ namespace ClassicUO.Game.UI.Gumps
         private HSliderBar _movementTurnDelay, _movementTurnDelayFast;
         private Checkbox _blockWalkWhileCasting, _startCastTimerFromSpellWords, _avoidTraps;
         private Combobox _timerDisplayStyle;
-        private HSliderBar _timerCircleSize, _timerCircleOffsetY, _statusIconSize, _statusIconOffsetY;
+        private HSliderBar _statusIconSize, _statusIconOffsetY;
         private Checkbox _showMortalIcon, _showCurseIcon;
         private Checkbox _friendEnemyHues, _friendHueParty, _friendHueAllies, _enemyHueHumanoids, _curseAura, _curseAuraLastTarget;
         private ClickableColorBox _friendHueBox, _enemyHueBox, _curseAuraHueBox;
         private HSliderBar _curseAuraOpacity, _curseAuraSize;
         // Dust-Light ports
         private Checkbox _tintSelfWhileCasting, _previewFields, _blockWoS, _blockWoSFelOnly, _blockWoSArt, _blockEnergyF, _blockEnergyFFelOnly, _blockEnergyFArt;
-        private Checkbox _rangeRingOnCast, _rangeRingAlways, _colorStealth, _colorStealthSelf;
+        private Checkbox _blockOutOfRangeSpells, _rangeRingOnCast, _rangeRingAlways, _colorStealth, _colorStealthSelf;
         private HSliderBar _rangeRingOnCastRange, _rangeRingAlwaysRange;
         private ClickableColorBox _rangeRingOnCastHue, _rangeRingAlwaysHue, _stealthHue, _lastTargetHue, _lastTargetPoisonHue, _lastTargetParaHue;
         private Combobox _stealthNeon, _lastTargetType, _lastTargetPoisonType, _lastTargetParaType, _fieldPlacementRules, _fieldPreviewSkipped;
@@ -1674,12 +1674,7 @@ namespace ClassicUO.Game.UI.Gumps
             );
             combat.Add(AddLabel(null, "Timer style", startX, startY));
             combat.AddRight(_timerDisplayStyle = AddCombobox(null, TimerCirclesOverlay.StyleNames, Math.Clamp(_currentProfile.TimerDisplayStyle, 0, TimerCirclesOverlay.StyleNames.Length - 1), startX, startY, 200));
-            combat.PushIndent();
-            combat.Add(AddLabel(null, "Circle size", startX, startY));
-            combat.AddRight(_timerCircleSize = AddHSlider(null, 16, 64, _currentProfile.TimerCircleSize, startX, startY, 150));
-            combat.Add(AddLabel(null, "Circles below your feet", startX, startY));
-            combat.AddRight(_timerCircleOffsetY = AddHSlider(null, 0, 120, _currentProfile.TimerCircleOffsetY, startX, startY, 150));
-            combat.PopIndent();
+            combat.Add(AddLabel(null, "(circle size and position: see the status icon sliders below)", startX + 20, startY));
             combat.Add
             (
                 _trackCurses = AddCheckBox
@@ -1704,9 +1699,9 @@ namespace ClassicUO.Game.UI.Gumps
             combat.Add(_showMortalIcon = AddCheckBox(null, "\"MS\" icon under mortally wounded players and creatures (yourself too)", _currentProfile.ShowMortalIcon, startX, startY));
             combat.Add(_showCurseIcon = AddCheckBox(null, "\"CURSE\" icon under cursed players (Curse, Corpse Skin, Hit Curse; yours from buffs)", _currentProfile.ShowCurseIcon, startX, startY));
             combat.PushIndent();
-            combat.Add(AddLabel(null, "Icon size", startX, startY));
+            combat.Add(AddLabel(null, "Circle size (status icons and your timer circles)", startX, startY));
             combat.AddRight(_statusIconSize = AddHSlider(null, 16, 48, _currentProfile.StatusIconSize, startX, startY, 150));
-            combat.Add(AddLabel(null, "Icons below the feet", startX, startY));
+            combat.Add(AddLabel(null, "Circles below the feet", startX, startY));
             combat.AddRight(_statusIconOffsetY = AddHSlider(null, 0, 100, _currentProfile.StatusIconOffsetY, startX, startY, 150));
             combat.PopIndent();
 
@@ -1849,6 +1844,8 @@ namespace ClassicUO.Game.UI.Gumps
             casting.Add(_rangeRingOnCastHue = AddColorBox(null, startX, startY, _currentProfile.LTHighlightRangeOnCastHue, ""));
             casting.AddRight(AddLabel(null, "Ring colour", 0, 0), 2);
             casting.PopIndent();
+
+            casting.Add(_blockOutOfRangeSpells = AddCheckBox(null, "Don't send spell targets that are out of range (ranges in Data/Client/spellranges.txt)", _currentProfile.BlockOutOfRangeSpellTargets, startX, startY));
 
             casting.Add(_rangeRingAlways = AddCheckBox(null, "Always show range ring", _currentProfile.LTHighlightRangeOnActivated, startX, startY));
             casting.PushIndent();
@@ -4916,6 +4913,7 @@ namespace ClassicUO.Game.UI.Gumps
             _currentProfile.FieldPlacementRules = _fieldPlacementRules.SelectedIndex;
             _currentProfile.FieldPreviewSkippedStyle = _fieldPreviewSkipped.SelectedIndex;
             _currentProfile.LTHighlightRangeOnCast = _rangeRingOnCast.IsChecked;
+            _currentProfile.BlockOutOfRangeSpellTargets = _blockOutOfRangeSpells.IsChecked;
             _currentProfile.LTHighlightRangeOnCastRange = _rangeRingOnCastRange.Value;
             _currentProfile.LTHighlightRangeOnCastHue = _rangeRingOnCastHue.Hue;
             _currentProfile.LTHighlightRangeOnActivated = _rangeRingAlways.IsChecked;
@@ -5012,8 +5010,6 @@ namespace ClassicUO.Game.UI.Gumps
             }
 
             _currentProfile.TimerDisplayStyle = _timerDisplayStyle.SelectedIndex;
-            _currentProfile.TimerCircleSize = _timerCircleSize.Value;
-            _currentProfile.TimerCircleOffsetY = _timerCircleOffsetY.Value;
             _currentProfile.ShowMortalIcon = _showMortalIcon.IsChecked;
             _currentProfile.ShowCurseIcon = _showCurseIcon.IsChecked;
             _currentProfile.StatusIconSize = _statusIconSize.Value;

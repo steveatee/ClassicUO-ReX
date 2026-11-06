@@ -31,48 +31,43 @@ namespace ClassicUO.Game.Managers
 
         public static bool ShowBars(Profile p) => p == null || p.TimerDisplayStyle != STYLE_CIRCLES;
 
-        /// <summary>Screen Y just below the circle row drawn this frame, or -1 when none was drawn.</summary>
-        public static int LastRowBottom { get; private set; } = -1;
-
-        public static void Draw(World world, UltimaBatcher2D batcher)
+        /// <summary>
+        /// The timers to show as circles under your character this frame (none in bars-only mode). The row itself
+        /// is laid out by StatusIconsOverlay, so the timers and your MS / curse icons share one line.
+        /// </summary>
+        public static int CollectCircles(World world)
         {
-            LastRowBottom = -1;
+            _timers.Clear();
             Profile profile = ProfileManager.CurrentProfile;
 
             if (profile == null || profile.TimerDisplayStyle == STYLE_BARS || world?.Player == null || world.Player.IsDestroyed)
             {
-                return;
+                return 0;
             }
 
-            _timers.Clear();
             SwingTimerGump.CollectActiveTimers(_timers);
 
-            if (_timers.Count == 0)
+            return _timers.Count;
+        }
+
+        /// <summary>Draws circle <paramref name="index"/> from the last <see cref="CollectCircles"/>.</summary>
+        public static void DrawCollected(UltimaBatcher2D batcher, int index, int x, int y, int size)
+        {
+            if (index >= 0 && index < _timers.Count)
             {
-                return;
+                DrawCircle(batcher, GetDisc(), _timers[index], x, y, size);
             }
+        }
 
-            int size = Math.Clamp(profile.TimerCircleSize, 16, 64);
-            int rowWidth = _timers.Count * size + (_timers.Count - 1) * GAP;
+        /// <summary>
+        /// Icon scale for art in a box: whole-number scales when enlarging (no blurry / uneven pixels),
+        /// smooth only when shrinking.
+        /// </summary>
+        internal static float IconScale(Rectangle src, float box)
+        {
+            float scale = Math.Min(box / src.Width, box / src.Height);
 
-            // Under the feet: the same anchor the health underline uses, then a configurable drop.
-            var player = world.Player;
-            Point p = player.RealScreenPosition;
-            p.X += (int)player.Offset.X + 22;
-            p.Y += (int)(player.Offset.Y - player.Offset.Z) + 22;
-            p = Client.Game.Scene.Camera.WorldToScreen(p, true);
-
-            int x = p.X - rowWidth / 2;
-            int y = p.Y + Math.Clamp(profile.TimerCircleOffsetY, 0, 120);
-
-            Texture2D disc = GetDisc();
-
-            for (int i = 0; i < _timers.Count; i++)
-            {
-                DrawCircle(batcher, disc, _timers[i], x + i * (size + GAP), y, size);
-            }
-
-            LastRowBottom = y + size;
+            return scale >= 1f ? Math.Min(MathF.Floor(scale), 2f) : scale;
         }
 
         private static void DrawCircle(UltimaBatcher2D batcher, Texture2D disc, SwingTimerGump.ActiveTimer t, int x, int y, int size)
@@ -98,8 +93,7 @@ namespace ClassicUO.Game.Managers
                         src = new Rectangle(art.UV.X + real.X, art.UV.Y + real.Y, real.Width, real.Height);
                     }
 
-                    float iconBox = size * 0.66f;
-                    float scale = Math.Min(Math.Min(iconBox / src.Width, iconBox / src.Height), 2f);
+                    float scale = IconScale(src, size * 0.66f);
                     int w = Math.Max(1, (int)(src.Width * scale));
                     int h = Math.Max(1, (int)(src.Height * scale));
 

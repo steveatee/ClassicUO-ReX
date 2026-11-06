@@ -248,6 +248,12 @@ namespace ClassicUO.Game.Managers
                 return;
             }
 
+            // ReX: don't send a spell target the server will reject as too far away; the cursor stays up.
+            if (SpellRanges.BlockIfOutOfRange(_world, serial))
+            {
+                return;
+            }
+
             Entity entity = _world.InGame ? _world.Get(serial) : null;
 
             if (entity != null)
@@ -438,6 +444,11 @@ namespace ClassicUO.Game.Managers
                     return;
             }
 
+            if (SpellRanges.BlockIfOutOfRange(_world, x, y))
+            {
+                return;
+            }
+
             if (graphic == 0)
             {
                 if (TargetingState == CursorTarget.Object)
@@ -488,6 +499,15 @@ namespace ClassicUO.Game.Managers
             _lastDataBuffer[4] = (byte) (_targetCursorId >> 8);
             _lastDataBuffer[5] = (byte) _targetCursorId;
             _lastDataBuffer[6] = (byte) TargetingType;
+
+            uint lastSerial = ReadTargetSerial(_lastDataBuffer);
+
+            if (SerialHelper.IsValid(lastSerial)
+                    ? SpellRanges.BlockIfOutOfRange(_world, lastSerial)
+                    : SpellRanges.BlockIfOutOfRange(_world, (_lastDataBuffer[11] << 8) | _lastDataBuffer[12], (_lastDataBuffer[13] << 8) | _lastDataBuffer[14]))
+            {
+                return;
+            }
 
             NetClient.Socket.Send(_lastDataBuffer);
             uint targetSerial = ReadTargetSerial(_lastDataBuffer);

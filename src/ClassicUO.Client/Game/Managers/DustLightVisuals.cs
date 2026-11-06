@@ -118,9 +118,9 @@ namespace ClassicUO.Game.Managers
         /// The range ring to show now, if any: while casting / holding a spell's target cursor (the on-cast ring),
         /// otherwise the always-on ring.
         /// </summary>
-        public static bool TryGetActiveRangeRing(World world, out int range, out ushort hue)
+        public static bool TryGetActiveRangeRing(World world, out SpellRangeRule rule, out ushort hue)
         {
-            range = 0;
+            rule = default;
             hue = 0;
             Profile p = ProfileManager.CurrentProfile;
 
@@ -132,14 +132,14 @@ namespace ClassicUO.Game.Managers
             if (p.LTHighlightRangeOnCast && (world.Player.IsCasting || world.TargetManager.IsTargeting && world.TargetManager.IsSpellTarget))
             {
                 // spellranges.txt can set a per-spell range (e.g. fields reach 9 on UO Dreams); slider otherwise.
-                range = SpellRanges.GetRange(GameActions.LastSpellIndex, p.LTHighlightRangeOnCastRange);
+                rule = SpellRanges.GetRule(GameActions.LastSpellIndex, p.LTHighlightRangeOnCastRange);
                 hue = p.LTHighlightRangeOnCastHue;
                 return true;
             }
 
             if (p.LTHighlightRangeOnActivated)
             {
-                range = p.LTHighlightRangeOnActivatedRange;
+                rule = new SpellRangeRule(p.LTHighlightRangeOnActivatedRange, false);
                 hue = p.LTHighlightRangeOnActivatedHue;
                 return true;
             }
@@ -152,15 +152,17 @@ namespace ClassicUO.Game.Managers
 
         /// <summary>
         /// Draws the range ring as a line along the OUTER edge of the last tile in range: everything inside the line
-        /// (including the tiles it runs along) is within N tiles, the same square-distance check the server uses
-        /// (Mobile.InRange). Called in the ground overlay pass so statics and mobiles still draw over it.
+        /// (including the tiles it runs along) is within range: a square for the stock check (Mobile.InRange), a
+        /// stepped circle for spells set to 'circle' in spellranges.txt. Called in the ground overlay pass so statics and mobiles still draw over it.
         /// </summary>
         public static void DrawRangeRing(World world, UltimaBatcher2D batcher)
         {
-            if (!TryGetActiveRangeRing(world, out int range, out ushort hue) || range <= 0 || world.Map == null)
+            if (!TryGetActiveRangeRing(world, out SpellRangeRule rule, out ushort hue) || rule.Range <= 0 || world.Map == null)
             {
                 return;
             }
+
+            int range = rule.Range;
 
             PlayerMobile player = world.Player;
             int px = player.X;
@@ -192,7 +194,18 @@ namespace ClassicUO.Game.Managers
             {
                 for (int dy = -range; dy <= range; dy++)
                 {
-                    if (Math.Abs(dx) != range && Math.Abs(dy) != range)
+                    // Edge tiles: in range, with at least one side facing a tile that isn't.
+                    if (!rule.Contains(dx, dy))
+                    {
+                        continue;
+                    }
+
+                    bool north = !rule.Contains(dx, dy - 1);
+                    bool east = !rule.Contains(dx + 1, dy);
+                    bool south = !rule.Contains(dx, dy + 1);
+                    bool west = !rule.Contains(dx - 1, dy);
+
+                    if (!north && !east && !south && !west)
                     {
                         continue;
                     }
@@ -213,10 +226,10 @@ namespace ClassicUO.Game.Managers
                     // A line's thickness lies to the left of its direction, so every edge runs clockwise round the
                     // tile to keep the stroke on this tile. On the next tile out it would be hidden by that tile's
                     // depth (that's why the south side went missing).
-                    if (dy == -range) DrawEdge(batcher, line, shadow, top, right, depth);   // north side
-                    if (dx == range) DrawEdge(batcher, line, shadow, right, bottom, depth); // east side
-                    if (dy == range) DrawEdge(batcher, line, shadow, bottom, left, depth);  // south side
-                    if (dx == -range) DrawEdge(batcher, line, shadow, left, top, depth);    // west side
+                    if (north) DrawEdge(batcher, line, shadow, top, right, depth);
+                    if (east) DrawEdge(batcher, line, shadow, right, bottom, depth);
+                    if (south) DrawEdge(batcher, line, shadow, bottom, left, depth);
+                    if (west) DrawEdge(batcher, line, shadow, left, top, depth);
                 }
             }
         }
