@@ -198,12 +198,13 @@ namespace ClassicUO.Game.Managers
 
 default = 10
 
-# UO Dreams: fields reach 9 tiles straight out but not 9 diagonally-ish, so a round check is the guess.
-Wall of Stone = 9 circle
-Fire Field = 9 circle
-Poison Field = 9 circle
-Paralyze Field = 9 circle
-Energy Field = 9 circle
+# UO Dreams: fields reach 9 tiles, square like the stock check (7 across + 7 up places fine).
+# Add 'circle' after the number if a far diagonal turns out to fail.
+Wall of Stone = 9
+Fire Field = 9
+Poison Field = 9
+Paralyze Field = 9
+Energy Field = 9
 
 # UO Dreams, measured in game
 Energy Vortex = 15
