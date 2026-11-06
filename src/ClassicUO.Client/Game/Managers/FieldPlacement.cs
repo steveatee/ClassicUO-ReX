@@ -10,9 +10,11 @@
 //     what skips tiles behind bumps, on the far side of a slope or behind house walls;
 //       - Energy / Paralyze / Wall of Stone check LOS to where the field ends up; Poison / Fire to the tile
 //         at the target height;
-//   * Energy / Paralyze / Wall of Stone: at most 5 below the target, and on sloped ground at most 2 below;
-//   * Poison / Fire: at most 9 below.
-//   The centre tile is always placed (the spell's own LOS check already passed).
+//   * at most 2 above the target; a side tile only goes up onto land whose average height is its low corner
+//     (flat ground, or a slope rising from there) - the centre may go up onto any slope;
+//   * Energy / Paralyze / Wall of Stone: at most 5 below the target; Poison / Fire: at most 9 below;
+//   * the centre follows the same rules (6 Nov: a centre on a rise was skipped while the sides placed).
+//   Offline check: Sourcecode/field_rules_check (check_casts.py, old.py) against the real map files.
 // "RunUO" and "ServUO / TrueUO" follow those servers' SpellHelper.AdjustField / Map.CanFit code.
 
 using System;
@@ -44,7 +46,10 @@ namespace ClassicUO.Game.Managers
         // Energy / Paralyze / Wall of Stone on sloped ground: placed when the field sits at most this far
         // below the target (2090,134: slope 0..4 under a z4 target, field at 2 → placed; every logged
         // skip had the field 3 or more below).
-        private const int STRICT_SLOPE_MAX_DROP = 2;
+        private const int STRICT_SLOPE_MAX_DROP = 2; // old rule, no longer used: line of sight explains those skips
+
+        // A field tile can sit at most this far above the target height (6 Nov: +2 placed, +3 not).
+        private const int MAX_RISE = 2;
 
         private const int UNKNOWN = int.MinValue;
 
@@ -335,7 +340,7 @@ namespace ClassicUO.Game.Managers
                         break;
 
                     default:
-                        placed = i == 0 || PlacedUODreams(world, x, y, pz, tolerant, px, py, GetCasterZ(world), isWall, spell == SPELL_PARALYZE_FIELD);
+                        placed = PlacedUODreams(world, x, y, pz, tolerant, px, py, GetCasterZ(world), isWall, spell == SPELL_PARALYZE_FIELD, i == 0);
                         break;
                 }
 
@@ -343,9 +348,9 @@ namespace ClassicUO.Game.Managers
             }
         }
 
-        private static bool PlacedUODreams(World world, int x, int y, int pz, bool tolerant, int px, int py, int casterZ, bool isWall, bool isParalyze)
+        private static bool PlacedUODreams(World world, int x, int y, int pz, bool tolerant, int px, int py, int casterZ, bool isWall, bool isParalyze, bool centre)
         {
-            if (!TryGetLandCorners(world, x, y, out int low, out _, out int top))
+            if (!TryGetLandCorners(world, x, y, out int low, out int avg, out int top))
             {
                 return true; // map not loaded: don't claim a skip we can't check
             }
@@ -386,14 +391,18 @@ namespace ClassicUO.Game.Managers
                 return false;
             }
 
-            if (z < pz)
+            if (z > pz)
             {
-                int drop = pz - z;
-
-                if (tolerant ? drop > 9 : drop > 5 || onLand && low != top && drop > STRICT_SLOPE_MAX_DROP)
+                // At most 2 above the target; a side tile only onto land whose average is its low corner
+                // (flat, or a slope that only rises from there). The centre may sit on any slope.
+                if (z - pz > MAX_RISE || !centre && onLand && avg != low)
                 {
                     return false;
                 }
+            }
+            else if (z < pz && pz - z > (tolerant ? 9 : 5))
+            {
+                return false;
             }
 
             return HasLineOfSight(world, px, py, casterZ + 14, x, y, tolerant ? pz : z);

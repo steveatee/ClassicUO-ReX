@@ -392,7 +392,7 @@ namespace ClassicUO.Game.UI.Gumps
             return kind switch
             {
                 ConsumableCooldownKind.EnchantedApple => Color.LimeGreen,
-                ConsumableCooldownKind.ConflagrationPotion => Color.OrangeRed,
+                ConsumableCooldownKind.ConflagrationPotion => Color.LimeGreen,
                 ConsumableCooldownKind.GrapesOfWrath => Color.MediumPurple,
                 _ => Color.Gold
             };

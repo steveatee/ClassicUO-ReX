@@ -153,6 +153,13 @@ namespace ClassicUO.Game.Managers
 
             for (GameObject o = world.Map.GetTile(x, y, false); o != null; o = o.TNext)
             {
+                if (o is Mobile mob)
+                {
+                    statics++;
+                    staticIds.Append(staticIds.Length > 0 ? " " : "").Append($"mob@{mob.Z}");
+                    continue;
+                }
+
                 if (o is Static || o is Multi || o is Item it && !IsFieldGraphic(it.Graphic))
                 {
                     statics++;
