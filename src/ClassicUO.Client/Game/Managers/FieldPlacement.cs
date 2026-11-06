@@ -285,6 +285,15 @@ namespace ClassicUO.Game.Managers
 
             Compute(world, target.X, target.Y, pz, px, py, spell, rules);
 
+            // Out of range (spellranges.txt, e.g. 9 on UO Dreams): the cast will fail, so nothing is placed.
+            if (SpellRanges.TryGetRange(spell, out int range) && Math.Max(Math.Abs(target.X - px), Math.Abs(target.Y - py)) > range)
+            {
+                for (int i = 0; i < _tileCount; i++)
+                {
+                    _tiles[i].Placed = false;
+                }
+            }
+
             return _tileCount > 0;
         }
 

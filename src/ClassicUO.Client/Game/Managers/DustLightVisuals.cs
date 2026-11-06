@@ -131,7 +131,8 @@ namespace ClassicUO.Game.Managers
 
             if (p.LTHighlightRangeOnCast && (world.Player.IsCasting || world.TargetManager.IsTargeting && world.TargetManager.IsSpellTarget))
             {
-                range = p.LTHighlightRangeOnCastRange;
+                // spellranges.txt can set a per-spell range (e.g. fields reach 9 on UO Dreams); slider otherwise.
+                range = SpellRanges.GetRange(GameActions.LastSpellIndex, p.LTHighlightRangeOnCastRange);
                 hue = p.LTHighlightRangeOnCastHue;
                 return true;
             }
@@ -209,10 +210,13 @@ namespace ClassicUO.Game.Managers
                     float depth = land.CalculateDepthZ() + 0.8f;
 
                     // Corners: top = (x, y), right = (x+1, y), bottom = (x+1, y+1), left = (x, y+1).
+                    // A line's thickness lies to the left of its direction, so every edge runs clockwise round the
+                    // tile to keep the stroke on this tile. On the next tile out it would be hidden by that tile's
+                    // depth (that's why the south side went missing).
                     if (dy == -range) DrawEdge(batcher, line, shadow, top, right, depth);   // north side
-                    if (dy == range) DrawEdge(batcher, line, shadow, left, bottom, depth);  // south side
-                    if (dx == -range) DrawEdge(batcher, line, shadow, top, left, depth);    // west side
                     if (dx == range) DrawEdge(batcher, line, shadow, right, bottom, depth); // east side
+                    if (dy == range) DrawEdge(batcher, line, shadow, bottom, left, depth);  // south side
+                    if (dx == -range) DrawEdge(batcher, line, shadow, left, top, depth);    // west side
                 }
             }
         }
@@ -221,7 +225,7 @@ namespace ClassicUO.Game.Managers
 
         private static void DrawEdge(UltimaBatcher2D batcher, Texture2D line, Texture2D shadow, Vector2 a, Vector2 b, float depth)
         {
-            batcher.DrawLine(shadow, a + new Vector2(0, 1), b + new Vector2(0, 1), _ringHueVector, 3f, depth);
+            batcher.DrawLine(shadow, a, b, _ringHueVector, 3f, depth);
             batcher.DrawLine(line, a, b, _ringHueVector, 2f, depth);
         }
 
