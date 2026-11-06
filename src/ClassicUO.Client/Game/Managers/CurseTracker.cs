@@ -256,7 +256,7 @@ namespace ClassicUO.Game.Managers
 
         private static bool IsEnabled(World world)
         {
-            return world?.Player != null && (ProfileManager.CurrentProfile.TrackCurses || ProfileManager.CurrentProfile.CurseAura);
+            return world?.Player != null && (ProfileManager.CurrentProfile.TrackCurses || ProfileManager.CurrentProfile.CurseAura || ProfileManager.CurrentProfile.ShowCurseIcon);
         }
 
         /// <summary>

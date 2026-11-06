@@ -210,6 +210,10 @@ namespace ClassicUO.Configuration
         public int TimerDisplayStyle { get; set; } // 0 bars, 1 circles under the character, 2 both (TimerCirclesOverlay)
         public int TimerCircleSize { get; set; } = 30;
         public int TimerCircleOffsetY { get; set; } = 26;
+        public bool ShowMortalIcon { get; set; } = true; // StatusIconsOverlay: "MS" icon under mortally wounded mobiles
+        public bool ShowCurseIcon { get; set; } = true; // StatusIconsOverlay: "CURSE" icon under cursed mobiles
+        public int StatusIconSize { get; set; } = 26;
+        public int StatusIconOffsetY { get; set; } = 18;
         // TazUO 26.10 ports, each switchable (Options > Custom > TazUO 26.10 ports)
         public bool TazMobileCadence { get; set; } = true;       // #1136 other mobiles move at the server's step cadence
         public bool TazArtWarmup { get; set; } = true;           // #1128 decode new statics a little each frame

@@ -1207,6 +1207,7 @@ namespace ClassicUO.Game.Scenes
         {
             _healthLinesManager.Draw(batcher, 0f);
             TimerCirclesOverlay.Draw(_world, batcher);
+            StatusIconsOverlay.Draw(_world, batcher);
 
             if (!UIManager.IsMouseOverWorld)
             {

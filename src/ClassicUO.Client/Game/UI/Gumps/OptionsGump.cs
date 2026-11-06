@@ -42,7 +42,8 @@ namespace ClassicUO.Game.UI.Gumps
         private HSliderBar _movementTurnDelay, _movementTurnDelayFast;
         private Checkbox _blockWalkWhileCasting, _startCastTimerFromSpellWords, _avoidTraps;
         private Combobox _timerDisplayStyle;
-        private HSliderBar _timerCircleSize, _timerCircleOffsetY;
+        private HSliderBar _timerCircleSize, _timerCircleOffsetY, _statusIconSize, _statusIconOffsetY;
+        private Checkbox _showMortalIcon, _showCurseIcon;
         private Checkbox _friendEnemyHues, _friendHueParty, _friendHueAllies, _enemyHueHumanoids, _curseAura, _curseAuraLastTarget;
         private ClickableColorBox _friendHueBox, _enemyHueBox, _curseAuraHueBox;
         private HSliderBar _curseAuraOpacity, _curseAuraSize;
@@ -1699,6 +1700,14 @@ namespace ClassicUO.Game.UI.Gumps
             combat.AddRight(_curseAuraOpacity = AddHSlider(null, 10, 100, _currentProfile.CurseAuraOpacity, startX, startY, 150));
             combat.Add(AddLabel(null, "Ring size", startX, startY));
             combat.AddRight(_curseAuraSize = AddHSlider(null, 30, 110, _currentProfile.CurseAuraSize, startX, startY, 150));
+            combat.PopIndent();
+            combat.Add(_showMortalIcon = AddCheckBox(null, "\"MS\" icon under mortally wounded players and creatures (yourself too)", _currentProfile.ShowMortalIcon, startX, startY));
+            combat.Add(_showCurseIcon = AddCheckBox(null, "\"CURSE\" icon under cursed players (Curse, Corpse Skin, Hit Curse; yours from buffs)", _currentProfile.ShowCurseIcon, startX, startY));
+            combat.PushIndent();
+            combat.Add(AddLabel(null, "Icon size", startX, startY));
+            combat.AddRight(_statusIconSize = AddHSlider(null, 16, 48, _currentProfile.StatusIconSize, startX, startY, 150));
+            combat.Add(AddLabel(null, "Icons below the feet", startX, startY));
+            combat.AddRight(_statusIconOffsetY = AddHSlider(null, 0, 100, _currentProfile.StatusIconOffsetY, startX, startY, 150));
             combat.PopIndent();
 
 
@@ -5005,6 +5014,10 @@ namespace ClassicUO.Game.UI.Gumps
             _currentProfile.TimerDisplayStyle = _timerDisplayStyle.SelectedIndex;
             _currentProfile.TimerCircleSize = _timerCircleSize.Value;
             _currentProfile.TimerCircleOffsetY = _timerCircleOffsetY.Value;
+            _currentProfile.ShowMortalIcon = _showMortalIcon.IsChecked;
+            _currentProfile.ShowCurseIcon = _showCurseIcon.IsChecked;
+            _currentProfile.StatusIconSize = _statusIconSize.Value;
+            _currentProfile.StatusIconOffsetY = _statusIconOffsetY.Value;
 
             bool trackCursesChanged = _currentProfile.TrackCurses != _trackCurses.IsChecked;
             _currentProfile.TrackCurses = _trackCurses.IsChecked;

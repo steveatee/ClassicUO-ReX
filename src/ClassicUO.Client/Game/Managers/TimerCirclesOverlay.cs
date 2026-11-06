@@ -31,8 +31,12 @@ namespace ClassicUO.Game.Managers
 
         public static bool ShowBars(Profile p) => p == null || p.TimerDisplayStyle != STYLE_CIRCLES;
 
+        /// <summary>Screen Y just below the circle row drawn this frame, or -1 when none was drawn.</summary>
+        public static int LastRowBottom { get; private set; } = -1;
+
         public static void Draw(World world, UltimaBatcher2D batcher)
         {
+            LastRowBottom = -1;
             Profile profile = ProfileManager.CurrentProfile;
 
             if (profile == null || profile.TimerDisplayStyle == STYLE_BARS || world?.Player == null || world.Player.IsDestroyed)
@@ -67,6 +71,8 @@ namespace ClassicUO.Game.Managers
             {
                 DrawCircle(batcher, disc, _timers[i], x + i * (size + GAP), y, size);
             }
+
+            LastRowBottom = y + size;
         }
 
         private static void DrawCircle(UltimaBatcher2D batcher, Texture2D disc, SwingTimerGump.ActiveTimer t, int x, int y, int size)
@@ -122,7 +128,7 @@ namespace ClassicUO.Game.Managers
             }
         }
 
-        private static void DrawArc(UltimaBatcher2D batcher, Texture2D texture, Vector2 centre, float radius, float fraction, float stroke, float depth)
+        internal static void DrawArc(UltimaBatcher2D batcher, Texture2D texture, Vector2 centre, float radius, float fraction, float stroke, float depth)
         {
             int segments = Math.Max(1, (int)Math.Ceiling(RING_SEGMENTS * fraction));
             float start = -MathF.PI / 2f;
@@ -147,6 +153,14 @@ namespace ClassicUO.Game.Managers
                 return _disc;
             }
 
+            _disc = CreateDisc(new Color(12, 12, 16), 0.62f);
+
+            return _disc;
+        }
+
+        /// <summary>A soft-edged filled disc of the given colour and opacity (premultiplied alpha).</summary>
+        internal static Texture2D CreateDisc(Color colour, float opacity)
+        {
             const int n = DISC_TEXTURE_SIZE;
             Color[] data = new Color[n * n];
             float r = n / 2f;
@@ -159,15 +173,15 @@ namespace ClassicUO.Game.Managers
                     float dy = py + 0.5f - r;
                     float d = MathF.Sqrt(dx * dx + dy * dy);
                     float edge = Math.Clamp(r - d, 0f, 1.5f) / 1.5f;
-                    float a = 0.62f * edge;
-                    data[py * n + px] = new Color(12, 12, 16) * a;
+                    float a = opacity * edge;
+                    data[py * n + px] = colour * a;
                 }
             }
 
-            _disc = new Texture2D(Client.Game.GraphicsDevice, n, n, false, SurfaceFormat.Color);
-            _disc.SetData(data);
+            var disc = new Texture2D(Client.Game.GraphicsDevice, n, n, false, SurfaceFormat.Color);
+            disc.SetData(data);
 
-            return _disc;
+            return disc;
         }
     }
 }
