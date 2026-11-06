@@ -153,7 +153,7 @@ namespace ClassicUO.Game.Managers
         /// <summary>
         /// Draws the range ring as a line along the OUTER edge of the last tile in range: everything inside the line
         /// (including the tiles it runs along) is within range: a square for the stock check (Mobile.InRange), a
-        /// stepped circle for spells set to 'circle' in spellranges.txt. Called in the ground overlay pass so statics and mobiles still draw over it.
+        /// stepped circle or cut-corner square for spells with circle / radius in spellranges.txt. Called in the ground overlay pass so statics and mobiles still draw over it.
         /// </summary>
         public static void DrawRangeRing(World world, UltimaBatcher2D batcher)
         {

@@ -3,11 +3,12 @@
 // (UO Dreams fields reach 9 tiles, not TrueUO's 10). Used by the on-cast range ring and the field preview.
 // The file is re-read when it changes, so edits apply without restarting the client.
 //
-// Format, one spell per line:   <spell number or name> = <range> [square|circle]     (# starts a comment)
+// Format, one spell per line:   <spell number or name> = <range> [circle | radius <r>]     (# starts a comment)
 //   39 = 9
-//   Paralyze Field = 9 circle
+//   Paralyze Field = 9 radius 10
 //   default = 10
-// square = the stock RunUO/TrueUO check (|dx| and |dy| both <= range); circle = dx² + dy² <= range².
+// <range> alone = the stock RunUO/TrueUO square check (|dx| and |dy| both <= range).
+// circle = dx² + dy² <= range². radius <r> = the square check AND dx² + dy² <= r² (a square with cut corners).
 // Spell numbers: magery 1-64, necromancy 101-117, chivalry 201-210, bushido 401-406, ninjitsu 501-508,
 // spellweaving 601-616, mysticism 678-693, masteries 701+.
 
@@ -23,19 +24,30 @@ namespace ClassicUO.Game.Managers
 {
     internal readonly struct SpellRangeRule
     {
-        public SpellRangeRule(int range, bool circle)
+        public SpellRangeRule(int range, bool circle) : this(range, circle ? range : 0)
+        {
+        }
+
+        /// <param name="radius">0 = no round limit (plain square).</param>
+        public SpellRangeRule(int range, int radius)
         {
             Range = range;
-            Circle = circle;
+            Radius = radius;
         }
 
         public int Range { get; }
-        public bool Circle { get; }
+
+        /// <summary>Round limit in tiles (dx² + dy² ≤ Radius²) on top of the square one; 0 = none.</summary>
+        public int Radius { get; }
+
+        public bool Circle => Radius > 0;
 
         public bool Contains(int dx, int dy)
         {
-            return Circle ? dx * dx + dy * dy <= Range * Range : Math.Abs(dx) <= Range && Math.Abs(dy) <= Range;
+            return Math.Abs(dx) <= Range && Math.Abs(dy) <= Range && (Radius <= 0 || dx * dx + dy * dy <= Radius * Radius);
         }
+
+        public string Describe() => Radius <= 0 ? Range.ToString() : Radius == Range ? $"{Range}, round" : $"{Range}, corners cut at {Radius}";
     }
 
     internal static class SpellRanges
@@ -143,11 +155,20 @@ namespace ClassicUO.Game.Managers
                     continue;
                 }
 
-                bool circle = value.Length > 1 && value[1].Equals("circle", StringComparison.OrdinalIgnoreCase);
+                int radius = 0;
+
+                if (value.Length > 1 && value[1].Equals("circle", StringComparison.OrdinalIgnoreCase))
+                {
+                    radius = range;
+                }
+                else if (value.Length > 2 && value[1].Equals("radius", StringComparison.OrdinalIgnoreCase) && int.TryParse(value[2], out int r) && r > 0)
+                {
+                    radius = r;
+                }
 
                 if (key.Equals("default", StringComparison.OrdinalIgnoreCase))
                 {
-                    _default = new SpellRangeRule(range, circle);
+                    _default = new SpellRangeRule(range, radius);
                     continue;
                 }
 
@@ -162,7 +183,7 @@ namespace ClassicUO.Game.Managers
                     }
                 }
 
-                _ranges[spell] = new SpellRangeRule(range, circle);
+                _ranges[spell] = new SpellRangeRule(range, radius);
             }
         }
 
@@ -187,9 +208,11 @@ namespace ClassicUO.Game.Managers
 @"# ReX spell ranges: how far away (in tiles) you can target each spell.
 # Used by the range ring shown while casting / holding the spell's target cursor, the field preview
 # (out of range = every tile shown as skipped) and the out-of-range target block.
-# One per line: <spell number or name> = <range> [square|circle]
-#   square: the stock check, |dx| and |dy| both within range (a square ring). This is the default.
-#   circle: dx*dx + dy*dy <= range*range (a round ring; 9 straight out works, 8 across + 5 up doesn't).
+# One per line: <spell number or name> = <range> [circle | radius <r>]
+#   <range> alone: the stock check, |dx| and |dy| both within range (a square ring).
+#   circle: dx*dx + dy*dy <= range*range (a round ring).
+#   radius <r>: the square check AND dx*dx + dy*dy <= r*r, a square with its corners cut off.
+#     '9 radius 10': 9 straight out, up to 4 either side at 9 (81+16 = 97 <= 100; 5 either side is 106), 8 and 6 (100).
 # 'default = <range> [shape]' applies to every spell not listed. Without it, unlisted spells use the
 # range ring slider in Options and are never blocked.
 # The file is re-read a couple of seconds after you save it.
@@ -198,13 +221,12 @@ namespace ClassicUO.Game.Managers
 
 default = 10
 
-# UO Dreams: fields reach 9 tiles, square like the stock check (7 across + 7 up places fine).
-# Add 'circle' after the number if a far diagonal turns out to fail.
-Wall of Stone = 9
-Fire Field = 9
-Poison Field = 9
-Paralyze Field = 9
-Energy Field = 9
+# UO Dreams: fields reach 9 straight out and 4 either side at 9, so a square of 9 with the corners cut at 10.
+Wall of Stone = 9 radius 10
+Fire Field = 9 radius 10
+Poison Field = 9 radius 10
+Paralyze Field = 9 radius 10
+Energy Field = 9 radius 10
 
 # UO Dreams, measured in game
 Energy Vortex = 15
@@ -238,7 +260,7 @@ Word of Death = 12
                 return false;
             }
 
-            GameActions.Print(world, $"Out of range ({rule.Range}{(rule.Circle ? ", round" : "")}) - target not sent", 0x0022);
+            GameActions.Print(world, $"Out of range ({rule.Describe()}) - target not sent", 0x0022);
 
             return true;
         }

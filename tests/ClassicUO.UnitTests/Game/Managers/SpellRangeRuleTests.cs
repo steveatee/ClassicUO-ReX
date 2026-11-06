@@ -19,6 +19,20 @@ namespace ClassicUO.UnitTests.Game.Managers
         }
 
         [Theory]
+        [InlineData(0, -9, true)]
+        [InlineData(4, -9, true)]   // 97
+        [InlineData(-4, -9, true)]
+        [InlineData(5, -9, false)]  // 106
+        [InlineData(0, -10, false)] // square limit
+        [InlineData(7, 7, true)]    // 98
+        [InlineData(8, 6, true)]    // 100
+        [InlineData(8, 7, false)]   // 113
+        public void SquareWithCutCorners(int dx, int dy, bool expected)
+        {
+            Assert.Equal(expected, new SpellRangeRule(9, 10).Contains(dx, dy));
+        }
+
+        [Theory]
         [InlineData(9, 9, true)]
         [InlineData(-9, 4, true)]
         [InlineData(10, 0, false)]
