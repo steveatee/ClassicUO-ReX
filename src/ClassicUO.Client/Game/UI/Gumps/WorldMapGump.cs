@@ -2256,6 +2256,7 @@ namespace ClassicUO.Game.UI.Gumps
                             if (!string.IsNullOrEmpty(partyMember.Name))
                             {
                                 WMapEntity.CacheName(partyMember.Serial, partyMember.Name);
+                                KnownPlayers.Remember(partyMember.Serial, partyMember.Name);
                             }
 
                             DrawMobile

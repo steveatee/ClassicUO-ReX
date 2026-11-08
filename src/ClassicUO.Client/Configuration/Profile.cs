@@ -211,6 +211,7 @@ namespace ClassicUO.Configuration
         public int TimerCircleSize { get; set; } = 30;
         public int TimerCircleOffsetY { get; set; } = 26;
         public bool ShowMortalIcon { get; set; } = true; // StatusIconsOverlay: "MS" icon under mortally wounded mobiles
+        public bool RememberPlayerNames { get; set; } = true; // KnownPlayers: names by serial across sessions (world map)
         public bool ShowDiscordIcon { get; set; } = true; // StatusIconsOverlay: lute icon under discorded creatures
         public bool ShowCurseIcon { get; set; } = true; // StatusIconsOverlay: "CURSE" icon under cursed mobiles
         public int StatusIconSize { get; set; } = 26;

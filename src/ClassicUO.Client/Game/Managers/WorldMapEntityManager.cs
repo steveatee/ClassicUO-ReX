@@ -191,6 +191,7 @@ namespace ClassicUO.Game.Managers
             if (!string.IsNullOrEmpty(name))
             {
                 WMapEntity.CacheName(serial, name);
+                KnownPlayers.Remember(serial, name); // party / guild members are players
             }
 
             if (!Entities.TryGetValue(serial, out WMapEntity entity) || entity == null)
@@ -222,6 +223,7 @@ namespace ClassicUO.Game.Managers
                 if (!string.IsNullOrEmpty(entity.Name))
                 {
                     WMapEntity.CacheName(serial, entity.Name);
+                    KnownPlayers.Remember(serial, entity.Name);
                 }
             }
         }

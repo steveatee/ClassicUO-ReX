@@ -280,6 +280,8 @@ namespace ClassicUO.Game.Scenes
                 return;
             }
 
+            KnownPlayers.Flush();
+
             ProfileManager.CurrentProfile.GameWindowPosition = new Point(
                 Camera.Bounds.X,
                 Camera.Bounds.Y
@@ -767,6 +769,8 @@ namespace ClassicUO.Game.Scenes
             SelectedObject.TranslatedMousePositionByViewport = Camera.MouseToWorldPosition();
 
             base.Update();
+
+            KnownPlayers.Update(_world);
 
             if (_time_cleanup < Time.Ticks)
             {
