@@ -579,6 +579,44 @@ namespace ClassicUO.Game.UI.Gumps
             }
         }
 
+        // ReX: nameplates placed so far this frame, so a plate that would cover another moves down below it.
+        private static readonly System.Collections.Generic.List<Rectangle> _placedThisFrame = new System.Collections.Generic.List<Rectangle>();
+        private static uint _placedFrameTicks;
+
+        private static int AvoidOverlap(int x, int y, int width, int height)
+        {
+            if (_placedFrameTicks != Time.Ticks)
+            {
+                _placedFrameTicks = Time.Ticks;
+                _placedThisFrame.Clear();
+            }
+
+            var rect = new Rectangle(x, y, width, height);
+
+            for (int tries = 0; tries < 8; tries++)
+            {
+                bool moved = false;
+
+                foreach (Rectangle other in _placedThisFrame)
+                {
+                    if (rect.Intersects(other))
+                    {
+                        rect.Y = other.Bottom + 1;
+                        moved = true;
+                    }
+                }
+
+                if (!moved)
+                {
+                    break;
+                }
+            }
+
+            _placedThisFrame.Add(rect);
+
+            return rect.Y;
+        }
+
         public override bool AddToRenderLists(RenderLists renderLists, int x, int y, ref float layerDepthRef)
         {
             if (IsDisposed || !SetName())
@@ -599,13 +637,24 @@ namespace ClassicUO.Game.UI.Gumps
 
                 if (UseCustomMobileNameplate)
                 {
-                    x =
-                        (int)(m.RealScreenPosition.X - m.FrameInfo.X + 22 + m.Offset.X)
-                        + (m.FrameInfo.Width >> 1);
-                    y =
-                        (int)(m.RealScreenPosition.Y - m.FrameInfo.Y + 22 + (m.Offset.Y - m.Offset.Z))
-                        + m.FrameInfo.Height
-                        + 12;
+                    // ReX: anchored to the feet with the body's standing size, not the current animation frame
+                    // (FrameInfo changes every step and with facing, so the plate jumped around while walking or
+                    // turning on the spot).
+                    Client.Game.UO.Animations.GetAnimationDimensions(
+                        0,
+                        m.GetGraphicForAnimation(),
+                        0,
+                        0,
+                        m.IsMounted,
+                        0,
+                        out _,
+                        out int standCenterY,
+                        out _,
+                        out _
+                    );
+
+                    x = (int)(m.RealScreenPosition.X + 22 + m.Offset.X);
+                    y = (int)(m.RealScreenPosition.Y + 22 + (m.Offset.Y - m.Offset.Z)) - standCenterY + 12;
                 }
                 else if (_positionLocked)
                 {
@@ -678,6 +727,11 @@ namespace ClassicUO.Game.UI.Gumps
             if (x < camera.Bounds.X || x + Width > camera.Bounds.Right)
             {
                 return false;
+            }
+
+            if (SerialHelper.IsMobile(LocalSerial))
+            {
+                y = AvoidOverlap(x, y, Width, Height);
             }
 
             if (y < camera.Bounds.Y || y + Height > camera.Bounds.Bottom)

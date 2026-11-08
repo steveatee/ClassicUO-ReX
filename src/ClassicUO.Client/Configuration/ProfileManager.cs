@@ -49,6 +49,14 @@ namespace ClassicUO.Configuration
             CurrentProfile.CharacterName = charactername;
 
             ValidateFields(CurrentProfile);
+
+            // ReX: the Tree Replacement dropdown (Normal / Stump / Tile) was removed; Stump and Tile both drew the
+            // same stump art, which is what "Trees to stumps" does.
+            if (CurrentProfile.TreeType != 0)
+            {
+                CurrentProfile.TreeToStumps = true;
+                CurrentProfile.TreeType = 0;
+            }
         }
 
         public static void SetProfileAsDefault(Profile profile)

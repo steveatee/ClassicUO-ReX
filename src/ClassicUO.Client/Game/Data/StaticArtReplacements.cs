@@ -55,14 +55,9 @@ namespace ClassicUO.Game.Data
 
             if (StaticFilters.IsTree(graphic, out _))
             {
-                if (profile.TreeType == 1 || profile.TreeType == 0 && profile.TreeToStumps)
+                if (profile.TreeToStumps)
                 {
                     return TreeReplaceGraphic;
-                }
-
-                if (profile.TreeType == 2)
-                {
-                    return TreeReplaceGraphicTile;
                 }
             }
 

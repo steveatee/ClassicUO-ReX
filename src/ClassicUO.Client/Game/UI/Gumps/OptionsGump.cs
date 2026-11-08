@@ -128,7 +128,7 @@ namespace ClassicUO.Game.UI.Gumps
                          _showConsumableCooldowns,
                          _trackCurses;
         private Checkbox _holdShiftForContext, _holdShiftToSplitStack, _reduceFPSWhenInactive, _sallosEasyGrab, _partyInviteGump, _objectsFading, _textFading, _holdAltToMoveGumps;
-        private Combobox _hpComboBox, _healtbarType, _fieldsType, _treeReplacementType, _blockerReplacementType, _hpComboBoxShowWhen;
+        private Combobox _hpComboBox, _healtbarType, _fieldsType, _blockerReplacementType, _hpComboBoxShowWhen;
 
         // infobar
         private List<InfoBarBuilderControl> _infoBarBuilderControls;
@@ -1526,33 +1526,9 @@ namespace ClassicUO.Game.UI.Gumps
                 )
             );
 
-            int mode = _currentProfile.TreeType;
-
-            if (mode < 0 || mode > 2)
-            {
-                mode = 0;
-            }
-
-            terrain.Add(AddLabel(null, "Tree Replacement", startX, startY));
-            terrain.AddRight
-            (
-                _treeReplacementType = AddCombobox
-                (
-                    null,
-                    new[] { "Normal", "Stump", "Tile" },
-                    mode,
-                    startX,
-                    startY,
-                    120
-                )
-            );
-            _treeReplacementType.OnOptionSelected += (sender, selected) =>
-            {
-                _currentProfile.TreeType = ClampReplacementMode(selected);
-                MarkUsedChunksDirty();
-            };
-
-            mode = _currentProfile.BlockerType;
+            // ReX: the Dust "Tree Replacement" dropdown is gone; the stock "Trees to stumps" checkbox does the same
+            // (old Stump / Tile settings are turned into that checkbox when the profile loads).
+            int mode = _currentProfile.BlockerType;
 
             if (mode < 0 || mode > 2)
             {
@@ -4337,7 +4313,6 @@ namespace ClassicUO.Game.UI.Gumps
                     _movementTurnDelayFast.Value = Constants.TURN_DELAY_FAST;
                     _showSwingTimer.IsChecked = false;
                     _showConsumableCooldowns.IsChecked = false;
-                    _treeReplacementType.SelectedIndex = 0;
                     _blockerReplacementType.SelectedIndex = 0;
                     _customPlayerNameplate.IsChecked = false;
                     _invisibleHousesEnabled.IsChecked = false;
@@ -4484,9 +4459,7 @@ namespace ClassicUO.Game.UI.Gumps
             _currentProfile.ShowTrapTiles = _showTrapTiles.IsChecked;
 
             bool rebuildStaticMeshes =
-                _currentProfile.TreeType != ClampReplacementMode(_treeReplacementType.SelectedIndex)
-                || _currentProfile.BlockerType != ClampReplacementMode(_blockerReplacementType.SelectedIndex);
-            _currentProfile.TreeType = ClampReplacementMode(_treeReplacementType.SelectedIndex);
+                _currentProfile.BlockerType != ClampReplacementMode(_blockerReplacementType.SelectedIndex);
             _currentProfile.BlockerType = ClampReplacementMode(_blockerReplacementType.SelectedIndex);
 
             if (seasonFileChanged)

@@ -547,10 +547,8 @@ namespace ClassicUO.Game.Scenes
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        // Leaves are hidden whenever trees are replaced (old "Trees to stumps" checkbox, or Tree Replacement =
-        // Stump / Tile). Stump / Tile used to keep the leaves, so forests in Trammel (summer: leaves drawn) still
-        // drew every canopy while Felucca (desolation: no leaves) didn't - the leaves are big, unmeshed sprites.
-        private static bool HideTreeFoliage(Profile profile) => profile.TreeToStumps && profile.TreeType == 0 || profile.TreeType == 1 || profile.TreeType == 2;
+        // Leaves are hidden whenever "Trees to stumps" is on.
+        private static bool HideTreeFoliage(Profile profile) => profile.TreeToStumps;
 
         private static bool IsFoliageVisibleAtSeason(ref StaticTiles itemData, Season season)
         {
