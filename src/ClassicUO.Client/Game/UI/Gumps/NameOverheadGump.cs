@@ -654,7 +654,7 @@ namespace ClassicUO.Game.UI.Gumps
                     );
 
                     x = (int)(m.RealScreenPosition.X + 22 + m.Offset.X);
-                    y = (int)(m.RealScreenPosition.Y + 22 + (m.Offset.Y - m.Offset.Z)) - standCenterY + 12;
+                    y = (int)(m.RealScreenPosition.Y + 22 + (m.Offset.Y - m.Offset.Z)) - standCenterY + 2; // +2: leaves room for the status icons below
                 }
                 else if (_positionLocked)
                 {

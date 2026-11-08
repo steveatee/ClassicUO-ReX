@@ -146,8 +146,7 @@ namespace ClassicUO.Game.Managers
                     continue;
                 }
 
-                if (world.OPL.TryGetNameAndData(m.Serial, out _, out string data)
-                    && data != null && data.IndexOf("Queen's Loyalty", StringComparison.OrdinalIgnoreCase) >= 0)
+                if (PlayerDetection.IsPlayer(world, m))
                 {
                     Remember(m.Serial, m.Name);
                 }

@@ -114,6 +114,12 @@ namespace ClassicUO.Game.Managers
                 return 0;
             }
 
+            // ReX: on UO Dreams only real players (Queen's Loyalty) get the enemy hue, not human-looking NPCs.
+            if (PlayerDetection.IsAvailable(world) && !PlayerDetection.IsPlayer(world, mobile))
+            {
+                return 0;
+            }
+
             return p.EnemyListHue;
         }
 
