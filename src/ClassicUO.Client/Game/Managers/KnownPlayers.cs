@@ -43,7 +43,7 @@ namespace ClassicUO.Game.Managers
         private static uint _nextScan, _nextSave;
 
         private static readonly Regex _lordLady = new Regex(@"^(Lady|Lord)\s+", RegexOptions.Compiled);
-        private static readonly string[] _strippedTags = { "[VvV]", "[SOA]", "[R0M]", @"[/\/\]" };
+        private static readonly string[] _strippedTags = { "[VvV]" }; // Vice vs Virtue flag; guild tags are kept
 
         public static bool Enabled => ProfileManager.CurrentProfile?.RememberPlayerNames != false;
 
