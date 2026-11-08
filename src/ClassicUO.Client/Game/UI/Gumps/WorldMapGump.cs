@@ -1743,25 +1743,30 @@ namespace ClassicUO.Game.UI.Gumps
 
                                         if (string.IsNullOrEmpty(line))
                                         {
-                                            return;
+                                            continue;
                                         }
 
                                         string[] splits = line.Split(',');
 
-                                        if (splits.Length <= 1)
+                                        // ReX: skip lines that aren't markers (headers, other CSV files in Data/Client)
+                                        // instead of crashing the client.
+                                        if (splits.Length < 6
+                                            || !int.TryParse(splits[0], out int mx)
+                                            || !int.TryParse(splits[1], out int my)
+                                            || !int.TryParse(splits[2], out int mmap))
                                         {
                                             continue;
                                         }
 
                                         WMapMarker marker = new WMapMarker
                                         {
-                                            X = int.Parse(splits[0]),
-                                            Y = int.Parse(splits[1]),
-                                            MapId = int.Parse(splits[2]),
+                                            X = mx,
+                                            Y = my,
+                                            MapId = mmap,
                                             Name = splits[3],
                                             MarkerIconName = splits[4].ToLower(),
                                             Color = GetColor(splits[5]),
-                                            ZoomIndex = splits.Length == 7 ? int.Parse(splits[6]) : 3
+                                            ZoomIndex = splits.Length == 7 && int.TryParse(splits[6], out int zoom) ? zoom : 3
                                         };
 
                                         if (_markerIcons.TryGetValue(splits[4].ToLower(), out Texture2D value))

@@ -216,7 +216,7 @@ namespace ClassicUO.Configuration
         public bool ShowCurseIcon { get; set; } = true; // StatusIconsOverlay: "CURSE" icon under cursed mobiles
         public int StatusIconSize { get; set; } = 26;
         public int StatusIconOffsetY { get; set; } = 18;
-        public bool LogFieldCasts { get; set; } = true; // FieldCastLog: preview vs actual -> Data/Client/field_casts.csv
+        public bool LogFieldCasts { get; set; } = true; // FieldCastLog: preview vs actual -> Data/Client/FieldChecks/field_casts.csv
         public bool BlockOutOfRangeSpellTargets { get; set; } = true; // SpellRanges.BlockIfOutOfRange
         // TazUO 26.10 ports, each switchable (Options > Custom > TazUO 26.10 ports)
         public bool TazMobileCadence { get; set; } = true;       // #1136 other mobiles move at the server's step cadence

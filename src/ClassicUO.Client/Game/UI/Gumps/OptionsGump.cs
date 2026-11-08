@@ -1846,7 +1846,7 @@ namespace ClassicUO.Game.UI.Gumps
             casting.AddRight(AddLabel(null, "Ring colour", 0, 0), 2);
             casting.PopIndent();
 
-            casting.Add(_logFieldCasts = AddCheckBox(null, "Check each field cast against the preview (journal line + Data/Client/field_casts.csv)", _currentProfile.LogFieldCasts, startX, startY));
+            casting.Add(_logFieldCasts = AddCheckBox(null, "Check each field cast against the preview (journal line + Data/Client/FieldChecks/field_casts.csv)", _currentProfile.LogFieldCasts, startX, startY));
             casting.Add(_blockOutOfRangeSpells = AddCheckBox(null, "Don't send spell targets that are out of range (ranges in Data/Client/spellranges.txt)", _currentProfile.BlockOutOfRangeSpellTargets, startX, startY));
 
             casting.Add(_rangeRingAlways = AddCheckBox(null, "Always show range ring", _currentProfile.LTHighlightRangeOnActivated, startX, startY));

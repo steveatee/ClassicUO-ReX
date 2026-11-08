@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: BSD-2-Clause
 // ReX: checks the field preview against what the server actually creates. When you send a field spell's
 // target, the preview's prediction is recorded; ~2 s later the new field items around the target are
-// collected and every tile is written to Data/Client/field_casts.csv (predicted vs actual, plus the land
+// collected and every tile is written to Data/Client/FieldChecks/field_casts.csv (predicted vs actual, plus the land
 // heights under it), and a one-line verdict is printed in the journal. Used to find the rules the preview
 // is still missing.
 
@@ -208,9 +208,17 @@ namespace ClassicUO.Game.Managers
         {
             try
             {
-                string dir = Path.Combine(CUOEnviroment.ExecutablePath, "Data", "Client");
+                // Its own folder: the world map loads every *.csv directly in Data/Client as a marker file.
+                string client = Path.Combine(CUOEnviroment.ExecutablePath, "Data", "Client");
+                string dir = Path.Combine(client, "FieldChecks");
                 Directory.CreateDirectory(dir);
                 string path = Path.Combine(dir, "field_casts.csv");
+                string old = Path.Combine(client, "field_casts.csv");
+
+                if (!File.Exists(path) && File.Exists(old))
+                {
+                    File.Move(old, path);
+                }
 
                 if (!File.Exists(path))
                 {
