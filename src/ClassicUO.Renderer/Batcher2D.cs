@@ -1080,6 +1080,53 @@ namespace ClassicUO.Renderer
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        /// <summary>
+        /// Axis-aligned destination rectangle with an explicit texture coordinate per corner
+        /// (top-left, top-right, bottom-left, bottom-right). Lets a caller rotate art inside a
+        /// squashed rectangle, e.g. a ring spinning flat on the isometric floor.
+        /// </summary>
+        public void DrawQuadUV
+        (
+            Texture2D texture,
+            Rectangle destination,
+            Vector2 uvTopLeft,
+            Vector2 uvTopRight,
+            Vector2 uvBottomLeft,
+            Vector2 uvBottomRight,
+            Vector3 hue,
+            float depth
+        )
+        {
+            EnsureSize();
+
+            ref PositionNormalTextureColor4 vertex = ref _vertexInfo[_numSprites];
+
+            vertex.Position0.X = destination.X;
+            vertex.Position0.Y = destination.Y;
+            vertex.Position1.X = destination.Right;
+            vertex.Position1.Y = destination.Y;
+            vertex.Position2.X = destination.X;
+            vertex.Position2.Y = destination.Bottom;
+            vertex.Position3.X = destination.Right;
+            vertex.Position3.Y = destination.Bottom;
+
+            vertex.Position0.Z = depth;
+            vertex.Position1.Z = depth;
+            vertex.Position2.Z = depth;
+            vertex.Position3.Z = depth;
+
+            vertex.TextureCoordinate0 = new Vector3(uvTopLeft, 0);
+            vertex.TextureCoordinate1 = new Vector3(uvTopRight, 0);
+            vertex.TextureCoordinate2 = new Vector3(uvBottomLeft, 0);
+            vertex.TextureCoordinate3 = new Vector3(uvBottomRight, 0);
+
+            vertex.Hue0 = vertex.Hue1 = vertex.Hue2 = vertex.Hue3 = hue;
+
+            SetDefaultNormals(ref vertex);
+
+            PushSprite(texture);
+        }
+
         private bool PushSprite(Texture2D texture)
         {
             if (texture == null || texture.IsDisposed)

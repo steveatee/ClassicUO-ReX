@@ -158,6 +158,12 @@ namespace ClassicUO.Configuration
         public int MovementTurnDelayFast { get; set; } = Constants.TURN_DELAY_FAST;
         public bool BlockWalkWhileCasting { get; set; } = true;
         public bool AvoidTraps { get; set; }
+        public bool AvoidAcid { get; set; } = true; // acid.txt; macro ToggleAcidBlock
+        public bool EnemyRing { get; set; } = true; // rotating ring under the enemy (ClassicAssist 'enemy' / server combatant)
+        public ushort EnemyRingHue { get; set; } = 0x0021;
+        public int EnemyRingOpacity { get; set; } = 85;
+        public int EnemyRingSize { get; set; } = 40; // radius in pixels
+        public int EnemyRingSpeed { get; set; } = 40; // degrees per second
 
         // Friend / enemy colouring (FriendsManager)
         public bool FriendEnemyHues { get; set; }

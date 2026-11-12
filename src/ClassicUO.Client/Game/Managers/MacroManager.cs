@@ -1851,6 +1851,11 @@ namespace ClassicUO.Game.Managers
                     GameActions.Print(_world, ProfileManager.CurrentProfile.HideNonPlayerCorpses ? "Hide non-player corpses: on" : "Hide non-player corpses: off");
                     break;
 
+                case MacroType.ToggleAcidBlock:
+                    ProfileManager.CurrentProfile.AvoidAcid = !ProfileManager.CurrentProfile.AvoidAcid;
+                    GameActions.Print(_world, ProfileManager.CurrentProfile.AvoidAcid ? "Avoid acid: on" : "Avoid acid: off");
+                    break;
+
                 case MacroType.ToggleAvoidTraps:
                     ProfileManager.CurrentProfile.AvoidTraps = !ProfileManager.CurrentProfile.AvoidTraps;
                     GameActions.Print(_world, ProfileManager.CurrentProfile.AvoidTraps ? "Avoid traps: on" : "Avoid traps: off");
@@ -2424,7 +2429,8 @@ namespace ClassicUO.Game.Managers
         AddFriend,
         RemoveFriend,
         ToggleFriendEnemyHues,
-        ToggleHideCorpses
+        ToggleHideCorpses,
+        ToggleAcidBlock
     }
 
     internal enum MacroSubType

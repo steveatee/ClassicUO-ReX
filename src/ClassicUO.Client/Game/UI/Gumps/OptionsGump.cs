@@ -40,13 +40,13 @@ namespace ClassicUO.Game.UI.Gumps
         private Checkbox _nameOverheadAlwaysOn, _nameOverheadShowHpBar, _customPlayerNameplate, _invisibleHousesEnabled, _invisibleHousesOffInside;
         private HSliderBar _invisibleHousesZ, _dontRemoveHouseBelowZ;
         private HSliderBar _movementTurnDelay, _movementTurnDelayFast;
-        private Checkbox _blockWalkWhileCasting, _startCastTimerFromSpellWords, _avoidTraps;
+        private Checkbox _blockWalkWhileCasting, _startCastTimerFromSpellWords, _avoidTraps, _avoidAcid;
         private Combobox _timerDisplayStyle;
         private HSliderBar _statusIconSize, _statusIconOffsetY;
         private Checkbox _showMortalIcon, _showCurseIcon, _showDiscordIcon;
-        private Checkbox _friendEnemyHues, _friendHueParty, _friendHueAllies, _enemyHueHumanoids, _curseAura, _curseAuraLastTarget;
-        private ClickableColorBox _friendHueBox, _enemyHueBox, _curseAuraHueBox;
-        private HSliderBar _curseAuraOpacity, _curseAuraSize;
+        private Checkbox _friendEnemyHues, _friendHueParty, _friendHueAllies, _enemyHueHumanoids, _curseAura, _curseAuraLastTarget, _enemyRing;
+        private ClickableColorBox _friendHueBox, _enemyHueBox, _curseAuraHueBox, _enemyRingHueBox;
+        private HSliderBar _curseAuraOpacity, _curseAuraSize, _enemyRingOpacity, _enemyRingSize, _enemyRingSpeed;
         // Dust-Light ports
         private Checkbox _tintSelfWhileCasting, _previewFields, _blockWoS, _blockWoSFelOnly, _blockWoSArt, _blockEnergyF, _blockEnergyFFelOnly, _blockEnergyFArt;
         private Checkbox _logFieldCasts, _blockOutOfRangeSpells, _rangeRingOnCast, _rangeRingAlways, _colorStealth, _colorStealthSelf;
@@ -1593,6 +1593,18 @@ namespace ClassicUO.Game.UI.Gumps
                 )
             );
 
+            movement.Add
+            (
+                _avoidAcid = AddCheckBox
+                (
+                    null,
+                    "Avoid acid and ooze when walking/pathing (Data/Client/acid.txt; macro: ToggleAcidBlock)",
+                    _currentProfile.AvoidAcid,
+                    startX,
+                    startY
+                )
+            );
+
             movement.Add(AddLabel(null, "Turn delay (ms)", startX, startY));
             movement.AddRight
             (
@@ -1671,6 +1683,17 @@ namespace ClassicUO.Game.UI.Gumps
             combat.AddRight(_curseAuraOpacity = AddHSlider(null, 10, 100, _currentProfile.CurseAuraOpacity, startX, startY, 150));
             combat.Add(AddLabel(null, "Ring size", startX, startY));
             combat.AddRight(_curseAuraSize = AddHSlider(null, 30, 110, _currentProfile.CurseAuraSize, startX, startY, 150));
+            combat.PopIndent();
+            combat.Add(_enemyRing = AddCheckBox(null, "Rotating ring under your enemy (ClassicAssist 'enemy' / who you attack)", _currentProfile.EnemyRing, startX, startY));
+            combat.PushIndent();
+            combat.Add(_enemyRingHueBox = AddColorBox(null, startX, startY, _currentProfile.EnemyRingHue, ""));
+            combat.AddRight(AddLabel(null, "Ring colour", 0, 0), 2);
+            combat.Add(AddLabel(null, "Opacity", startX, startY));
+            combat.AddRight(_enemyRingOpacity = AddHSlider(null, 10, 100, _currentProfile.EnemyRingOpacity, startX, startY, 150));
+            combat.Add(AddLabel(null, "Ring size", startX, startY));
+            combat.AddRight(_enemyRingSize = AddHSlider(null, 20, 90, _currentProfile.EnemyRingSize, startX, startY, 150));
+            combat.Add(AddLabel(null, "Spin speed (degrees/s, 0 = still)", startX, startY));
+            combat.AddRight(_enemyRingSpeed = AddHSlider(null, 0, 180, _currentProfile.EnemyRingSpeed, startX, startY, 150));
             combat.PopIndent();
             combat.Add(_showMortalIcon = AddCheckBox(null, "\"MS\" icon under mortally wounded players and creatures (yourself too)", _currentProfile.ShowMortalIcon, startX, startY));
             combat.Add(_showCurseIcon = AddCheckBox(null, "\"CURSE\" icon under cursed players (Curse, Corpse Skin, Hit Curse; yours from buffs)", _currentProfile.ShowCurseIcon, startX, startY));
@@ -4297,6 +4320,12 @@ namespace ClassicUO.Game.UI.Gumps
                     _autoAvoidObstacles.IsChecked = false;
                     _blockWalkWhileCasting.IsChecked = true;
                     _avoidTraps.IsChecked = false;
+                    _avoidAcid.IsChecked = true;
+                    _enemyRing.IsChecked = true;
+                    _enemyRingHueBox.Hue = 0x0021;
+                    _enemyRingOpacity.Value = 85;
+                    _enemyRingSize.Value = 40;
+                    _enemyRingSpeed.Value = 40;
                     _friendEnemyHues.IsChecked = false;
                     _friendHueBox.Hue = 0x0044;
                     _enemyHueBox.Hue = 0x0021;
@@ -4374,6 +4403,12 @@ namespace ClassicUO.Game.UI.Gumps
             _currentProfile.AutoAvoidObstacles = _autoAvoidObstacles.IsChecked;
             _currentProfile.BlockWalkWhileCasting = _blockWalkWhileCasting.IsChecked;
             _currentProfile.AvoidTraps = _avoidTraps.IsChecked;
+            _currentProfile.AvoidAcid = _avoidAcid.IsChecked;
+            _currentProfile.EnemyRing = _enemyRing.IsChecked;
+            _currentProfile.EnemyRingHue = _enemyRingHueBox.Hue;
+            _currentProfile.EnemyRingOpacity = _enemyRingOpacity.Value;
+            _currentProfile.EnemyRingSize = _enemyRingSize.Value;
+            _currentProfile.EnemyRingSpeed = _enemyRingSpeed.Value;
             _currentProfile.FriendEnemyHues = _friendEnemyHues.IsChecked;
             _currentProfile.FriendListHue = _friendHueBox.Hue;
             _currentProfile.EnemyListHue = _enemyHueBox.Hue;

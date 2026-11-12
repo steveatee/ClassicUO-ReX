@@ -76,6 +76,12 @@ namespace ClassicUO.Game.GameObjects
                 );
             }
 
+            // Rotating ring under the enemy (ClassicAssist 'enemy' / server combatant), on top of any aura.
+            if (!IsDead && EnemyRing.ShouldDraw(Serial, World.Player.Serial))
+            {
+                EnemyRing.Draw(batcher, drawX, drawY, depth);
+            }
+
             bool isHuman = IsHuman;
 
             bool isGargoyle =

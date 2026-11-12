@@ -219,6 +219,7 @@ namespace ClassicUO.Game.Data
             AddBuiltInTrapMarkersByGraphic();
             LoadTrapMarkers(traps, false);
             LoadTrapMarkers(poisonTraps, true);
+            AcidFilter.Load(Path.Combine(path, "acid.txt"));
         }
 
         private static void CreateTrapFileIfMissing(string filePath, bool poison)

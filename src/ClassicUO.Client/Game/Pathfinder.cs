@@ -278,6 +278,19 @@ namespace ClassicUO.Game
                                     && !(x == _world.Player.X && y == _world.Player.Y) // never trap yourself on the tile you stand on
                                     && StaticFilters.IsTrapMarker(graphicHelper, out _);
 
+                                // Avoid acid: ground acid / ooze from acid.txt (graphic + hue) is an obstacle too.
+                                // Your own tile is never blocked, so you can always step off acid you stand in.
+                                if (!avoidTrap
+                                    && ProfileManager.CurrentProfile.AvoidAcid
+                                    && obj is Item acidItem
+                                    && stepState != (int) PATH_STEP_STATE.PSS_DEAD_OR_GM
+                                    && stepState != (int) PATH_STEP_STATE.PSS_ON_SEA_HORSE
+                                    && !(x == _world.Player.X && y == _world.Player.Y)
+                                    && AcidFilter.IsAcid(acidItem.Graphic, acidItem.Hue))
+                                {
+                                    avoidTrap = true; // same obstacle shape as a trap
+                                }
+
                                 if (avoidTrap)
                                 {
                                     flags = (uint) PATH_OBJECT_FLAGS.POF_IMPASSABLE_OR_SURFACE;

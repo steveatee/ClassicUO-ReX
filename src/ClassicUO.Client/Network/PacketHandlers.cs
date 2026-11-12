@@ -3549,6 +3549,7 @@ namespace ClassicUO.Network
 
             GameActions.SendCloseStatus(world, world.TargetManager.LastAttack);
             world.TargetManager.LastAttack = serial;
+            EnemyRing.OnCombatant(serial);
             GameActions.RequestMobileStatus(world, serial);
         }
 

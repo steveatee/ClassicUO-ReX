@@ -780,6 +780,8 @@ namespace ClassicUO.Game
 
         public void Clear()
         {
+            EnemyRing.Clear();
+
             foreach (Mobile mobile in Mobiles.Values)
             {
                 RemoveMobile(mobile);
